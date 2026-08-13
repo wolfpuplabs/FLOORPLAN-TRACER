@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D Floor Plan Tracer - BIM Architect</title>
+    <!-- Load Three.js & Addons -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
@@ -59,6 +60,7 @@
         
         <div style="border-left: 1px solid #ccc; height: 20px;"></div>
         
+        <!-- Global Architectural Settings -->
         <label style="font-size:12px; font-weight:bold;">Tinggi(m): <input type="number" id="valWallH" value="3.0" step="0.1" style="width:45px; padding:4px;"></label>
         <label style="font-size:12px; font-weight:bold;">Tebal(m): <input type="number" id="valWallT" value="0.15" step="0.05" style="width:45px; padding:4px;"></label>
 
@@ -71,6 +73,7 @@
         <button id="exportBtn" style="background: #4CAF50; color: white; border: none;">Export GLB</button>
     </div>
 
+    <!-- Panel Edit Individual Objek -->
     <div id="edit-panel">
         <h4 style="margin: 0 0 10px 0; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Parameter Objek</h4>
         
@@ -90,17 +93,20 @@
     </div>
 
     <div id="main-container">
+        <!-- 2D View -->
         <div id="left-panel">
             <div id="workspace">
                 <img id="floorplan-img" src="">
                 <canvas id="draw-canvas"></canvas>
             </div>
             <div id="instructions">
-                <b>Panduan:</b><br>
-                - <b>Geser Objek</b>: Klik Pintu/Jendela di mode [Pilih] lalu geser slider Posisi<br>
-                - Ketinggian & Ketebalan global bisa diedit di atas (Standar Arsitek)
+                <b>Cara Menggambar Tembok:</b><br>
+                - <b>Klik 1</b>: Mulai garis tembok<br>
+                - <b>Klik 2</b>: Akhiri garis tembok (End Drawing)<br>
+                - <b>Batal Garis</b>: Tekan ESC atau Klik Kanan
             </div>
         </div>
+        <!-- 3D View -->
         <div id="right-panel"></div>
     </div>
 
@@ -125,7 +131,7 @@
         const inputWallT = document.getElementById('valWallT');
 
         inputWallH.addEventListener('change', () => { saveState(); update3D(); });
-        inputWallT.addEventListener('change', () => { saveState(); update3D(); draw2D(); }); // Update 2D line thickness too
+        inputWallT.addEventListener('change', () => { saveState(); update3D(); draw2D(); });
 
         // === UNDO / REDO LOGIC ===
         function saveState() {
@@ -202,7 +208,8 @@
         leftPanel.addEventListener('touchend', () => { isPanning = false; });
 
         // === UI EDITOR & INTERAKSI KANVAS ===
-        let isDrawing = false, currentLine = null;
+        let isDrawing = false;
+        let currentLine = null;
         const SNAP_RADIUS = 20;
 
         document.getElementById('modeSelect').onclick = (e) => setMode('select', e.target);
@@ -218,6 +225,13 @@
             if (mode !== 'select') closeEditPanel();
             draw2D();
         }
+
+        // Batal gambar jika tekan ESC
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && isDrawing) {
+                isDrawing = false; currentLine = null; draw2D();
+            }
+        });
 
         function getTrueCoords(x, y) {
             const rect = canvas.getBoundingClientRect();
@@ -241,8 +255,15 @@
             return { x: snapX, y: snapY };
         }
 
+        // ==========================================
+        // PERBAIKAN TOTAL SIKLUS START & END DRAWING
+        // ==========================================
         function handlePointerDown(clientX, clientY, button) {
-            if (button !== 0 && button !== undefined) return; 
+            if (button !== 0 && button !== undefined) {
+                // Jika klik kanan saat gambar, batalkan
+                if (isDrawing) { isDrawing = false; currentLine = null; draw2D(); }
+                return; 
+            }
             let { x, y } = getTrueCoords(clientX, clientY);
             
             if (mode === 'select') {
@@ -262,10 +283,20 @@
             else if (mode === 'wall') {
                 let snap = getSnapped(x, y);
                 if (!isDrawing) {
-                    saveState(); isDrawing = true; currentLine = { start: snap, end: snap };
+                    // KLIK PERTAMA: Mulai Garis
+                    saveState(); 
+                    isDrawing = true; 
+                    currentLine = { start: snap, end: snap };
                 } else {
-                    currentLine.end = snap; lines.push({...currentLine});
-                    isDrawing = false; currentLine = null; update3D();
+                    // KLIK KEDUA: Akhiri Garis (END DRAWING)
+                    currentLine.end = snap; 
+                    // Mencegah simpan garis nol panjang
+                    if (Math.hypot(currentLine.end.x - currentLine.start.x, currentLine.end.y - currentLine.start.y) > 5) {
+                        lines.push({...currentLine});
+                        update3D();
+                    }
+                    isDrawing = false; 
+                    currentLine = null;
                 }
                 draw2D();
             } 
@@ -283,19 +314,21 @@
             }
         }
 
-        canvas.addEventListener('mousedown', (e) => handlePointerDown(e.clientX, e.clientY, e.button));
-        canvas.addEventListener('touchstart', (e) => {
-            if (e.touches.length === 1 && !isPanning) handlePointerDown(e.touches[0].clientX, e.touches[0].clientY, 0);
-        }, { passive: true });
+        canvas.addEventListener('click', (e) => handlePointerDown(e.clientX, e.clientY, e.button));
 
         canvas.addEventListener('mousemove', (e) => {
-            if (isDrawing && mode === 'wall') {
-                let { x, y } = getTrueCoords(e.clientX, e.clientY); currentLine.end = getSnapped(x, y); draw2D();
+            if (isDrawing && mode === 'wall' && currentLine) {
+                let { x, y } = getTrueCoords(e.clientX, e.clientY); 
+                currentLine.end = getSnapped(x, y); 
+                draw2D();
             }
         });
+
         canvas.addEventListener('touchmove', (e) => {
-            if (isDrawing && mode === 'wall' && e.touches.length === 1) {
-                let { x, y } = getTrueCoords(e.touches[0].clientX, e.touches[0].clientY); currentLine.end = getSnapped(x, y); draw2D();
+            if (isDrawing && mode === 'wall' && currentLine && e.touches.length === 1) {
+                let { x, y } = getTrueCoords(e.touches[0].clientX, e.touches[0].clientY); 
+                currentLine.end = getSnapped(x, y); 
+                draw2D();
             }
         }, { passive: true });
 
@@ -332,25 +365,21 @@
         }
         function closeEditPanel() { editPanel.style.display = 'none'; selectedOpening = null; }
 
-        // Event: Geser (Ratio)
         editPos.addEventListener('input', (e) => {
             if (selectedOpening) { selectedOpening.ratio = parseFloat(e.target.value) / 100; valPos.innerText = e.target.value; update3D(); draw2D(); }
         });
         editPos.addEventListener('change', () => saveState());
 
-        // Event: Lebar
         editWidth.addEventListener('input', (e) => {
             if (selectedOpening) { selectedOpening.width3D = parseFloat(e.target.value); valWidth.innerText = selectedOpening.width3D; update3D(); draw2D(); }
         });
         editWidth.addEventListener('change', () => saveState());
 
-        // Event: Swing
         editSwing.addEventListener('input', (e) => {
             if (selectedOpening) { selectedOpening.swing = parseFloat(e.target.value); valSwing.innerText = selectedOpening.swing; update3D(); draw2D(); }
         });
         editSwing.addEventListener('change', () => saveState());
 
-        // Event: Flip Engsel (Kiri/Kanan)
         document.getElementById('flipHingeBtn').addEventListener('click', () => {
             if (selectedOpening && selectedOpening.type === 'door') {
                 saveState();
@@ -359,7 +388,6 @@
             }
         });
 
-        // Event: Hapus
         document.getElementById('delObjBtn').addEventListener('click', () => {
             if (selectedOpening) { saveState(); openings = openings.filter(o => o.id !== selectedOpening.id); closeEditPanel(); update3D(); draw2D(); }
         });
@@ -367,14 +395,16 @@
         // === 2D RENDER ===
         function draw2D() {
             ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.lineCap = 'round';
-            // Sync 2D Wall Thickness visually with 3D setting (Convert Meter to Pixels via Scale)
             const globalThick2D = parseFloat(inputWallT.value) / scale3D;
             ctx.lineWidth = Math.max(2, globalThick2D); 
             
             ctx.strokeStyle = '#222';
             lines.forEach(l => { ctx.beginPath(); ctx.moveTo(l.start.x, l.start.y); ctx.lineTo(l.end.x, l.end.y); ctx.stroke(); });
 
-            if (currentLine) { ctx.strokeStyle = '#f44336'; ctx.beginPath(); ctx.moveTo(currentLine.start.x, currentLine.start.y); ctx.lineTo(currentLine.end.x, currentLine.end.y); ctx.stroke(); }
+            if (currentLine) { 
+                ctx.strokeStyle = '#f44336'; 
+                ctx.beginPath(); ctx.moveTo(currentLine.start.x, currentLine.start.y); ctx.lineTo(currentLine.end.x, currentLine.end.y); ctx.stroke(); 
+            }
 
             openings.forEach(op => {
                 let l = lines[op.lineIndex]; if(!l) return;
@@ -383,8 +413,6 @@
                 const opWidth2D = op.width3D / scale3D; 
 
                 ctx.save(); ctx.translate(cx, cy); ctx.rotate(angle);
-                
-                // Flip matrix logic for Hinge side
                 if (op.flipHinge) { ctx.scale(-1, 1); }
 
                 if (op === selectedOpening) {
@@ -456,7 +484,6 @@
             while(modelGroup.children.length > 0) modelGroup.remove(modelGroup.children[0]); 
             if(lines.length === 0) return;
 
-            // Get Global Arch Settings
             const heightWall = parseFloat(inputWallH.value); 
             const thickWall = parseFloat(inputWallT.value);
 
@@ -472,7 +499,6 @@
             const matWindow = new THREE.MeshLambertMaterial({ color: 0x87CEEB, transparent: true, opacity: 0.5 }); 
             const matFrame = new THREE.MeshLambertMaterial({ color: 0x333333 }); 
 
-            // 1. Gambar Tembok & Bukaan
             lines.forEach((line, index) => {
                 const dx = line.end.x - line.start.x; const dy = line.end.y - line.start.y;
                 const length = Math.sqrt(dx*dx + dy*dy) * scale3D; const angle = Math.atan2(dy, dx);
@@ -494,7 +520,6 @@
                         hole.moveTo(opStart, op.elevation); hole.lineTo(opEnd, op.elevation); hole.lineTo(opEnd, op.elevation + op.height3D); hole.lineTo(opStart, op.elevation + op.height3D); hole.lineTo(opStart, op.elevation);
                         const leafGeom = new THREE.BoxGeometry(op.width3D, op.height3D, 0.04);
                         
-                        // Flip Hinge Logic
                         if (op.flipHinge) {
                             leafGeom.translate(-op.width3D/2, op.height3D/2, 0); 
                             const doorMesh = new THREE.Mesh(leafGeom, matDoor);
@@ -527,7 +552,7 @@
                 wallObj.position.set(posX, 0, posZ); wallObj.rotation.y = -angle; modelGroup.add(wallObj);
             });
 
-            // 2. Pilar Sudut
+            // Pilar Sudut
             const cornerGeom = new THREE.CylinderGeometry(thickWall/2, thickWall/2, heightWall, 16);
             let uniqueVertices = [];
             lines.forEach(l => {
