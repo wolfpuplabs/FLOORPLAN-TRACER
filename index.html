@@ -161,9 +161,10 @@
                 <canvas id="draw-canvas"></canvas>
             </div>
             <div id="instructions">
-                <b>Fitur Baru:</b><br>
-                - <b>Tap & Drag</b>: Tekan tahan mebel di mode [Pilih/Edit] lalu geser posisi.<br>
-                - <b>Scale & Dapur/Mandi</b>: Ubah skala ukuran mebel, kitchen set, kompor, kulkas, & toilet.
+                <b>Cara Pakai Mode Tembok:</b><br>
+                - Klik/Tap untuk mulai menggambar.<br>
+                - Klik/Tap lagi untuk lanjut (Tembok akan menyambung).<br>
+                - <b>Klik Kanan</b> atau <b>Tap 2x di posisi yang sama</b> untuk memutus/mengakhiri tembok.
             </div>
         </div>
         <div id="right-panel"></div>
@@ -241,18 +242,23 @@
             scale = newScale; applyTransform();
         }, { passive: false });
 
-        leftPanel.addEventListener('mousedown', (e) => {
+        leftPanel.addEventListener('pointerdown', (e) => {
             if (e.button === 2 || e.button === 1) { 
                 isPanning = true; startPanX = e.clientX - panX; startPanY = e.clientY - panY;
                 leftPanel.style.cursor = 'grabbing';
             }
         });
-        window.addEventListener('mouseup', () => { 
+        
+        window.addEventListener('pointerup', () => { 
             isPanning = false; 
             if (isDraggingObject) { isDraggingObject = false; saveState(); }
             leftPanel.style.cursor = 'crosshair'; 
         });
-        window.addEventListener('mousemove', (e) => { if (isPanning) { panX = e.clientX - startPanX; panY = e.clientY - startPanY; applyTransform(); }});
+        
+        window.addEventListener('pointermove', (e) => { 
+            if (isPanning) { panX = e.clientX - startPanX; panY = e.clientY - startPanY; applyTransform(); }
+        });
+        
         leftPanel.addEventListener('contextmenu', e => e.preventDefault());
 
         // Multi-Touch Logic
@@ -336,6 +342,7 @@
 
         function handlePointerDown(clientX, clientY, button) {
             if (button !== 0 && button !== undefined) {
+                // Akhiri gambar (termasuk jika klik kanan)
                 if (isDrawing) { isDrawing = false; currentLine = null; draw2D(); }
                 return; 
             }
@@ -372,14 +379,23 @@
             else if (mode === 'wall') {
                 let snap = getSnapped(x, y);
                 if (!isDrawing) {
-                    saveState(); isDrawing = true; currentLine = { start: snap, end: snap };
+                    saveState(); 
+                    isDrawing = true; 
+                    currentLine = { start: snap, end: snap };
                 } else {
                     currentLine.end = snap; 
-                    if (Math.hypot(currentLine.end.x - currentLine.start.x, currentLine.end.y - currentLine.start.y) > 5) {
+                    const dist = Math.hypot(currentLine.end.x - currentLine.start.x, currentLine.end.y - currentLine.start.y);
+                    
+                    if (dist > 5) {
                         lines.push({...currentLine});
                         update3D();
+                        // CONTINUOUS DRAWING
+                        currentLine = { start: snap, end: snap };
+                    } else {
+                        // END DRAWING jika jarak sangat kecil (Tap 2x di posisi yang sama)
+                        isDrawing = false; 
+                        currentLine = null;
                     }
-                    isDrawing = false; currentLine = null;
                 }
                 draw2D();
             } 
@@ -412,10 +428,11 @@
             }
         }
 
-        canvas.addEventListener('mousedown', (e) => handlePointerDown(e.clientX, e.clientY, e.button));
-        canvas.addEventListener('touchstart', (e) => {
-            if (e.touches.length === 1 && !isPanning) handlePointerDown(e.touches[0].clientX, e.touches[0].clientY, 0);
-        }, { passive: true });
+        // KODE BARU: Menggunakan pointerdown/pointermove untuk Canvas
+        canvas.addEventListener('pointerdown', (e) => {
+            if (isPanning) return;
+            handlePointerDown(e.clientX, e.clientY, e.button);
+        });
 
         // LOGIKA DRAGGING KURSOR / TAP & HOLD
         function handlePointerMove(clientX, clientY) {
@@ -430,10 +447,9 @@
             }
         }
 
-        canvas.addEventListener('mousemove', (e) => handlePointerMove(e.clientX, e.clientY));
-        canvas.addEventListener('touchmove', (e) => {
-            if (e.touches.length === 1) handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
-        }, { passive: true });
+        canvas.addEventListener('pointermove', (e) => {
+            handlePointerMove(e.clientX, e.clientY);
+        });
 
         function findNearestLine(px, py) {
             let minDist = 30 / scale; let result = null;
