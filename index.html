@@ -2,280 +2,332 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport"
-      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+/>
 
-<title>Floorplan Tracer → 3D</title>
+<title>Floorplan Tracer → 3D MVP</title>
 
 <style>
-*{
-  box-sizing:border-box;
+* {
+  box-sizing: border-box;
 }
 
 html,
-body{
-  margin:0;
-  width:100%;
-  height:100%;
-  overflow:hidden;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
-  background:#0d0f12;
-  color:#e9edf2;
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  background: #0d0f12;
+  color: #e8eaed;
 }
 
 button,
 input,
-select{
-  font:inherit;
+select {
+  font: inherit;
 }
 
-button{
-  border:1px solid #3a404a;
-  background:#20242c;
-  color:#e8ebef;
-  border-radius:8px;
-  padding:10px 12px;
-  cursor:pointer;
+button {
+  cursor: pointer;
 }
 
-button:hover{
-  background:#2b313b;
+.app {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
 }
 
-button.active{
-  background:#4f8df7;
-  border-color:#6ca4ff;
-  color:white;
+/* =========================================================
+   SIDEBAR
+========================================================= */
+
+.sidebar {
+  width: 390px;
+  min-width: 390px;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #171a1f;
+  border-right: 1px solid #30343b;
+  padding: 18px;
+  z-index: 20;
 }
 
-button.danger{
-  background:#662c30;
-  border-color:#8f3a40;
+.title {
+  font-size: 23px;
+  font-weight: 700;
+  margin-bottom: 4px;
 }
 
-button.primary{
-  background:#4f8df7;
-  border-color:#6ca4ff;
-  color:white;
-  font-weight:700;
+.subtitle {
+  color: #8d939e;
+  font-size: 13px;
+  margin-bottom: 20px;
 }
 
-input,
-select{
-  width:100%;
-  padding:10px;
-  border-radius:7px;
-  border:1px solid #3a404a;
-  background:#111318;
-  color:#eee;
-  outline:none;
+.section {
+  border-top: 1px solid #30343b;
+  padding-top: 17px;
+  margin-top: 17px;
 }
 
-label{
-  display:block;
-  font-size:12px;
-  color:#9da4af;
-  margin-bottom:6px;
+.section-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 12px;
 }
 
-.app{
-  display:grid;
-  grid-template-columns:360px 1fr;
-  width:100%;
-  height:100%;
+label {
+  display: block;
+  color: #9da3ad;
+  font-size: 12px;
+  margin-bottom: 6px;
 }
 
-.sidebar{
-  width:360px;
-  height:100%;
-  overflow-y:auto;
-  background:#181b20;
-  border-right:1px solid #30343c;
-  padding:18px;
+input[type="number"],
+input[type="text"],
+select {
+  width: 100%;
+  height: 46px;
+  border-radius: 8px;
+  border: 1px solid #383e47;
+  background: #101216;
+  color: #f0f2f5;
+  padding: 0 12px;
+  outline: none;
+  margin-bottom: 10px;
 }
 
-h1{
-  margin:0;
-  font-size:22px;
+input:focus,
+select:focus {
+  border-color: #5793ff;
 }
 
-.subtitle{
-  color:#9299a4;
-  font-size:13px;
-  margin-top:5px;
+input[type="file"] {
+  width: 100%;
+  margin-bottom: 10px;
+  color: #ddd;
 }
 
-.section{
-  border-top:1px solid #30343c;
-  margin-top:18px;
-  padding-top:16px;
+.row {
+  display: flex;
+  gap: 8px;
 }
 
-.section h2{
-  font-size:15px;
-  margin:0 0 13px;
+.row > * {
+  flex: 1;
 }
 
-.row{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:8px;
-  margin-bottom:8px;
+button {
+  min-height: 44px;
+  border-radius: 9px;
+  border: 1px solid #3a404b;
+  background: #20242c;
+  color: #e9ebef;
+  padding: 8px 12px;
+  transition: 0.15s;
 }
 
-.row3{
-  display:grid;
-  grid-template-columns:1fr 1fr 1fr;
-  gap:8px;
+button:hover {
+  background: #292e37;
 }
 
-.field{
-  margin-bottom:10px;
+button.active {
+  background: #4f8df7;
+  border-color: #72a7ff;
+  color: white;
 }
 
-.small{
-  font-size:11px;
-  color:#858d99;
-  line-height:1.45;
+button.primary {
+  background: #4f8df7;
+  border-color: #72a7ff;
+  color: white;
+  font-weight: 700;
 }
 
-.status{
-  position:fixed;
-  bottom:0;
-  left:0;
-  right:0;
-  height:30px;
-  padding:6px 12px;
-  background:#090a0c;
-  color:#8d95a1;
-  font-size:12px;
-  z-index:100;
+button.danger {
+  background: #672b30;
+  border-color: #8f3a41;
 }
 
-.viewport{
-  position:relative;
-  min-width:0;
-  min-height:0;
-  background:#0d0f12;
+button.danger:hover {
+  background: #7a3238;
 }
 
-.view{
-  position:absolute;
-  inset:0;
-  display:none;
+button.big {
+  width: 100%;
+  min-height: 48px;
+  font-size: 16px;
+  font-weight: 700;
 }
 
-.view.active{
-  display:block;
+.file-name {
+  color: #9da3ad;
+  font-size: 12px;
+  word-break: break-all;
+  margin-top: 3px;
 }
 
-#traceCanvas{
-  width:100%;
-  height:100%;
-  display:block;
-  touch-action:none;
-  background:#e9e9e9;
+.hint {
+  color: #8b919b;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 7px;
 }
 
-#threeContainer{
-  width:100%;
-  height:100%;
-  position:relative;
-  background:#0c0e11;
+.status {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 30px;
+  background: #090a0c;
+  border-top: 1px solid #292c32;
+  color: #9298a2;
+  font-size: 12px;
+  padding: 7px 14px;
+  z-index: 100;
 }
 
-.topbar{
-  position:absolute;
-  top:14px;
-  left:14px;
-  z-index:10;
-  display:flex;
-  gap:8px;
+/* =========================================================
+   MAIN VIEW
+========================================================= */
+
+.main {
+  position: relative;
+  flex: 1;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
-.badge{
-  background:#171a20;
-  border:1px solid #3a404a;
-  border-radius:8px;
-  padding:9px 12px;
-  font-size:12px;
+.toolbar {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  z-index: 10;
+  display: flex;
+  gap: 8px;
 }
 
-.tool{
-  margin-bottom:8px;
+.badge {
+  min-height: 38px;
+  padding: 9px 13px;
+  border-radius: 8px;
+  border: 1px solid #343941;
+  background: rgba(20, 23, 28, 0.92);
+  color: #dfe3e9;
+  font-size: 13px;
 }
 
-.fileName{
-  margin-top:7px;
-  color:#b6bcc6;
-  font-size:12px;
-  word-break:break-all;
+#editorWrap {
+  position: absolute;
+  inset: 0;
+  background: #101216;
+  overflow: hidden;
 }
 
-.assetList{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
+#editorCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
 }
 
-.assetItem{
-  display:grid;
-  grid-template-columns:1fr auto auto;
-  gap:5px;
-  align-items:center;
-  padding:7px;
-  border:1px solid #343943;
-  border-radius:7px;
-  background:#12151a;
+#threeWrap {
+  position: absolute;
+  inset: 0;
+  display: none;
+  background: #0d0f12;
 }
 
-.assetItem.selected{
-  border-color:#5b97ff;
-  background:#1b273d;
+#threeCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
-.assetName{
-  font-size:12px;
+.empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
 }
 
-.assetItem button{
-  padding:5px 8px;
-  font-size:11px;
+.emptyInner {
+  text-align: center;
+  color: #8e949d;
 }
 
-.hidden{
-  display:none !important;
+.emptyInner h1 {
+  margin: 0 0 7px;
+  color: #d8dbe0;
+  font-size: 28px;
 }
 
-#loading{
-  position:absolute;
-  inset:0;
-  display:none;
-  align-items:center;
-  justify-content:center;
-  background:rgba(0,0,0,.55);
-  z-index:100;
-  font-size:16px;
+.emptyInner p {
+  margin: 0;
+  font-size: 15px;
 }
 
-.help{
-  background:#111419;
-  border:1px solid #30343c;
-  border-radius:8px;
-  padding:10px;
-  font-size:11px;
-  color:#aab1bc;
-  line-height:1.5;
+/* =========================================================
+   OBJECT CONTROLS
+========================================================= */
+
+.objectControls {
+  display: none;
 }
 
-@media(max-width:800px){
-  .app{
-    grid-template-columns:300px 1fr;
+.objectControls.visible {
+  display: block;
+}
+
+.smallBtn {
+  min-height: 38px;
+  padding: 6px 9px;
+  font-size: 12px;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 900px) {
+  .sidebar {
+    width: 330px;
+    min-width: 330px;
+  }
+}
+
+@media (max-width: 700px) {
+  .app {
+    flex-direction: column;
   }
 
-  .sidebar{
-    width:300px;
-    padding:13px;
+  .sidebar {
+    width: 100%;
+    min-width: 0;
+    height: 42%;
+    max-height: 48%;
+    border-right: 0;
+    border-bottom: 1px solid #30343b;
+  }
+
+  .main {
+    height: 58%;
   }
 }
 </style>
@@ -285,30 +337,39 @@ h1{
 
 <div class="app">
 
+  <!-- =====================================================
+       SIDEBAR
+  ====================================================== -->
+
   <aside class="sidebar">
 
-    <h1>Floorplan → 3D</h1>
+    <div class="title">
+      Floorplan → 3D
+    </div>
+
     <div class="subtitle">
-      Browser-side CAD-style MVP
+      Browser-side CAD-style floorplan tracer
     </div>
 
     <!-- FLOORPLAN -->
+
     <div class="section">
 
-      <h2>1. FLOORPLAN</h2>
+      <div class="section-title">
+        1. FLOORPLAN
+      </div>
 
-      <div class="field">
-        <label>Upload floorplan</label>
+      <input
+        id="imageInput"
+        type="file"
+        accept="image/*"
+      />
 
-        <input
-          id="imageInput"
-          type="file"
-          accept="image/*"
-        >
-
-        <div id="fileName" class="fileName">
-          No image selected
-        </div>
+      <div
+        id="fileName"
+        class="file-name"
+      >
+        No floorplan uploaded
       </div>
 
       <div class="row">
@@ -316,48 +377,54 @@ h1{
           Fit Image
         </button>
 
-        <button id="toggleImageBtn">
+        <button id="hideImageBtn">
           Hide Image
         </button>
       </div>
 
-      <div class="field">
-        <label>Image opacity</label>
-        <input
-          id="opacityInput"
-          type="range"
-          min="0"
-          max="1"
-          step=".05"
-          value=".55"
-        >
+      <label>
+        Image opacity
+      </label>
+
+      <input
+        id="imageOpacity"
+        type="range"
+        min="0"
+        max="1"
+        step="0.05"
+        value="0.55"
+        style="width:100%;"
+      />
+
+      <div class="hint">
+        Wheel = zoom. Space + drag = pan.
+        Two fingers = pan/zoom on iPad.
       </div>
 
     </div>
 
+    <!-- WALL -->
 
-    <!-- TRACE -->
     <div class="section">
 
-      <h2>2. WALL TRACER</h2>
+      <div class="section-title">
+        2. WALL TRACER
+      </div>
 
       <div class="row">
-
         <button
-          id="wallToolBtn"
+          id="wallBtn"
           class="active"
         >
           Wall
         </button>
 
-        <button id="selectToolBtn">
+        <button id="selectBtn">
           Select
         </button>
-
       </div>
 
       <div class="row">
-
         <button id="finishBtn">
           Finish
         </button>
@@ -365,346 +432,397 @@ h1{
         <button id="undoBtn">
           Undo
         </button>
-
       </div>
 
       <button
-        id="deleteWallBtn"
-        class="danger"
-        style="width:100%;"
+        id="deleteBtn"
+        class="danger big"
+        style="margin-top:8px;"
       >
-        Delete Selected Wall
+        Delete Selected
       </button>
 
       <div class="row" style="margin-top:8px;">
-
-        <button id="axisBtn" class="active">
+        <button
+          id="axisSnapBtn"
+          class="active"
+        >
           Axis Snap ON
         </button>
 
-        <button id="snapBtn" class="active">
+        <button
+          id="endpointSnapBtn"
+          class="active"
+        >
           Endpoint Snap ON
         </button>
-
       </div>
 
-      <div class="small">
-        Click/tap to create wall points.
+      <button
+        id="gridBtn"
+        style="margin-top:8px;"
+      >
+        Grid ON
+      </button>
+
+      <div class="hint">
+        Click/tap to draw walls.
         Double-click or Finish commits the wall.
-        Snap locks to existing endpoints and wall lines.
-        Axis Snap makes segments horizontal/vertical.
+        Snap locks to endpoints and existing wall lines.
+        Axis snap makes segments perfectly horizontal/vertical.
       </div>
 
     </div>
 
-
     <!-- SCALE -->
+
     <div class="section">
 
-      <h2>3. SCALE & GEOMETRY</h2>
-
-      <div class="field">
-        <label>Drawing width (meters)</label>
-        <input
-          id="drawingWidth"
-          type="number"
-          value="10"
-          min=".1"
-          step=".1"
-        >
+      <div class="section-title">
+        3. SCALE & GEOMETRY
       </div>
 
-      <div class="field">
-        <label>Wall height (meters)</label>
-        <input
-          id="wallHeight"
-          type="number"
-          value="2.8"
-          min=".1"
-          step=".1"
-        >
+      <label>
+        Drawing width (meters)
+      </label>
+
+      <input
+        id="drawingWidth"
+        type="number"
+        value="10"
+        step="0.1"
+        min="0.1"
+      />
+
+      <label>
+        Wall height (meters)
+      </label>
+
+      <input
+        id="wallHeight"
+        type="number"
+        value="2.8"
+        step="0.1"
+        min="0.1"
+      />
+
+      <label>
+        Wall thickness (meters)
+      </label>
+
+      <input
+        id="wallThickness"
+        type="number"
+        value="0.15"
+        step="0.01"
+        min="0.03"
+      />
+
+    </div>
+
+    <!-- DOORS -->
+
+    <div class="section">
+
+      <div class="section-title">
+        4. DOORS
       </div>
 
-      <div class="field">
-        <label>Wall thickness (meters)</label>
-        <input
-          id="wallThickness"
-          type="number"
-          value=".15"
-          min=".01"
-          step=".01"
+      <button
+        id="doorBtn"
+        class="big"
+      >
+        + Door
+      </button>
+
+      <label style="margin-top:10px;">
+        Door width (m)
+      </label>
+
+      <input
+        id="doorWidth"
+        type="number"
+        value="0.9"
+        step="0.05"
+        min="0.2"
+      />
+
+      <label>
+        Door height (m)
+      </label>
+
+      <input
+        id="doorHeight"
+        type="number"
+        value="2.1"
+        step="0.1"
+        min="0.5"
+      />
+
+      <div class="row">
+        <button id="rotateObjectBtn">
+          Rotate
+        </button>
+
+        <button
+          id="deleteObjectBtn"
+          class="danger"
         >
+          Delete
+        </button>
+      </div>
+
+      <div class="hint">
+        Add a door, then drag it in 2D.
+        Select it and press Rotate to change orientation.
+      </div>
+
+    </div>
+
+    <!-- WINDOWS -->
+
+    <div class="section">
+
+      <div class="section-title">
+        5. WINDOWS
+      </div>
+
+      <button
+        id="windowBtn"
+        class="big"
+      >
+        + Window
+      </button>
+
+      <label style="margin-top:10px;">
+        Window width (m)
+      </label>
+
+      <input
+        id="windowWidth"
+        type="number"
+        value="1.2"
+        step="0.05"
+        min="0.2"
+      />
+
+      <label>
+        Window height (m)
+      </label>
+
+      <input
+        id="windowHeight"
+        type="number"
+        value="1.2"
+        step="0.1"
+        min="0.3"
+      />
+
+      <label>
+        Window sill height (m)
+      </label>
+
+      <input
+        id="windowSill"
+        type="number"
+        value="0.9"
+        step="0.1"
+        min="0"
+      />
+
+      <div class="hint">
+        Windows are editable in the same way as doors.
+      </div>
+
+    </div>
+
+    <!-- STAIRS -->
+
+    <div class="section">
+
+      <div class="section-title">
+        6. STAIRS
+      </div>
+
+      <button
+        id="stairBtn"
+        class="big"
+      >
+        + Stair
+      </button>
+
+      <label style="margin-top:10px;">
+        Stair width (m)
+      </label>
+
+      <input
+        id="stairWidth"
+        type="number"
+        value="1"
+        step="0.05"
+        min="0.3"
+      />
+
+      <label>
+        Total rise (m)
+      </label>
+
+      <input
+        id="stairRise"
+        type="number"
+        value="2.8"
+        step="0.1"
+        min="0.5"
+      />
+
+      <label>
+        Number of steps
+      </label>
+
+      <input
+        id="stairSteps"
+        type="number"
+        value="14"
+        step="1"
+        min="2"
+        max="100"
+      />
+
+      <div class="row">
+        <button id="rotateStairBtn">
+          Rotate Stair
+        </button>
+
+        <button
+          id="deleteStairBtn"
+          class="danger"
+        >
+          Delete Stair
+        </button>
+      </div>
+
+      <div class="hint">
+        Stairs are generated as individual stepped geometry.
+        Select and drag them in 2D, then rotate.
+      </div>
+
+    </div>
+
+    <!-- 3D -->
+
+    <div class="section">
+
+      <div class="section-title">
+        7. 3D
       </div>
 
       <button
         id="generateBtn"
-        class="primary"
-        style="width:100%;"
+        class="primary big"
       >
         GENERATE 3D
       </button>
 
-    </div>
-
-
-    <!-- OPENINGS -->
-    <div class="section">
-
-      <h2>4. DOORS / WINDOWS</h2>
-
-      <div class="row">
-
-        <button id="doorBtn">
-          + Door
-        </button>
-
-        <button id="windowBtn">
-          + Window
-        </button>
-
-      </div>
-
-      <div class="row">
-
-        <button id="rotateAssetBtn">
-          Rotate 90°
-        </button>
-
-        <button id="deleteAssetBtn" class="danger">
-          Delete
-        </button>
-
-      </div>
-
-      <div class="field">
-        <label>Opening width (m)</label>
-        <input
-          id="openingWidth"
-          type="number"
-          value=".9"
-          min=".1"
-          step=".05"
-        >
-      </div>
-
-      <div class="field">
-        <label>Door height / Window sill (m)</label>
-        <input
-          id="openingHeight"
-          type="number"
-          value="2.1"
-          min=".1"
-          step=".05"
-        >
-      </div>
-
-      <div class="field">
-        <label>Window sill height (m)</label>
-        <input
-          id="sillHeight"
-          type="number"
-          value="1"
-          min="0"
-          step=".05"
-        >
-      </div>
-
-      <div class="small">
-        Add a door/window by tapping a wall in 2D.
-        The opening is applied as a boolean subtraction
-        during 3D generation.
-      </div>
-
-    </div>
-
-
-    <!-- STAIRS -->
-    <div class="section">
-
-      <h2>5. STAIRS</h2>
-
-      <div class="row">
-
-        <button id="stairBtn">
-          + Stair
-        </button>
-
-        <button id="rotateStairBtn">
-          Rotate
-        </button>
-
-      </div>
-
-      <button
-        id="deleteStairBtn"
-        class="danger"
-        style="width:100%;"
-      >
-        Delete Stair
-      </button>
-
-      <div class="field">
-        <label>Width (m)</label>
-        <input
-          id="stairWidth"
-          type="number"
-          value="1"
-          min=".2"
-          step=".05"
-        >
-      </div>
-
-      <div class="field">
-        <label>Rise / total height (m)</label>
-        <input
-          id="stairHeight"
-          type="number"
-          value="2.8"
-          min=".1"
-          step=".1"
-        >
-      </div>
-
-      <div class="field">
-        <label>Number of steps</label>
-        <input
-          id="stairSteps"
-          type="number"
-          value="14"
-          min="2"
-          max="50"
-          step="1"
-        >
-      </div>
-
-    </div>
-
-
-    <!-- 3D -->
-    <div class="section">
-
-      <h2>6. 3D</h2>
-
-      <div class="row">
-
-        <button id="view2DBtn">
-          2D
-        </button>
-
-        <button id="view3DBtn">
-          3D
-        </button>
-
-      </div>
-
       <button
         id="exportBtn"
-        style="width:100%;"
+        class="big"
+        style="margin-top:8px;"
       >
         EXPORT GLB
       </button>
 
-    </div>
+      <div class="row" style="margin-top:8px;">
+        <button id="view2DBtn">
+          2D
+        </button>
 
-
-    <!-- INFO -->
-    <div class="section">
-
-      <div class="help">
-        <b>Tracing controls</b><br>
-        • Mouse/touch drag = pan<br>
-        • Wheel/pinch = zoom<br>
-        • Wall mode = draw walls<br>
-        • Select = select walls/assets<br>
-        • Snap = endpoint + wall snapping<br>
-        • Axis = H/V snapping<br><br>
-
-        <b>3D</b><br>
-        Walls are converted to actual
-        extruded geometry. Door/window
-        openings are boolean subtractions.
-        Model is centered at world origin.
+        <button
+          id="view3DBtn"
+          class="active"
+        >
+          3D
+        </button>
       </div>
+
+      <button
+        id="resetBtn"
+        class="danger big"
+        style="margin-top:8px;"
+      >
+        RESET
+      </button>
 
     </div>
 
   </aside>
 
+  <!-- =====================================================
+       MAIN
+  ====================================================== -->
 
-  <main class="viewport">
+  <main class="main">
 
-    <!-- 2D -->
-    <div
-      id="traceView"
-      class="view active"
-    >
+    <div class="toolbar">
 
-      <div class="topbar">
-
-        <div class="badge">
-          2D TRACER
-        </div>
-
-        <div
-          id="wallCount"
-          class="badge"
-        >
-          Walls: 0
-        </div>
-
+      <div
+        id="modeBadge"
+        class="badge"
+      >
+        2D EDITOR
       </div>
 
-      <canvas id="traceCanvas"></canvas>
+      <div
+        id="countBadge"
+        class="badge"
+      >
+        Walls: 0
+      </div>
 
     </div>
 
+    <div id="editorWrap">
 
-    <!-- 3D -->
-    <div
-      id="threeView"
-      class="view"
-    >
+      <canvas id="editorCanvas"></canvas>
 
-      <div class="topbar">
-
-        <div class="badge">
-          3D VIEW
+      <div
+        id="emptyState"
+        class="empty"
+      >
+        <div class="emptyInner">
+          <h1>Floorplan Tracer</h1>
+          <p>
+            Upload a floorplan or start drawing walls.
+          </p>
         </div>
-
-        <div
-          id="objectCount"
-          class="badge"
-        >
-          Objects: 0
-        </div>
-
       </div>
-
-      <div id="threeContainer"></div>
 
     </div>
 
-    <div id="loading">
-      Generating 3D...
+    <div id="threeWrap">
+      <canvas id="threeCanvas"></canvas>
     </div>
 
   </main>
 
 </div>
 
-<div id="status" class="status">
+<div
+  id="status"
+  class="status"
+>
   Ready.
 </div>
 
 
-<!-- THREE.JS -->
+<!-- =========================================================
+     THREE.JS
+========================================================== -->
+
 <script type="importmap">
 {
   "imports": {
-    "three":
-      "https://cdn.jsdelivr.net/npm/three@0.178.0/build/three.module.js",
-    "three/addons/":
-      "https://cdn.jsdelivr.net/npm/three@0.178.0/examples/jsm/"
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
   }
 }
 </script>
@@ -722,49 +840,49 @@ import {
   GLTFExporter
 } from "three/addons/exporters/GLTFExporter.js";
 
-import {
-  Evaluator,
-  Brush,
-  SUBTRACTION
-} from "https://cdn.jsdelivr.net/npm/three-bvh-csg@0.0.17/+esm";
-
 
 /* =========================================================
    DOM
 ========================================================= */
 
 const canvas =
-  document.getElementById("traceCanvas");
+  document.getElementById("editorCanvas");
 
 const ctx =
   canvas.getContext("2d");
 
-const imageInput =
-  document.getElementById("imageInput");
+const threeCanvas =
+  document.getElementById("threeCanvas");
 
-const fileName =
-  document.getElementById("fileName");
+const editorWrap =
+  document.getElementById("editorWrap");
+
+const threeWrap =
+  document.getElementById("threeWrap");
 
 const statusEl =
   document.getElementById("status");
 
-const traceView =
-  document.getElementById("traceView");
+const emptyState =
+  document.getElementById("emptyState");
 
-const threeView =
-  document.getElementById("threeView");
+const fileInput =
+  document.getElementById("imageInput");
 
-const threeContainer =
-  document.getElementById("threeContainer");
+const fileNameEl =
+  document.getElementById("fileName");
 
-const wallCount =
-  document.getElementById("wallCount");
+const imageOpacity =
+  document.getElementById("imageOpacity");
 
-const objectCount =
-  document.getElementById("objectCount");
+const drawingWidthInput =
+  document.getElementById("drawingWidth");
 
-const loading =
-  document.getElementById("loading");
+const wallHeightInput =
+  document.getElementById("wallHeight");
+
+const wallThicknessInput =
+  document.getElementById("wallThickness");
 
 
 /* =========================================================
@@ -773,107 +891,111 @@ const loading =
 
 const state = {
 
-  mode:"wall",
+  mode: "wall",
 
-  walls:[],
+  walls: [],
 
-  currentWall:[],
+  objects: [],
 
-  selectedWall:null,
+  selectedWall: null,
 
-  selectedAsset:null,
+  selectedObject: null,
 
-  assets:[],
+  currentWall: [],
 
-  image:null,
+  image: null,
 
-  imageVisible:true,
+  imageVisible: true,
 
-  imageOpacity:.55,
+  imageOpacity: 0.55,
 
-  imageTransform:{
-    x:0,
-    y:0,
-    scale:1
+  imageNaturalWidth: 0,
+
+  imageNaturalHeight: 0,
+
+  camera: {
+
+    x: 0,
+
+    y: 0,
+
+    zoom: 1
+
   },
 
-  pan:{
-    x:0,
-    y:0
-  },
+  grid: true,
 
-  zoom:1,
+  axisSnap: true,
 
-  pointerDown:false,
+  endpointSnap: true,
 
-  pointerId:null,
+  draggingObject: null,
 
-  pointerStart:{
-    x:0,
-    y:0
-  },
+  pointerDown: false,
 
-  panStart:{
-    x:0,
-    y:0
-  },
+  panMode: false,
 
-  drawingMoved:false,
+  lastPointer: null,
 
-  axisSnap:true,
+  pinch: null,
 
-  endpointSnap:true,
+  threeScene: null,
 
-  generated:false
+  threeCamera: null,
+
+  renderer: null,
+
+  controls: null,
+
+  modelGroup: null
 
 };
-
-
-/* =========================================================
-   THREE STATE
-========================================================= */
-
-let scene;
-let camera;
-let renderer;
-let controls;
-
-let generatedGroup = null;
-
-const csgEvaluator = new Evaluator();
 
 
 /* =========================================================
    HELPERS
 ========================================================= */
 
-function setStatus(text){
+function setStatus(text) {
 
   statusEl.textContent = text;
 
 }
 
 
-function clamp(v,a,b){
+function clamp(value, min, max) {
 
-  return Math.max(a,Math.min(b,v));
-
-}
-
-
-function dist(a,b){
-
-  return Math.hypot(
-    a.x-b.x,
-    a.y-b.y
+  return Math.max(
+    min,
+    Math.min(max, value)
   );
 
 }
 
 
-function lerp(a,b,t){
+function dist(a, b) {
 
-  return a+(b-a)*t;
+  return Math.hypot(
+    a.x - b.x,
+    a.y - b.y
+  );
+
+}
+
+
+function lerp(a, b, t) {
+
+  return a + (b - a) * t;
+
+}
+
+
+function angleBetween(a, b) {
+
+  return Math.atan2(
+    b.y - a.y,
+    b.x - a.x
+  );
 
 }
 
@@ -882,19 +1004,25 @@ function lerp(a,b,t){
    CANVAS RESIZE
 ========================================================= */
 
-function resizeCanvas(){
+function resizeCanvas() {
 
   const rect =
-    canvas.getBoundingClientRect();
+    editorWrap.getBoundingClientRect();
 
   const dpr =
-    Math.min(window.devicePixelRatio || 1,2);
+    Math.min(window.devicePixelRatio || 1, 2);
 
   canvas.width =
-    Math.max(1,Math.floor(rect.width*dpr));
+    Math.max(1, Math.floor(rect.width * dpr));
 
   canvas.height =
-    Math.max(1,Math.floor(rect.height*dpr));
+    Math.max(1, Math.floor(rect.height * dpr));
+
+  canvas.style.width =
+    rect.width + "px";
+
+  canvas.style.height =
+    rect.height + "px";
 
   ctx.setTransform(
     dpr,
@@ -917,49 +1045,75 @@ window.addEventListener(
 
 
 /* =========================================================
-   COORDINATE SYSTEM
-=========================================================
-
-   screen:
-     canvas pixel coordinates
-
-   world2D:
-     arbitrary drawing coordinates
-
-   model:
-     meters
-     centered around 0,0
-
+   WORLD / SCREEN TRANSFORM
 ========================================================= */
 
-function screenToWorld(x,y){
+/*
+  World coordinates:
+  x = meters
+  y = meters
+
+  Screen coordinate:
+  x = pixels
+  y = pixels
+
+  We deliberately use a stable world center.
+*/
+
+function screenToWorld(sx, sy) {
+
+  const rect =
+    canvas.getBoundingClientRect();
+
+  const cx =
+    rect.width / 2;
+
+  const cy =
+    rect.height / 2;
 
   return {
 
     x:
-      (x - state.pan.x) /
-      state.zoom,
+      (sx - cx) /
+        state.camera.zoom
+      +
+      state.camera.x,
 
     y:
-      (y - state.pan.y) /
-      state.zoom
+      (sy - cy) /
+        state.camera.zoom
+      +
+      state.camera.y
 
   };
 
 }
 
 
-function worldToScreen(p){
+function worldToScreen(p) {
+
+  const rect =
+    canvas.getBoundingClientRect();
+
+  const cx =
+    rect.width / 2;
+
+  const cy =
+    rect.height / 2;
 
   return {
 
     x:
-      p.x * state.zoom +
-      state.pan.x,
+      (p.x - state.camera.x) *
+        state.camera.zoom
+      +
+      cx,
 
     y:
-      p.y * state.zoom +
-      state.pan.y
+      (p.y - state.camera.y) *
+        state.camera.zoom
+      +
+      cy
 
   };
 
@@ -967,43 +1121,593 @@ function worldToScreen(p){
 
 
 /* =========================================================
-   FIT IMAGE
+   GRID
 ========================================================= */
 
-function fitImage(){
+function gridStep() {
 
-  if(!state.image)
-    return;
+  const width =
+    parseFloat(
+      drawingWidthInput.value
+    ) || 10;
+
+  return width / 20;
+
+}
+
+
+function drawGrid() {
+
+  if (!state.grid) return;
 
   const rect =
     canvas.getBoundingClientRect();
 
-  const iw =
-    state.image.naturalWidth;
+  const stepWorld =
+    gridStep();
 
-  const ih =
-    state.image.naturalHeight;
+  const step =
+    stepWorld *
+    state.camera.zoom;
+
+  if (step < 8) return;
+
+  ctx.save();
+
+  ctx.strokeStyle =
+    "rgba(100,110,125,0.20)";
+
+  ctx.lineWidth = 1;
+
+  const origin =
+    worldToScreen({
+      x: 0,
+      y: 0
+    });
+
+  let startX =
+    origin.x % step;
+
+  let startY =
+    origin.y % step;
+
+  if (startX < 0) startX += step;
+  if (startY < 0) startY += step;
+
+  for (
+    let x = startX;
+    x < rect.width;
+    x += step
+  ) {
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      Math.round(x) + 0.5,
+      0
+    );
+
+    ctx.lineTo(
+      Math.round(x) + 0.5,
+      rect.height
+    );
+
+    ctx.stroke();
+
+  }
+
+  for (
+    let y = startY;
+    y < rect.height;
+    y += step
+  ) {
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      0,
+      Math.round(y) + 0.5
+    );
+
+    ctx.lineTo(
+      rect.width,
+      Math.round(y) + 0.5
+    );
+
+    ctx.stroke();
+
+  }
+
+  ctx.restore();
+
+}
+
+
+/* =========================================================
+   FLOORPLAN IMAGE
+========================================================= */
+
+function drawImage() {
+
+  if (
+    !state.image ||
+    !state.imageVisible
+  ) {
+
+    return;
+
+  }
+
+  const rect =
+    canvas.getBoundingClientRect();
+
+  /*
+    The image is stored in world-space dimensions.
+    Its width corresponds to drawingWidth.
+  */
+
+  const widthMeters =
+    parseFloat(
+      drawingWidthInput.value
+    ) || 10;
+
+  const imageAspect =
+    state.imageNaturalHeight /
+    state.imageNaturalWidth;
+
+  const worldW =
+    widthMeters;
+
+  const worldH =
+    widthMeters *
+    imageAspect;
+
+  const topLeft =
+    worldToScreen({
+      x: -worldW / 2,
+      y: -worldH / 2
+    });
+
+  const w =
+    worldW *
+    state.camera.zoom;
+
+  const h =
+    worldH *
+    state.camera.zoom;
+
+  ctx.save();
+
+  ctx.globalAlpha =
+    state.imageOpacity;
+
+  ctx.drawImage(
+    state.image,
+    topLeft.x,
+    topLeft.y,
+    w,
+    h
+  );
+
+  ctx.restore();
+
+}
+
+
+/* =========================================================
+   WALL DRAWING
+========================================================= */
+
+function drawWallLine(
+  a,
+  b,
+  color,
+  width
+) {
+
+  const A =
+    worldToScreen(a);
+
+  const B =
+    worldToScreen(b);
+
+  ctx.save();
+
+  ctx.strokeStyle =
+    color;
+
+  ctx.lineWidth =
+    width;
+
+  ctx.lineCap =
+    "round";
+
+  ctx.beginPath();
+
+  ctx.moveTo(A.x, A.y);
+
+  ctx.lineTo(B.x, B.y);
+
+  ctx.stroke();
+
+  ctx.restore();
+
+}
+
+
+function drawWalls() {
+
+  for (
+    let i = 0;
+    i < state.walls.length;
+    i++
+  ) {
+
+    const wall =
+      state.walls[i];
+
+    const selected =
+      state.selectedWall === wall;
+
+    drawWallLine(
+      wall.a,
+      wall.b,
+      selected
+        ? "#42a5ff"
+        : "#ef3155",
+      selected ? 7 : 5
+    );
+
+    const A =
+      worldToScreen(wall.a);
+
+    const B =
+      worldToScreen(wall.b);
+
+    ctx.fillStyle =
+      selected
+        ? "#9fd0ff"
+        : "#ef3155";
+
+    ctx.beginPath();
+
+    ctx.arc(
+      A.x,
+      A.y,
+      selected ? 6 : 5,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fill();
+
+    ctx.beginPath();
+
+    ctx.arc(
+      B.x,
+      B.y,
+      selected ? 6 : 5,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fill();
+
+  }
+
+}
+
+
+function drawCurrentWall() {
+
+  if (
+    state.currentWall.length === 0
+  ) {
+
+    return;
+
+  }
+
+  for (
+    let i = 0;
+    i <
+    state.currentWall.length - 1;
+    i++
+  ) {
+
+    drawWallLine(
+      state.currentWall[i],
+      state.currentWall[i + 1],
+      "#ff9c39",
+      5
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   OBJECT DRAWING
+========================================================= */
+
+function drawObject(obj) {
+
+  const selected =
+    state.selectedObject === obj;
+
+  ctx.save();
+
+  const center =
+    worldToScreen(obj.position);
+
+  ctx.translate(
+    center.x,
+    center.y
+  );
+
+  ctx.rotate(
+    obj.rotation
+  );
 
   const scale =
-    Math.min(
-      rect.width/iw,
-      rect.height/ih
-    ) * .9;
+    state.camera.zoom;
 
-  state.imageTransform.scale =
-    scale;
+  if (obj.type === "door") {
 
-  state.imageTransform.x =
-    (rect.width - iw*scale)/2;
+    const w =
+      obj.width * scale;
 
-  state.imageTransform.y =
-    (rect.height - ih*scale)/2;
+    const d =
+      0.12 * scale;
 
-  state.pan.x = 0;
-  state.pan.y = 0;
-  state.zoom = 1;
+    ctx.fillStyle =
+      selected
+        ? "#d6a15d"
+        : "#9c6a31";
 
-  draw2D();
+    ctx.fillRect(
+      -w / 2,
+      -d / 2,
+      w,
+      d
+    );
+
+    ctx.strokeStyle =
+      "#e8c99e";
+
+    ctx.lineWidth = 2;
+
+    ctx.beginPath();
+
+    ctx.arc(
+      -w / 2,
+      0,
+      w,
+      0,
+      Math.PI / 2
+    );
+
+    ctx.stroke();
+
+  }
+
+  if (obj.type === "window") {
+
+    const w =
+      obj.width * scale;
+
+    const d =
+      0.12 * scale;
+
+    ctx.fillStyle =
+      selected
+        ? "#5ab8ff"
+        : "#2488c7";
+
+    ctx.fillRect(
+      -w / 2,
+      -d / 2,
+      w,
+      d
+    );
+
+    ctx.strokeStyle =
+      "#c8ecff";
+
+    ctx.lineWidth = 2;
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      0,
+      -d / 2
+    );
+
+    ctx.lineTo(
+      0,
+      d / 2
+    );
+
+    ctx.stroke();
+
+  }
+
+  if (obj.type === "stair") {
+
+    const w =
+      obj.width * scale;
+
+    const depth =
+      obj.depth * scale;
+
+    const steps =
+      obj.steps;
+
+    ctx.fillStyle =
+      selected
+        ? "#e0a548"
+        : "#a87930";
+
+    for (
+      let i = 0;
+      i < steps;
+      i++
+    ) {
+
+      const x =
+        -depth / 2 +
+        i *
+        depth /
+        steps;
+
+      ctx.fillRect(
+        x,
+        -w / 2,
+        depth / steps + 1,
+        w
+      );
+
+    }
+
+    ctx.strokeStyle =
+      "#f3d08a";
+
+    ctx.strokeRect(
+      -depth / 2,
+      -w / 2,
+      depth,
+      w
+    );
+
+  }
+
+  if (selected) {
+
+    ctx.strokeStyle =
+      "#ffffff";
+
+    ctx.lineWidth = 2;
+
+    let w = 0.5 * scale;
+    let h = 0.5 * scale;
+
+    if (obj.type === "door") {
+      w = obj.width * scale;
+      h = 0.35 * scale;
+    }
+
+    if (obj.type === "window") {
+      w = obj.width * scale;
+      h = 0.35 * scale;
+    }
+
+    if (obj.type === "stair") {
+      w = obj.depth * scale;
+      h = obj.width * scale;
+    }
+
+    ctx.strokeRect(
+      -w / 2,
+      -h / 2,
+      w,
+      h
+    );
+
+  }
+
+  ctx.restore();
+
+}
+
+
+function drawObjects() {
+
+  for (
+    const obj of state.objects
+  ) {
+
+    drawObject(obj);
+
+  }
+
+}
+
+
+/* =========================================================
+   DRAW 2D
+========================================================= */
+
+function draw2D() {
+
+  if (!ctx) return;
+
+  const rect =
+    canvas.getBoundingClientRect();
+
+  ctx.clearRect(
+    0,
+    0,
+    rect.width,
+    rect.height
+  );
+
+  ctx.fillStyle =
+    "#f0f1f2";
+
+  ctx.fillRect(
+    0,
+    0,
+    rect.width,
+    rect.height
+  );
+
+  drawGrid();
+
+  drawImage();
+
+  drawWalls();
+
+  drawCurrentWall();
+
+  drawObjects();
+
+  updateEmptyState();
+
+  updateBadges();
+
+}
+
+
+/* =========================================================
+   EMPTY STATE
+========================================================= */
+
+function updateEmptyState() {
+
+  const hasContent =
+    state.image ||
+    state.walls.length ||
+    state.objects.length;
+
+  emptyState.style.display =
+    hasContent
+      ? "none"
+      : "flex";
+
+}
+
+
+/* =========================================================
+   BADGES
+========================================================= */
+
+function updateBadges() {
+
+  document.getElementById(
+    "countBadge"
+  ).textContent =
+    `Walls: ${state.walls.length}`;
 
 }
 
@@ -1012,18 +1716,15 @@ function fitImage(){
    IMAGE UPLOAD
 ========================================================= */
 
-imageInput.addEventListener(
+fileInput.addEventListener(
   "change",
-  async e => {
+  function () {
 
     const file =
-      e.target.files?.[0];
+      this.files &&
+      this.files[0];
 
-    if(!file)
-      return;
-
-    fileName.textContent =
-      file.name;
+    if (!file) return;
 
     const url =
       URL.createObjectURL(file);
@@ -1033,12 +1734,29 @@ imageInput.addEventListener(
 
     img.onload = () => {
 
-      state.image = img;
+      state.image =
+        img;
+
+      state.imageNaturalWidth =
+        img.naturalWidth;
+
+      state.imageNaturalHeight =
+        img.naturalHeight;
+
+      state.imageOpacity =
+        parseFloat(
+          imageOpacity.value
+        );
+
+      fileNameEl.textContent =
+        file.name;
 
       fitImage();
 
+      draw2D();
+
       setStatus(
-        "Floorplan loaded."
+        "Floorplan uploaded."
       );
 
       URL.revokeObjectURL(url);
@@ -1050,6 +1768,8 @@ imageInput.addEventListener(
       setStatus(
         "Could not load image."
       );
+
+      URL.revokeObjectURL(url);
 
     };
 
@@ -1063,721 +1783,655 @@ imageInput.addEventListener(
    IMAGE CONTROLS
 ========================================================= */
 
-document
-  .getElementById("fitImageBtn")
-  .onclick = fitImage;
-
-
-document
-  .getElementById("toggleImageBtn")
-  .onclick = () => {
-
-    state.imageVisible =
-      !state.imageVisible;
-
-    document
-      .getElementById("toggleImageBtn")
-      .textContent =
-      state.imageVisible
-        ? "Hide Image"
-        : "Show Image";
-
-    draw2D();
-
-  };
-
-
-document
-  .getElementById("opacityInput")
-  .oninput = e => {
+imageOpacity.addEventListener(
+  "input",
+  () => {
 
     state.imageOpacity =
-      Number(e.target.value);
+      parseFloat(
+        imageOpacity.value
+      );
 
     draw2D();
 
-  };
+  }
+);
 
 
-/* =========================================================
-   DRAW GRID
-========================================================= */
+document
+  .getElementById("hideImageBtn")
+  .addEventListener(
+    "click",
+    () => {
 
-function drawGrid(){
+      state.imageVisible =
+        !state.imageVisible;
+
+      document.getElementById(
+        "hideImageBtn"
+      ).textContent =
+        state.imageVisible
+          ? "Hide Image"
+          : "Show Image";
+
+      draw2D();
+
+    }
+  );
+
+
+function fitImage() {
+
+  if (!state.image) return;
 
   const rect =
     canvas.getBoundingClientRect();
 
-  ctx.save();
-
-  ctx.fillStyle =
-    "#eeeeee";
-
-  ctx.fillRect(
-    0,
-    0,
-    rect.width,
-    rect.height
-  );
-
-  const spacing =
-    25 * state.zoom;
-
-  const ox =
-    state.pan.x %
-    spacing;
-
-  const oy =
-    state.pan.y %
-    spacing;
-
-  ctx.strokeStyle =
-    "rgba(0,0,0,.10)";
-
-  ctx.lineWidth = 1;
-
-  for(
-    let x=ox;
-    x<rect.width;
-    x+=spacing
-  ){
-
-    ctx.beginPath();
-    ctx.moveTo(x,0);
-    ctx.lineTo(x,rect.height);
-    ctx.stroke();
-
-  }
-
-  for(
-    let y=oy;
-    y<rect.height;
-    y+=spacing
-  ){
-
-    ctx.beginPath();
-    ctx.moveTo(0,y);
-    ctx.lineTo(rect.width,y);
-    ctx.stroke();
-
-  }
-
-  ctx.restore();
-
-}
-
-
-/* =========================================================
-   DRAW IMAGE
-========================================================= */
-
-function drawImage(){
-
-  if(!state.image ||
-     !state.imageVisible)
-    return;
-
-  ctx.save();
-
-  ctx.globalAlpha =
-    state.imageOpacity;
-
-  const t =
-    state.imageTransform;
-
-  ctx.drawImage(
-    state.image,
-    t.x,
-    t.y,
-    state.image.naturalWidth*t.scale,
-    state.image.naturalHeight*t.scale
-  );
-
-  ctx.restore();
-
-}
-
-
-/* =========================================================
-   DRAW WALL
-========================================================= */
-
-function drawWall(
-  wall,
-  selected=false
-){
-
-  if(wall.points.length < 2)
-    return;
-
-  ctx.save();
-
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-
-  ctx.strokeStyle =
-    selected
-      ? "#00a8ff"
-      : "#ef2148";
-
-  ctx.lineWidth =
-    selected ? 7 : 5;
-
-  ctx.beginPath();
-
-  wall.points.forEach(
-    (p,i) => {
-
-      const s =
-        worldToScreen(p);
-
-      if(i===0)
-        ctx.moveTo(s.x,s.y);
-      else
-        ctx.lineTo(s.x,s.y);
-
-    }
-  );
-
-  ctx.stroke();
-
-  /* endpoints */
-
-  wall.points.forEach(
-    p => {
-
-      const s =
-        worldToScreen(p);
-
-      ctx.beginPath();
-
-      ctx.fillStyle =
-        selected
-          ? "#ffffff"
-          : "#ef2148";
-
-      ctx.strokeStyle =
-        "#222";
-
-      ctx.lineWidth = 1;
-
-      ctx.arc(
-        s.x,
-        s.y,
-        5,
-        0,
-        Math.PI*2
-      );
-
-      ctx.fill();
-      ctx.stroke();
-
-    }
-  );
-
-  ctx.restore();
-
-}
-
-
-/* =========================================================
-   DRAW ASSETS
-========================================================= */
-
-function drawAsset(asset){
-
-  const s =
-    worldToScreen(asset.position);
-
-  ctx.save();
-
-  ctx.translate(
-    s.x,
-    s.y
-  );
-
-  ctx.rotate(
-    asset.rotation
-  );
-
-  ctx.strokeStyle =
-    asset === state.selectedAsset
-      ? "#00a8ff"
-      : "#111";
-
-  ctx.fillStyle =
-    asset.type === "door"
-      ? "rgba(180,120,70,.8)"
-      : "rgba(50,160,230,.8)";
-
-  ctx.lineWidth =
-    asset === state.selectedAsset
-      ? 3
-      : 2;
-
-  const w =
-    asset.width *
-    getPixelsPerMeter();
-
-  const h =
-    asset.type === "door"
-      ? 15
-      : 10;
-
-  ctx.fillRect(
-    -w/2,
-    -h/2,
-    w,
-    h
-  );
-
-  ctx.strokeRect(
-    -w/2,
-    -h/2,
-    w,
-    h
-  );
-
-  ctx.restore();
-
-}
-
-
-/* =========================================================
-   PIXELS / METERS
-========================================================= */
-
-function getPixelsPerMeter(){
-
-  const widthM =
-    Number(
-      document
-        .getElementById("drawingWidth")
-        .value
+  const widthMeters =
+    parseFloat(
+      drawingWidthInput.value
     ) || 10;
 
-  if(!state.image)
-    return 50;
-
-  return (
-    state.image.naturalWidth /
-    widthM
-  ) * state.imageTransform.scale;
-
-}
-
-
-/* =========================================================
-   DRAW CURRENT WALL
-========================================================= */
-
-function drawCurrentWall(){
-
-  if(state.currentWall.length < 1)
-    return;
-
-  ctx.save();
-
-  ctx.strokeStyle =
-    "#ff7a00";
-
-  ctx.lineWidth = 4;
-
-  ctx.lineCap = "round";
-
-  ctx.beginPath();
-
-  state.currentWall.forEach(
-    (p,i) => {
-
-      const s =
-        worldToScreen(p);
-
-      if(i===0)
-        ctx.moveTo(s.x,s.y);
-      else
-        ctx.lineTo(s.x,s.y);
-
-    }
-  );
-
-  ctx.stroke();
-
-  state.currentWall.forEach(
-    p => {
-
-      const s =
-        worldToScreen(p);
-
-      ctx.beginPath();
-
-      ctx.fillStyle =
-        "#ff7a00";
-
-      ctx.arc(
-        s.x,
-        s.y,
-        5,
-        0,
-        Math.PI*2
-      );
-
-      ctx.fill();
-
-    }
-  );
-
-  ctx.restore();
-
-}
-
-
-/* =========================================================
-   DRAW 2D
-========================================================= */
-
-function draw2D(){
-
-  if(!canvas.width)
-    return;
-
-  const rect =
-    canvas.getBoundingClientRect();
-
-  drawGrid();
-
-  drawImage();
-
-  state.walls.forEach(
-    wall => {
-
-      drawWall(
-        wall,
-        wall === state.selectedWall
-      );
-
-    }
-  );
-
-  drawCurrentWall();
-
-  state.assets.forEach(
-    drawAsset
-  );
-
-  wallCount.textContent =
-    "Walls: " +
-    state.walls.length;
-
-}
-
-
-/* =========================================================
-   WALL SNAP
-========================================================= */
-
-function nearestEndpoint(
-  p,
-  threshold
-){
-
-  let best = null;
-  let bestD = threshold;
-
-  for(
-    const wall of state.walls
-  ){
-
-    for(
-      const q of wall.points
-    ){
-
-      const d =
-        dist(p,q);
-
-      if(d < bestD){
-
-        bestD = d;
-
-        best = {
-          x:q.x,
-          y:q.y
-        };
-
-      }
-
-    }
-
-  }
-
-  return best;
-
-}
-
-
-/* =========================================================
-   POINT TO SEGMENT
-========================================================= */
-
-function closestPointOnSegment(
-  p,
-  a,
-  b
-){
-
-  const dx =
-    b.x-a.x;
-
-  const dy =
-    b.y-a.y;
-
-  const len2 =
-    dx*dx+dy*dy;
-
-  if(len2===0)
-    return {
-      x:a.x,
-      y:a.y
-    };
-
-  let t =
-    (
-      (p.x-a.x)*dx +
-      (p.y-a.y)*dy
-    ) / len2;
-
-  t =
-    clamp(t,0,1);
-
-  return {
-    x:a.x+t*dx,
-    y:a.y+t*dy
-  };
-
-}
-
-
-/* =========================================================
-   WALL LINE SNAP
-========================================================= */
-
-function nearestWallPoint(
-  p,
-  threshold
-){
-
-  let best = null;
-  let bestD = threshold;
-
-  for(
-    const wall of state.walls
-  ){
-
-    for(
-      let i=0;
-      i<wall.points.length-1;
-      i++
-    ){
-
-      const a =
-        wall.points[i];
-
-      const b =
-        wall.points[i+1];
-
-      const q =
-        closestPointOnSegment(
-          p,
-          a,
-          b
-        );
-
-      const d =
-        dist(p,q);
-
-      if(d < bestD){
-
-        bestD = d;
-
-        best = q;
-
-      }
-
-    }
-
-  }
-
-  return best;
-
-}
-
-
-/* =========================================================
-   AXIS SNAP
-========================================================= */
-
-function applyAxisSnap(
-  p
-){
-
-  if(
-    !state.axisSnap ||
-    state.currentWall.length===0
-  )
-    return p;
-
-  const last =
-    state.currentWall[
-      state.currentWall.length-1
-    ];
-
-  const dx =
-    Math.abs(p.x-last.x);
-
-  const dy =
-    Math.abs(p.y-last.y);
-
-  if(dx > dy){
-
-    return {
-      x:p.x,
-      y:last.y
-    };
-
-  }
-
-  return {
-    x:last.x,
-    y:p.y
-  };
-
-}
-
-
-/* =========================================================
-   GET DRAW POINT
-========================================================= */
-
-function getDrawPoint(
-  sx,
-  sy
-){
-
-  let p =
-    screenToWorld(
-      sx,
-      sy
+  const aspect =
+    state.imageNaturalHeight /
+    state.imageNaturalWidth;
+
+  const heightMeters =
+    widthMeters * aspect;
+
+  const margin =
+    Math.min(
+      rect.width,
+      rect.height
+    ) * 0.08;
+
+  const zoomX =
+    (rect.width - margin) /
+    widthMeters;
+
+  const zoomY =
+    (rect.height - margin) /
+    heightMeters;
+
+  state.camera.zoom =
+    Math.max(
+      1,
+      Math.min(
+        zoomX,
+        zoomY
+      )
     );
 
+  state.camera.x = 0;
+
+  state.camera.y = 0;
+
+  draw2D();
+
+}
+
+
+document
+  .getElementById("fitImageBtn")
+  .addEventListener(
+    "click",
+    fitImage
+  );
+
+
+drawingWidthInput.addEventListener(
+  "change",
+  () => {
+
+    draw2D();
+
+  }
+);
+
+
+/* =========================================================
+   SNAP SYSTEM
+========================================================= */
+
+function snapPoint(
+  point,
+  previous
+) {
+
+  let p = {
+    x: point.x,
+    y: point.y
+  };
+
   /*
-    Endpoint snap first
+    Endpoint snap first.
   */
 
-  if(state.endpointSnap){
+  if (state.endpointSnap) {
 
-    const e =
-      nearestEndpoint(
-        p,
-        20/state.zoom
-      );
+    let best = null;
+    let bestDist = Infinity;
 
-    if(e)
-      return e;
+    const threshold =
+      18 /
+      state.camera.zoom;
 
-    const w =
-      nearestWallPoint(
-        p,
-        15/state.zoom
-      );
+    function checkCandidate(c) {
 
-    if(w)
-      p = w;
+      const d =
+        dist(
+          p,
+          c
+        );
+
+      if (
+        d <
+        threshold &&
+        d <
+        bestDist
+      ) {
+
+        bestDist = d;
+        best = c;
+
+      }
+
+    }
+
+    for (
+      const wall of state.walls
+    ) {
+
+      checkCandidate(wall.a);
+      checkCandidate(wall.b);
+
+    }
+
+    for (
+      const obj of state.objects
+    ) {
+
+      checkCandidate(obj.position);
+
+    }
+
+    if (best) {
+
+      p = {
+        x: best.x,
+        y: best.y
+      };
+
+      return p;
+
+    }
 
   }
 
-  p =
-    applyAxisSnap(p);
+  /*
+    Axis snap.
+  */
+
+  if (
+    previous &&
+    state.axisSnap
+  ) {
+
+    const dx =
+      Math.abs(
+        p.x - previous.x
+      );
+
+    const dy =
+      Math.abs(
+        p.y - previous.y
+      );
+
+    const threshold =
+      20 /
+      state.camera.zoom;
+
+    if (
+      dx < threshold
+    ) {
+
+      p.x =
+        previous.x;
+
+    }
+    else if (
+      dy < threshold
+    ) {
+
+      p.y =
+        previous.y;
+
+    }
+
+  }
+
+  /*
+    Snap to existing wall lines.
+  */
+
+  const threshold =
+    12 /
+    state.camera.zoom;
+
+  let best = null;
+  let bestDistance = Infinity;
+
+  for (
+    const wall of state.walls
+  ) {
+
+    const q =
+      nearestPointOnSegment(
+        p,
+        wall.a,
+        wall.b
+      );
+
+    const d =
+      dist(
+        p,
+        q
+      );
+
+    if (
+      d <
+      threshold &&
+      d <
+      bestDistance
+    ) {
+
+      bestDistance = d;
+      best = q;
+
+    }
+
+  }
+
+  if (best) {
+
+    p = best;
+
+  }
 
   return p;
 
 }
 
 
+function nearestPointOnSegment(
+  p,
+  a,
+  b
+) {
+
+  const dx =
+    b.x - a.x;
+
+  const dy =
+    b.y - a.y;
+
+  const len2 =
+    dx * dx +
+    dy * dy;
+
+  if (len2 === 0) {
+
+    return {
+      x: a.x,
+      y: a.y
+    };
+
+  }
+
+  let t =
+    (
+      (p.x - a.x) * dx +
+      (p.y - a.y) * dy
+    ) /
+    len2;
+
+  t =
+    clamp(
+      t,
+      0,
+      1
+    );
+
+  return {
+
+    x:
+      a.x + dx * t,
+
+    y:
+      a.y + dy * t
+
+  };
+
+}
+
+
 /* =========================================================
-   POINTER EVENTS
+   POINTER HELPERS
+========================================================= */
+
+function pointerPosition(
+  e
+) {
+
+  const rect =
+    canvas.getBoundingClientRect();
+
+  return {
+
+    x:
+      e.clientX -
+      rect.left,
+
+    y:
+      e.clientY -
+      rect.top
+
+  };
+
+}
+
+
+/* =========================================================
+   WALL HIT TEST
+========================================================= */
+
+function hitWall(
+  worldPoint
+) {
+
+  const threshold =
+    10 /
+    state.camera.zoom;
+
+  let best = null;
+  let bestD = Infinity;
+
+  for (
+    const wall of state.walls
+  ) {
+
+    const q =
+      nearestPointOnSegment(
+        worldPoint,
+        wall.a,
+        wall.b
+      );
+
+    const d =
+      dist(
+        worldPoint,
+        q
+      );
+
+    if (
+      d <
+      threshold &&
+      d <
+      bestD
+    ) {
+
+      bestD = d;
+      best = wall;
+
+    }
+
+  }
+
+  return best;
+
+}
+
+
+/* =========================================================
+   OBJECT HIT TEST
+========================================================= */
+
+function hitObject(
+  p
+) {
+
+  for (
+    let i =
+      state.objects.length - 1;
+    i >= 0;
+    i--
+  ) {
+
+    const obj =
+      state.objects[i];
+
+    const dx =
+      p.x -
+      obj.position.x;
+
+    const dy =
+      p.y -
+      obj.position.y;
+
+    const c =
+      Math.cos(
+        -obj.rotation
+      );
+
+    const s =
+      Math.sin(
+        -obj.rotation
+      );
+
+    const lx =
+      dx * c -
+      dy * s;
+
+    const ly =
+      dx * s +
+      dy * c;
+
+    let hw = 0.5;
+    let hh = 0.5;
+
+    if (
+      obj.type === "door" ||
+      obj.type === "window"
+    ) {
+
+      hw =
+        obj.width / 2;
+
+      hh =
+        0.25;
+
+    }
+
+    if (
+      obj.type === "stair"
+    ) {
+
+      hw =
+        obj.depth / 2;
+
+      hh =
+        obj.width / 2;
+
+    }
+
+    if (
+      Math.abs(lx) <= hw &&
+      Math.abs(ly) <= hh
+    ) {
+
+      return obj;
+
+    }
+
+  }
+
+  return null;
+
+}
+
+
+/* =========================================================
+   POINTER DOWN
 ========================================================= */
 
 canvas.addEventListener(
   "pointerdown",
-  e => {
+  (e) => {
 
-    if(
-      e.button!==undefined &&
-      e.button!==0
-    )
-      return;
+    e.preventDefault();
 
     canvas.setPointerCapture(
       e.pointerId
     );
 
-    state.pointerDown = true;
-    state.pointerId =
-      e.pointerId;
+    const screen =
+      pointerPosition(e);
 
-    state.pointerStart = {
-      x:e.clientX,
-      y:e.clientY
-    };
-
-    state.panStart = {
-      x:state.pan.x,
-      y:state.pan.y
-    };
-
-    state.drawingMoved = false;
-
-  }
-);
-
-
-canvas.addEventListener(
-  "pointermove",
-  e => {
-
-    if(!state.pointerDown)
-      return;
-
-    const dx =
-      e.clientX -
-      state.pointerStart.x;
-
-    const dy =
-      e.clientY -
-      state.pointerStart.y;
-
-    if(
-      Math.abs(dx)+Math.abs(dy)>5
-    )
-      state.drawingMoved = true;
+    const world =
+      screenToWorld(
+        screen.x,
+        screen.y
+      );
 
     /*
-      Select mode:
-      dragging pans the canvas.
+      Two finger gesture starts separately.
     */
 
-    if(
-      state.mode==="select" ||
-      state.currentWall.length===0
-    ){
+    if (
+      e.pointerType === "touch"
+    ) {
 
-      state.pan.x =
-        state.panStart.x + dx;
+      touchPointers.set(
+        e.pointerId,
+        screen
+      );
 
-      state.pan.y =
-        state.panStart.y + dy;
+      if (
+        touchPointers.size >= 2
+      ) {
+
+        state.currentWall = [];
+
+        beginPinch();
+
+        return;
+
+      }
+
+    }
+
+    /*
+      Space / middle mouse = pan.
+    */
+
+    if (
+      e.button === 1 ||
+      spaceDown
+    ) {
+
+      state.panMode = true;
+
+      state.lastPointer = screen;
+
+      return;
+
+    }
+
+    /*
+      Select mode.
+    */
+
+    if (
+      state.mode === "select"
+    ) {
+
+      const object =
+        hitObject(world);
+
+      if (object) {
+
+        state.selectedObject =
+          object;
+
+        state.selectedWall =
+          null;
+
+        state.draggingObject =
+          object;
+
+        draw2D();
+
+        return;
+
+      }
+
+      const wall =
+        hitWall(world);
+
+      if (wall) {
+
+        state.selectedWall =
+          wall;
+
+        state.selectedObject =
+          null;
+
+        draw2D();
+
+        return;
+
+      }
+
+      state.selectedObject =
+        null;
+
+      state.selectedWall =
+        null;
 
       draw2D();
+
+      return;
+
+    }
+
+    /*
+      Wall mode.
+    */
+
+    if (
+      state.mode === "wall"
+    ) {
+
+      let previous =
+        state.currentWall.length
+          ? state.currentWall[
+              state.currentWall.length - 1
+            ]
+          : null;
+
+      const snapped =
+        snapPoint(
+          world,
+          previous
+        );
+
+      state.currentWall.push(
+        snapped
+      );
+
+      draw2D();
+
+      return;
 
     }
 
@@ -1785,109 +2439,180 @@ canvas.addEventListener(
 );
 
 
-canvas.addEventListener(
-  "pointerup",
-  e => {
-
-    if(
-      !state.pointerDown ||
-      e.pointerId!==state.pointerId
-    )
-      return;
-
-    state.pointerDown = false;
-
-    if(state.drawingMoved)
-      return;
-
-    const rect =
-      canvas.getBoundingClientRect();
-
-    const sx =
-      e.clientX -
-      rect.left;
-
-    const sy =
-      e.clientY -
-      rect.top;
-
-    handleCanvasTap(
-      sx,
-      sy
-    );
-
-  }
-);
-
-
 /* =========================================================
-   WHEEL ZOOM
+   POINTER MOVE
 ========================================================= */
 
 canvas.addEventListener(
-  "wheel",
-  e => {
+  "pointermove",
+  (e) => {
 
-    e.preventDefault();
+    const screen =
+      pointerPosition(e);
 
-    const rect =
-      canvas.getBoundingClientRect();
+    /*
+      Touch gesture.
+    */
 
-    const mx =
-      e.clientX -
-      rect.left;
+    if (
+      e.pointerType === "touch"
+    ) {
 
-    const my =
-      e.clientY -
-      rect.top;
-
-    const before =
-      screenToWorld(
-        mx,
-        my
+      touchPointers.set(
+        e.pointerId,
+        screen
       );
 
-    const factor =
-      e.deltaY < 0
-        ? 1.12
-        : .89;
+      if (
+        touchPointers.size >= 2
+      ) {
 
-    state.zoom =
-      clamp(
-        state.zoom*factor,
-        .15,
-        10
-      );
+        updatePinch();
 
-    const after =
-      worldToScreen(
-        before
-      );
+        return;
 
-    state.pan.x +=
-      mx-after.x;
+      }
 
-    state.pan.y +=
-      my-after.y;
+    }
 
-    draw2D();
+    /*
+      Pan.
+    */
 
-  },
-  {
-    passive:false
+    if (
+      state.panMode &&
+      state.lastPointer
+    ) {
+
+      const dx =
+        screen.x -
+        state.lastPointer.x;
+
+      const dy =
+        screen.y -
+        state.lastPointer.y;
+
+      state.camera.x -=
+        dx /
+        state.camera.zoom;
+
+      state.camera.y -=
+        dy /
+        state.camera.zoom;
+
+      state.lastPointer =
+        screen;
+
+      draw2D();
+
+      return;
+
+    }
+
+    /*
+      Object drag.
+    */
+
+    if (
+      state.draggingObject
+    ) {
+
+      const world =
+        screenToWorld(
+          screen.x,
+          screen.y
+        );
+
+      const snapped =
+        snapPoint(
+          world,
+          null
+        );
+
+      state.draggingObject.position =
+        snapped;
+
+      draw2D();
+
+      return;
+
+    }
+
   }
 );
 
 
 /* =========================================================
-   DOUBLE CLICK
+   POINTER UP
+========================================================= */
+
+canvas.addEventListener(
+  "pointerup",
+  (e) => {
+
+    if (
+      e.pointerType === "touch"
+    ) {
+
+      touchPointers.delete(
+        e.pointerId
+      );
+
+      if (
+        touchPointers.size < 2
+      ) {
+
+        state.pinch = null;
+
+      }
+
+    }
+
+    state.panMode =
+      false;
+
+    state.draggingObject =
+      null;
+
+    state.lastPointer =
+      null;
+
+  }
+);
+
+
+canvas.addEventListener(
+  "pointercancel",
+  (e) => {
+
+    touchPointers.delete(
+      e.pointerId
+    );
+
+    state.panMode =
+      false;
+
+    state.draggingObject =
+      null;
+
+    state.lastPointer =
+      null;
+
+  }
+);
+
+
+/* =========================================================
+   DOUBLE CLICK / TAP
 ========================================================= */
 
 canvas.addEventListener(
   "dblclick",
-  e => {
+  (e) => {
 
-    if(state.mode==="wall"){
+    if (
+      state.mode === "wall"
+    ) {
 
       finishWall();
 
@@ -1898,46 +2623,300 @@ canvas.addEventListener(
 
 
 /* =========================================================
-   CANVAS TAP
+   TOUCH PINCH
 ========================================================= */
 
-function handleCanvasTap(
-  sx,
-  sy
-){
+const touchPointers =
+  new Map();
 
-  const p =
-    getDrawPoint(
-      sx,
-      sy
+function beginPinch() {
+
+  const pts =
+    [...touchPointers.values()];
+
+  if (
+    pts.length < 2
+  ) return;
+
+  const a = pts[0];
+  const b = pts[1];
+
+  state.pinch = {
+
+    distance:
+      Math.hypot(
+        a.x - b.x,
+        a.y - b.y
+      ),
+
+    center: {
+
+      x:
+        (a.x + b.x) / 2,
+
+      y:
+        (a.y + b.y) / 2
+
+    },
+
+    zoom:
+      state.camera.zoom,
+
+    cameraX:
+      state.camera.x,
+
+    cameraY:
+      state.camera.y
+
+  };
+
+}
+
+
+function updatePinch() {
+
+  if (
+    !state.pinch ||
+    touchPointers.size < 2
+  ) return;
+
+  const pts =
+    [...touchPointers.values()];
+
+  const a = pts[0];
+  const b = pts[1];
+
+  const distance =
+    Math.hypot(
+      a.x - b.x,
+      a.y - b.y
     );
 
+  const factor =
+    distance /
+    state.pinch.distance;
+
+  const newZoom =
+    clamp(
+      state.pinch.zoom *
+        factor,
+      0.15,
+      100
+    );
+
+  const center = {
+
+    x:
+      (a.x + b.x) / 2,
+
+    y:
+      (a.y + b.y) / 2
+
+  };
+
   /*
-    WALL MODE
+    Zoom around pinch center.
   */
 
-  if(state.mode==="wall"){
+  const before =
+    screenToWorld(
+      center.x,
+      center.y
+    );
 
-    state.currentWall.push(p);
+  state.camera.zoom =
+    newZoom;
+
+  const after =
+    screenToWorld(
+      center.x,
+      center.y
+    );
+
+  state.camera.x +=
+    before.x -
+    after.x;
+
+  state.camera.y +=
+    before.y -
+    after.y;
+
+  /*
+    Two finger movement pans.
+  */
+
+  const dx =
+    center.x -
+    state.pinch.center.x;
+
+  const dy =
+    center.y -
+    state.pinch.center.y;
+
+  state.camera.x -=
+    dx /
+    state.camera.zoom;
+
+  state.camera.y -=
+    dy /
+    state.camera.zoom;
+
+  state.pinch.center =
+    center;
+
+  draw2D();
+
+}
+
+
+/* =========================================================
+   MOUSE WHEEL ZOOM
+========================================================= */
+
+canvas.addEventListener(
+  "wheel",
+  (e) => {
+
+    e.preventDefault();
+
+    const screen =
+      pointerPosition(e);
+
+    const before =
+      screenToWorld(
+        screen.x,
+        screen.y
+      );
+
+    const factor =
+      e.deltaY < 0
+        ? 1.12
+        : 0.89;
+
+    state.camera.zoom =
+      clamp(
+        state.camera.zoom *
+          factor,
+        0.15,
+        100
+      );
+
+    const after =
+      screenToWorld(
+        screen.x,
+        screen.y
+      );
+
+    state.camera.x +=
+      before.x -
+      after.x;
+
+    state.camera.y +=
+      before.y -
+      after.y;
 
     draw2D();
 
-    return;
+  },
+  {
+    passive: false
+  }
+);
+
+
+/* =========================================================
+   SPACE PAN
+========================================================= */
+
+let spaceDown = false;
+
+window.addEventListener(
+  "keydown",
+  (e) => {
+
+    if (
+      e.code === "Space"
+    ) {
+
+      spaceDown = true;
+
+    }
 
   }
+);
+
+window.addEventListener(
+  "keyup",
+  (e) => {
+
+    if (
+      e.code === "Space"
+    ) {
+
+      spaceDown = false;
+
+    }
+
+  }
+);
 
 
-  /*
-    SELECT MODE
-  */
+/* =========================================================
+   WALL MODE BUTTON
+========================================================= */
 
-  if(state.mode==="select"){
+document
+  .getElementById("wallBtn")
+  .addEventListener(
+    "click",
+    () => {
 
-    selectObjectAt(
-      p
+      state.mode =
+        "wall";
+
+      state.selectedObject =
+        null;
+
+      updateModeButtons();
+
+      draw2D();
+
+    }
+  );
+
+
+document
+  .getElementById("selectBtn")
+  .addEventListener(
+    "click",
+    () => {
+
+      state.mode =
+        "select";
+
+      updateModeButtons();
+
+      draw2D();
+
+    }
+  );
+
+
+function updateModeButtons() {
+
+  document
+    .getElementById("wallBtn")
+    .classList.toggle(
+      "active",
+      state.mode === "wall"
     );
 
-  }
+  document
+    .getElementById("selectBtn")
+    .classList.toggle(
+      "active",
+      state.mode === "select"
+    );
 
 }
 
@@ -1946,11 +2925,11 @@ function handleCanvasTap(
    FINISH WALL
 ========================================================= */
 
-function finishWall(){
+function finishWall() {
 
-  if(
+  if (
     state.currentWall.length < 2
-  ){
+  ) {
 
     state.currentWall = [];
 
@@ -1960,86 +2939,58 @@ function finishWall(){
 
   }
 
-  state.walls.push({
+  for (
+    let i = 0;
+    i <
+    state.currentWall.length - 1;
+    i++
+  ) {
 
-    id:
-      crypto.randomUUID(),
+    const a =
+      state.currentWall[i];
 
-    points:
-      state.currentWall.map(
-        p => ({
-          x:p.x,
-          y:p.y
-        })
-      )
+    const b =
+      state.currentWall[i + 1];
 
-  });
+    if (
+      dist(a, b) > 0.001
+    ) {
+
+      state.walls.push({
+
+        a: {
+          x: a.x,
+          y: a.y
+        },
+
+        b: {
+          x: b.x,
+          y: b.y
+        }
+
+      });
+
+    }
+
+  }
 
   state.currentWall = [];
 
-  state.generated = false;
+  setStatus(
+    "Wall committed."
+  );
 
   draw2D();
-
-  setStatus(
-    "Wall created."
-  );
 
 }
 
 
-/* =========================================================
-   WALL TOOL
-========================================================= */
-
-document
-  .getElementById("wallToolBtn")
-  .onclick = () => {
-
-    state.mode = "wall";
-
-    document
-      .getElementById("wallToolBtn")
-      .classList.add("active");
-
-    document
-      .getElementById("selectToolBtn")
-      .classList.remove("active");
-
-    setStatus(
-      "Wall drawing mode."
-    );
-
-  };
-
-
-document
-  .getElementById("selectToolBtn")
-  .onclick = () => {
-
-    finishWall();
-
-    state.mode = "select";
-
-    document
-      .getElementById("selectToolBtn")
-      .classList.add("active");
-
-    document
-      .getElementById("wallToolBtn")
-      .classList.remove("active");
-
-    setStatus(
-      "Select mode."
-    );
-
-  };
-
-
 document
   .getElementById("finishBtn")
-  .onclick =
-  finishWall;
+  .addEventListener(
+    "click",
+    finishWall
+  );
 
 
 /* =========================================================
@@ -2048,25 +2999,30 @@ document
 
 document
   .getElementById("undoBtn")
-  .onclick = () => {
+  .addEventListener(
+    "click",
+    () => {
 
-    if(
-      state.currentWall.length
-    ){
+      if (
+        state.currentWall.length
+      ) {
 
-      state.currentWall.pop();
+        state.currentWall.pop();
 
-    }else{
+      }
+      else {
 
-      state.walls.pop();
+        state.walls.pop();
+
+      }
+
+      state.selectedWall =
+        null;
+
+      draw2D();
 
     }
-
-    state.generated = false;
-
-    draw2D();
-
-  };
+  );
 
 
 /* =========================================================
@@ -2074,467 +3030,623 @@ document
 ========================================================= */
 
 document
-  .getElementById("deleteWallBtn")
-  .onclick = () => {
+  .getElementById("deleteBtn")
+  .addEventListener(
+    "click",
+    () => {
 
-    if(
-      !state.selectedWall
-    )
-      return;
+      if (
+        !state.selectedWall
+      ) {
 
-    state.walls =
-      state.walls.filter(
-        w =>
-          w !==
-          state.selectedWall
-      );
-
-    state.selectedWall = null;
-
-    state.generated = false;
-
-    draw2D();
-
-  };
-
-
-/* =========================================================
-   AXIS SNAP
-========================================================= */
-
-document
-  .getElementById("axisBtn")
-  .onclick = e => {
-
-    state.axisSnap =
-      !state.axisSnap;
-
-    e.currentTarget.textContent =
-      state.axisSnap
-        ? "Axis Snap ON"
-        : "Axis Snap OFF";
-
-    e.currentTarget.classList.toggle(
-      "active",
-      state.axisSnap
-    );
-
-  };
-
-
-/* =========================================================
-   ENDPOINT SNAP
-========================================================= */
-
-document
-  .getElementById("snapBtn")
-  .onclick = e => {
-
-    state.endpointSnap =
-      !state.endpointSnap;
-
-    e.currentTarget.textContent =
-      state.endpointSnap
-        ? "Endpoint Snap ON"
-        : "Endpoint Snap OFF";
-
-    e.currentTarget.classList.toggle(
-      "active",
-      state.endpointSnap
-    );
-
-  };
-
-
-/* =========================================================
-   SELECT OBJECT
-========================================================= */
-
-function selectObjectAt(
-  p
-){
-
-  state.selectedWall = null;
-  state.selectedAsset = null;
-
-  let best = Infinity;
-
-  /*
-    WALL
-  */
-
-  for(
-    const wall of state.walls
-  ){
-
-    for(
-      let i=0;
-      i<wall.points.length-1;
-      i++
-    ){
-
-      const q =
-        closestPointOnSegment(
-          p,
-          wall.points[i],
-          wall.points[i+1]
+        setStatus(
+          "Select a wall first."
         );
 
-      const d =
-        dist(p,q);
-
-      if(d < best){
-
-        best = d;
-
-        state.selectedWall =
-          wall;
+        return;
 
       }
 
-    }
+      const index =
+        state.walls.indexOf(
+          state.selectedWall
+        );
 
-  }
+      if (index >= 0) {
 
-  /*
-    ASSET
-  */
+        state.walls.splice(
+          index,
+          1
+        );
 
-  for(
-    const asset of state.assets
-  ){
+      }
 
-    if(
-      dist(
-        p,
-        asset.position
-      ) < .4
-    ){
+      state.selectedWall =
+        null;
 
-      state.selectedWall = null;
-
-      state.selectedAsset =
-        asset;
-
-      break;
+      draw2D();
 
     }
-
-  }
-
-  draw2D();
-
-}
+  );
 
 
 /* =========================================================
-   OPENING POSITION
+   SNAP BUTTONS
 ========================================================= */
 
-function addAsset(
+document
+  .getElementById("axisSnapBtn")
+  .addEventListener(
+    "click",
+    () => {
+
+      state.axisSnap =
+        !state.axisSnap;
+
+      const b =
+        document.getElementById(
+          "axisSnapBtn"
+        );
+
+      b.textContent =
+        state.axisSnap
+          ? "Axis Snap ON"
+          : "Axis Snap OFF";
+
+      b.classList.toggle(
+        "active",
+        state.axisSnap
+      );
+
+    }
+  );
+
+
+document
+  .getElementById("endpointSnapBtn")
+  .addEventListener(
+    "click",
+    () => {
+
+      state.endpointSnap =
+        !state.endpointSnap;
+
+      const b =
+        document.getElementById(
+          "endpointSnapBtn"
+        );
+
+      b.textContent =
+        state.endpointSnap
+          ? "Endpoint Snap ON"
+          : "Endpoint Snap OFF";
+
+      b.classList.toggle(
+        "active",
+        state.endpointSnap
+      );
+
+    }
+  );
+
+
+document
+  .getElementById("gridBtn")
+  .addEventListener(
+    "click",
+    () => {
+
+      state.grid =
+        !state.grid;
+
+      const b =
+        document.getElementById(
+          "gridBtn"
+        );
+
+      b.textContent =
+        state.grid
+          ? "Grid ON"
+          : "Grid OFF";
+
+      draw2D();
+
+    }
+  );
+
+
+/* =========================================================
+   ADD OBJECT
+========================================================= */
+
+function addObject(
   type
-){
+) {
 
-  if(
-    state.walls.length===0
-  ){
+  /*
+    Start object at screen center.
+    User can immediately drag it.
+  */
 
-    setStatus(
-      "Create a wall first."
+  const rect =
+    canvas.getBoundingClientRect();
+
+  const center =
+    screenToWorld(
+      rect.width / 2,
+      rect.height / 2
     );
 
-    return;
+  if (type === "door") {
+
+    state.objects.push({
+
+      id:
+        crypto.randomUUID(),
+
+      type:
+        "door",
+
+      position:
+        center,
+
+      rotation:
+        0,
+
+      width:
+        parseFloat(
+          document.getElementById(
+            "doorWidth"
+          ).value
+        ) || 0.9,
+
+      height:
+        parseFloat(
+          document.getElementById(
+            "doorHeight"
+          ).value
+        ) || 2.1
+
+    });
 
   }
 
-  /*
-    Use selected wall
-    or first wall.
-  */
+  if (type === "window") {
 
-  const wall =
-    state.selectedWall ||
-    state.walls[0];
+    state.objects.push({
 
-  if(
-    wall.points.length<2
-  )
-    return;
+      id:
+        crypto.randomUUID(),
 
-  const a =
-    wall.points[0];
+      type:
+        "window",
 
-  const b =
-    wall.points[1];
+      position:
+        center,
 
-  const pos = {
-    x:(a.x+b.x)/2,
-    y:(a.y+b.y)/2
-  };
+      rotation:
+        0,
 
-  const asset = {
+      width:
+        parseFloat(
+          document.getElementById(
+            "windowWidth"
+          ).value
+        ) || 1.2,
 
-    id:
-      crypto.randomUUID(),
+      height:
+        parseFloat(
+          document.getElementById(
+            "windowHeight"
+          ).value
+        ) || 1.2,
 
-    type,
+      sill:
+        parseFloat(
+          document.getElementById(
+            "windowSill"
+          ).value
+        ) || 0.9
 
-    position:pos,
+    });
 
-    rotation:
-      Math.atan2(
-        b.y-a.y,
-        b.x-a.x
-      ),
+  }
 
-    width:
-      Number(
-        document
-          .getElementById(
-            "openingWidth"
-          )
-          .value
-      ) || .9,
+  if (type === "stair") {
 
-    height:
-      Number(
-        document
-          .getElementById(
-            "openingHeight"
-          )
-          .value
-      ) || 2.1,
+    const steps =
+      Math.max(
+        2,
+        parseInt(
+          document.getElementById(
+            "stairSteps"
+          ).value
+        ) || 14
+      );
 
-    sill:
-      Number(
-        document
-          .getElementById(
-            "sillHeight"
-          )
-          .value
-      ) || 1,
+    const rise =
+      parseFloat(
+        document.getElementById(
+          "stairRise"
+        ).value
+      ) || 2.8;
 
-    wallId:
-      wall.id
+    const tread =
+      0.28;
 
-  };
+    state.objects.push({
 
-  state.assets.push(
-    asset
-  );
+      id:
+        crypto.randomUUID(),
 
-  state.selectedAsset =
-    asset;
+      type:
+        "stair",
+
+      position:
+        center,
+
+      rotation:
+        0,
+
+      width:
+        parseFloat(
+          document.getElementById(
+            "stairWidth"
+          ).value
+        ) || 1,
+
+      rise:
+        rise,
+
+      steps:
+        steps,
+
+      tread:
+        tread,
+
+      depth:
+        steps * tread
+
+    });
+
+  }
+
+  state.selectedObject =
+    state.objects[
+      state.objects.length - 1
+    ];
 
   state.selectedWall =
     null;
 
-  state.generated = false;
+  state.mode =
+    "select";
+
+  updateModeButtons();
 
   draw2D();
 
   setStatus(
-    type === "door"
-      ? "Door added."
-      : "Window added."
+    `${type} added. Drag it to position.`
   );
 
 }
 
 
-/* =========================================================
-   DOOR / WINDOW BUTTONS
-========================================================= */
-
 document
   .getElementById("doorBtn")
-  .onclick = () =>
-    addAsset("door");
+  .addEventListener(
+    "click",
+    () => addObject("door")
+  );
 
 
 document
   .getElementById("windowBtn")
-  .onclick = () =>
-    addAsset("window");
+  .addEventListener(
+    "click",
+    () => addObject("window")
+  );
+
+
+document
+  .getElementById("stairBtn")
+  .addEventListener(
+    "click",
+    () => addObject("stair")
+  );
 
 
 /* =========================================================
-   ROTATE ASSET
+   ROTATE SELECTED
 ========================================================= */
 
 document
-  .getElementById("rotateAssetBtn")
-  .onclick = () => {
+  .getElementById("rotateObjectBtn")
+  .addEventListener(
+    "click",
+    () => {
 
-    if(
-      !state.selectedAsset
-    ){
+      if (
+        !state.selectedObject
+      ) {
 
-      setStatus(
-        "Select a door or window first."
-      );
+        setStatus(
+          "Select a door or window."
+        );
 
-      return;
+        return;
+
+      }
+
+      state.selectedObject.rotation +=
+        Math.PI / 2;
+
+      draw2D();
 
     }
+  );
 
-    state.selectedAsset.rotation +=
-      Math.PI/2;
 
-    state.generated = false;
+document
+  .getElementById("rotateStairBtn")
+  .addEventListener(
+    "click",
+    () => {
 
-    draw2D();
+      if (
+        !state.selectedObject ||
+        state.selectedObject.type !== "stair"
+      ) {
 
-  };
+        setStatus(
+          "Select a stair first."
+        );
+
+        return;
+
+      }
+
+      state.selectedObject.rotation +=
+        Math.PI / 2;
+
+      draw2D();
+
+    }
+  );
 
 
 /* =========================================================
-   DELETE ASSET
+   DELETE OBJECT
 ========================================================= */
 
+function deleteSelectedObject() {
+
+  if (
+    !state.selectedObject
+  ) {
+
+    setStatus(
+      "No object selected."
+    );
+
+    return;
+
+  }
+
+  const index =
+    state.objects.indexOf(
+      state.selectedObject
+    );
+
+  if (index >= 0) {
+
+    state.objects.splice(
+      index,
+      1
+    );
+
+  }
+
+  state.selectedObject =
+    null;
+
+  draw2D();
+
+}
+
+
 document
-  .getElementById("deleteAssetBtn")
-  .onclick = () => {
+  .getElementById("deleteObjectBtn")
+  .addEventListener(
+    "click",
+    deleteSelectedObject
+  );
 
-    if(
-      !state.selectedAsset
-    )
-      return;
 
-    state.assets =
-      state.assets.filter(
-        a =>
-          a !==
-          state.selectedAsset
-      );
-
-    state.selectedAsset =
-      null;
-
-    state.generated = false;
-
-    draw2D();
-
-  };
+document
+  .getElementById("deleteStairBtn")
+  .addEventListener(
+    "click",
+    deleteSelectedObject
+  );
 
 
 /* =========================================================
    THREE INITIALIZATION
 ========================================================= */
 
-function initThree(){
+function initThree() {
 
-  scene =
+  state.threeScene =
     new THREE.Scene();
 
-  scene.background =
+  state.threeScene.background =
     new THREE.Color(
       0x0d0f12
     );
 
-  camera =
+  state.threeCamera =
     new THREE.PerspectiveCamera(
-      45,
+      50,
       1,
-      .01,
+      0.01,
       1000
     );
 
-  camera.position.set(
-    8,
-    7,
-    8
+  state.threeCamera.position.set(
+    10,
+    9,
+    10
   );
 
-  renderer =
+  state.renderer =
     new THREE.WebGLRenderer({
-      antialias:true
+
+      canvas:
+        threeCanvas,
+
+      antialias:
+        true,
+
+      alpha:
+        false
+
     });
 
-  renderer.setPixelRatio(
+  state.renderer.setPixelRatio(
     Math.min(
       window.devicePixelRatio || 1,
       2
     )
   );
 
-  renderer.setSize(
-    threeContainer.clientWidth,
-    threeContainer.clientHeight
+  state.renderer.setSize(
+    threeWrap.clientWidth,
+    threeWrap.clientHeight
   );
 
-  renderer.shadowMap.enabled = true;
+  state.renderer.shadowMap.enabled =
+    true;
 
-  threeContainer.appendChild(
-    renderer.domElement
-  );
+  state.renderer.shadowMap.type =
+    THREE.PCFSoftShadowMap;
 
-  controls =
+  state.controls =
     new OrbitControls(
-      camera,
-      renderer.domElement
+      state.threeCamera,
+      threeCanvas
     );
 
-  controls.enableDamping = true;
+  state.controls.enableDamping =
+    true;
 
-  controls.target.set(
+  state.controls.dampingFactor =
+    0.07;
+
+  state.controls.target.set(
     0,
-    0,
+    1,
     0
   );
 
+  state.modelGroup =
+    new THREE.Group();
+
+  state.threeScene.add(
+    state.modelGroup
+  );
+
   /*
-    LIGHTS
+    Lighting.
   */
 
   const hemi =
     new THREE.HemisphereLight(
       0xffffff,
-      0x444444,
+      0x343840,
       2
     );
 
-  scene.add(
+  state.threeScene.add(
     hemi
   );
 
-  const dir =
+  const sun =
     new THREE.DirectionalLight(
       0xffffff,
       3
     );
 
-  dir.position.set(
-    5,
+  sun.position.set(
     10,
-    5
+    15,
+    8
   );
 
-  dir.castShadow = true;
+  sun.castShadow =
+    true;
 
-  scene.add(
-    dir
+  sun.shadow.mapSize.width =
+    2048;
+
+  sun.shadow.mapSize.height =
+    2048;
+
+  state.threeScene.add(
+    sun
   );
 
   /*
-    FLOOR
+    Ground.
   */
 
-  const floor =
-    new THREE.GridHelper(
-      30,
-      30,
-      0x333941,
-      0x20242a
+  const ground =
+    new THREE.Mesh(
+      new THREE.PlaneGeometry(
+        100,
+        100
+      ),
+      new THREE.MeshStandardMaterial({
+        color:
+          0x252a31,
+        roughness:
+          0.9,
+        metalness:
+          0
+      })
     );
 
-  scene.add(
-    floor
+  ground.rotation.x =
+    -Math.PI / 2;
+
+  ground.receiveShadow =
+    true;
+
+  ground.name =
+    "Ground";
+
+  state.threeScene.add(
+    ground
   );
 
-  window.addEventListener(
-    "resize",
-    resizeThree
+  /*
+    Grid helper.
+  */
+
+  const grid =
+    new THREE.GridHelper(
+      100,
+      100,
+      0x343a43,
+      0x1f242b
+    );
+
+  grid.position.y =
+    0.002;
+
+  state.threeScene.add(
+    grid
   );
 
   resizeThree();
@@ -2548,395 +3660,1024 @@ function initThree(){
    THREE RESIZE
 ========================================================= */
 
-function resizeThree(){
+function resizeThree() {
+
+  if (
+    !state.renderer
+  ) return;
 
   const w =
-    threeContainer.clientWidth;
+    threeWrap.clientWidth;
 
   const h =
-    threeContainer.clientHeight;
+    threeWrap.clientHeight;
 
-  if(!w || !h)
-    return;
+  if (
+    w <= 0 ||
+    h <= 0
+  ) return;
 
-  camera.aspect =
-    w/h;
+  state.threeCamera.aspect =
+    w / h;
 
-  camera.updateProjectionMatrix();
+  state.threeCamera.updateProjectionMatrix();
 
-  renderer.setSize(
+  state.renderer.setSize(
     w,
-    h
+    h,
+    false
   );
 
 }
 
 
+window.addEventListener(
+  "resize",
+  resizeThree
+);
+
+
 /* =========================================================
-   2D → METERS
+   THREE ANIMATION
 ========================================================= */
 
-function convertToMeters(){
+function animateThree() {
 
-  const widthM =
-    Number(
-      document
-        .getElementById(
-          "drawingWidth"
-        )
-        .value
-    ) || 10;
-
-  /*
-    Determine drawing bounding box
-  */
-
-  const all = [];
-
-  state.walls.forEach(
-    wall =>
-      wall.points.forEach(
-        p => all.push(p)
-      )
+  requestAnimationFrame(
+    animateThree
   );
 
-  if(
-    all.length===0
-  )
-    return null;
+  if (
+    state.controls
+  ) {
 
-  let minX=Infinity;
-  let maxX=-Infinity;
-  let minY=Infinity;
-  let maxY=-Infinity;
+    state.controls.update();
 
-  all.forEach(
-    p => {
+  }
 
-      minX =
-        Math.min(
-          minX,
-          p.x
-        );
+  if (
+    state.renderer &&
+    state.threeScene &&
+    state.threeCamera
+  ) {
 
-      maxX =
-        Math.max(
-          maxX,
-          p.x
-        );
-
-      minY =
-        Math.min(
-          minY,
-          p.y
-        );
-
-      maxY =
-        Math.max(
-          maxY,
-          p.y
-        );
-
-    }
-  );
-
-  const drawingPixelWidth =
-    Math.max(
-      1,
-      maxX-minX
+    state.renderer.render(
+      state.threeScene,
+      state.threeCamera
     );
 
-  const scale =
-    widthM /
-    drawingPixelWidth;
-
-  const cx =
-    (minX+maxX)/2;
-
-  const cy =
-    (minY+maxY)/2;
-
-  const walls =
-    state.walls.map(
-      wall => ({
-        ...wall,
-
-        points:
-          wall.points.map(
-            p => ({
-
-              x:
-                (p.x-cx)*scale,
-
-              z:
-                (p.y-cy)*scale
-
-            })
-          )
-
-      })
-    );
-
-  const assets =
-    state.assets.map(
-      asset => ({
-
-        ...asset,
-
-        position:{
-
-          x:
-            (asset.position.x-cx)
-            *scale,
-
-          z:
-            (asset.position.y-cy)
-            *scale
-
-        }
-
-      })
-    );
-
-  return {
-    walls,
-    assets
-  };
+  }
 
 }
 
 
 /* =========================================================
-   CREATE WALL BRUSH
+   WALL SEGMENTATION
 ========================================================= */
 
-function createWallBrush(
-  p1,
-  p2,
-  height,
-  thickness
-){
+/*
+  This is the important part.
 
-  const x1 =
-    p1.x;
+  Instead of trying to run CSG boolean operations for every wall,
+  we split the wall into pieces around door/window openings.
 
-  const z1 =
-    p1.z;
+  This is MUCH more reliable in a browser MVP.
 
-  const x2 =
-    p2.x;
+  Each opening is projected onto the wall.
+*/
 
-  const z2 =
-    p2.z;
+function getWallOpenings(
+  wall
+) {
+
+  const ax =
+    wall.a.x;
+
+  const ay =
+    wall.a.y;
+
+  const bx =
+    wall.b.x;
+
+  const by =
+    wall.b.y;
 
   const dx =
-    x2-x1;
+    bx - ax;
 
-  const dz =
-    z2-z1;
+  const dy =
+    by - ay;
 
   const length =
     Math.hypot(
       dx,
-      dz
+      dy
     );
 
-  if(
-    length < .001
-  )
-    return null;
+  if (
+    length < 0.0001
+  ) {
 
-  const geometry =
-    new THREE.BoxGeometry(
-      length,
-      height,
-      thickness
-    );
+    return [];
 
-  const material =
-    new THREE.MeshStandardMaterial({
-      color:0xf2f2f2
+  }
+
+  const ux =
+    dx / length;
+
+  const uy =
+    dy / length;
+
+  const result = [];
+
+  for (
+    const obj of state.objects
+  ) {
+
+    if (
+      obj.type !== "door" &&
+      obj.type !== "window"
+    ) {
+
+      continue;
+
+    }
+
+    const px =
+      obj.position.x -
+      ax;
+
+    const py =
+      obj.position.y -
+      ay;
+
+    const t =
+      (
+        px * ux +
+        py * uy
+      );
+
+    const lateral =
+      Math.abs(
+        px * (-uy) +
+        py * ux
+      );
+
+    /*
+      Only consider object if it is actually close to wall.
+    */
+
+    const wallThickness =
+      parseFloat(
+        wallThicknessInput.value
+      ) || 0.15;
+
+    if (
+      lateral >
+      wallThickness * 2
+    ) {
+
+      continue;
+
+    }
+
+    const half =
+      obj.width / 2;
+
+    const start =
+      t - half;
+
+    const end =
+      t + half;
+
+    if (
+      end < 0 ||
+      start > length
+    ) {
+
+      continue;
+
+    }
+
+    result.push({
+
+      start:
+        clamp(
+          start,
+          0,
+          length
+        ),
+
+      end:
+        clamp(
+          end,
+          0,
+          length
+        ),
+
+      object:
+        obj
+
     });
 
-  const brush =
-    new Brush(
-      geometry,
-      material
-    );
+  }
 
-  brush.position.set(
-    (x1+x2)/2,
-    height/2,
-    (z1+z2)/2
+  result.sort(
+    (a, b) =>
+      a.start -
+      b.start
   );
 
-  brush.rotation.y =
-    -Math.atan2(
-      dz,
-      dx
-    );
-
-  brush.updateMatrixWorld();
-
-  return brush;
+  return result;
 
 }
 
 
 /* =========================================================
-   OPENING CUTTER
+   CREATE EXTRUDED WALL SEGMENT
 ========================================================= */
 
-function createOpeningBrush(
-  asset,
-  wallP1,
-  wallP2,
-  wallHeight,
-  wallThickness
-){
+function createWallSegment(
+  wall,
+  start,
+  end,
+  height,
+  thickness,
+  material
+) {
 
   const dx =
-    wallP2.x-wallP1.x;
+    wall.b.x -
+    wall.a.x;
 
-  const dz =
-    wallP2.z-wallP1.z;
+  const dy =
+    wall.b.y -
+    wall.a.y;
 
-  const wallAngle =
-    -Math.atan2(
-      dz,
-      dx
+  const length =
+    Math.hypot(
+      dx,
+      dy
     );
+
+  if (
+    length <= 0.0001
+  ) {
+
+    return null;
+
+  }
+
+  /*
+    Slightly extend every segment.
+
+    This intentionally overlaps neighbouring pieces
+    so there are NO VISIBLE JOINT GAPS.
+  */
+
+  const overlap =
+    Math.min(
+      thickness * 0.65,
+      0.10
+    );
+
+  const s =
+    Math.max(
+      0,
+      start - overlap
+    );
+
+  const e =
+    Math.min(
+      length,
+      end + overlap
+    );
+
+  const segmentLength =
+    Math.max(
+      0.001,
+      e - s
+    );
+
+  const cx =
+    wall.a.x +
+    dx *
+    ((s + e) / 2 / length);
+
+  const cy =
+    wall.a.y +
+    dy *
+    ((s + e) / 2 / length);
+
+  /*
+    Extrude a rectangular 2D shape.
+
+    Shape coordinates:
+      x = wall length
+      y = height
+
+    Extrude depth = wall thickness.
+  */
+
+  const shape =
+    new THREE.Shape();
+
+  shape.moveTo(
+    -segmentLength / 2,
+    0
+  );
+
+  shape.lineTo(
+    segmentLength / 2,
+    0
+  );
+
+  shape.lineTo(
+    segmentLength / 2,
+    height
+  );
+
+  shape.lineTo(
+    -segmentLength / 2,
+    height
+  );
+
+  shape.closePath();
 
   const geometry =
-    new THREE.BoxGeometry(
-      asset.width,
-      asset.type==="door"
-        ? asset.height
-        : Math.max(
-            .1,
-            asset.height -
-            asset.sill
-          ),
-      wallThickness + .25
+    new THREE.ExtrudeGeometry(
+      shape,
+      {
+
+        depth:
+          thickness,
+
+        bevelEnabled:
+          false,
+
+        steps:
+          1
+
+      }
     );
 
-  const material =
-    new THREE.MeshBasicMaterial();
+  /*
+    ExtrudeGeometry extrudes along +Z.
 
-  const brush =
-    new Brush(
+    Rotate it so:
+      local X = wall direction
+      local Z = wall thickness
+      local Y = world up.
+  */
+
+  geometry.translate(
+    0,
+    0,
+    -thickness / 2
+  );
+
+  const mesh =
+    new THREE.Mesh(
       geometry,
       material
     );
 
-  const openingY =
-    asset.type==="door"
-      ? asset.height/2
-      : asset.sill +
-        (
-          Math.max(
-            .1,
-            asset.height -
-            asset.sill
-          )/2
-        );
-
-  brush.position.set(
-    asset.position.x,
-    openingY,
-    asset.position.z
+  mesh.position.set(
+    cx,
+    0,
+    -cy
   );
 
-  /*
-    Asset rotation is relative
-    to wall direction.
-  */
-
-  brush.rotation.y =
-    wallAngle +
-    asset.rotation -
+  const angle =
     Math.atan2(
-      dz,
+      dy,
       dx
     );
 
-  /*
-    For a normal wall asset,
-    its long dimension is along
-    the wall.
-  */
+  mesh.rotation.y =
+    angle;
 
-  brush.rotation.y =
-    -Math.atan2(
-      dz,
-      dx
-    ) +
-    asset.rotation;
+  mesh.castShadow =
+    true;
 
-  brush.updateMatrixWorld();
+  mesh.receiveShadow =
+    true;
 
-  return brush;
+  return mesh;
 
 }
 
 
 /* =========================================================
-   FIND WALL FOR ASSET
+   CREATE WALL
 ========================================================= */
 
-function findWallForAsset(
-  asset,
-  walls
-){
+function buildWall(
+  wall,
+  material
+) {
 
-  let best = null;
-  let bestDistance = Infinity;
+  const dx =
+    wall.b.x -
+    wall.a.x;
 
-  for(
-    const wall of walls
-  ){
+  const dy =
+    wall.b.y -
+    wall.a.y;
 
-    for(
-      let i=0;
-      i<wall.points.length-1;
-      i++
-    ){
+  const length =
+    Math.hypot(
+      dx,
+      dy
+    );
 
-      const a =
-        wall.points[i];
+  const height =
+    parseFloat(
+      wallHeightInput.value
+    ) || 2.8;
 
-      const b =
-        wall.points[i+1];
+  const thickness =
+    parseFloat(
+      wallThicknessInput.value
+    ) || 0.15;
 
-      const q =
-        closestPointOnSegment(
-          asset.position,
-          a,
-          b
+  const openings =
+    getWallOpenings(
+      wall
+    );
+
+  /*
+    No openings = one wall.
+  */
+
+  if (
+    openings.length === 0
+  ) {
+
+    const mesh =
+      createWallSegment(
+        wall,
+        0,
+        length,
+        height,
+        thickness,
+        material
+      );
+
+    if (mesh) {
+
+      state.modelGroup.add(
+        mesh
+      );
+
+    }
+
+    return;
+
+  }
+
+  /*
+    Merge overlapping openings.
+  */
+
+  const merged = [];
+
+  for (
+    const opening of openings
+  ) {
+
+    if (
+      !merged.length ||
+      opening.start >
+      merged[
+        merged.length - 1
+      ].end
+    ) {
+
+      merged.push({
+        start:
+          opening.start,
+
+        end:
+          opening.end
+      });
+
+    }
+    else {
+
+      merged[
+        merged.length - 1
+      ].end =
+        Math.max(
+          merged[
+            merged.length - 1
+          ].end,
+          opening.end
         );
-
-      const d =
-        Math.hypot(
-          asset.position.x-q.x,
-          asset.position.z-q.y
-        );
-
-      if(d < bestDistance){
-
-        bestDistance = d;
-
-        best = {
-          wall,
-          index:i
-        };
-
-      }
 
     }
 
   }
 
-  return best;
+  /*
+    Build pieces between openings.
+  */
+
+  let cursor = 0;
+
+  for (
+    const opening of merged
+  ) {
+
+    if (
+      opening.start >
+      cursor
+    ) {
+
+      const mesh =
+        createWallSegment(
+          wall,
+          cursor,
+          opening.start,
+          height,
+          thickness,
+          material
+        );
+
+      if (mesh) {
+
+        state.modelGroup.add(
+          mesh
+        );
+
+      }
+
+    }
+
+    /*
+      Important:
+
+      The opening itself is empty from floor to top.
+
+      For windows, we need a lower and upper wall segment.
+      Door remains open from floor.
+    */
+
+    const matching =
+      openings.find(
+        o =>
+          o.start ===
+            opening.start &&
+          o.end ===
+            opening.end
+      );
+
+    const object =
+      matching
+        ? matching.object
+        : null;
+
+    if (
+      object &&
+      object.type === "window"
+    ) {
+
+      const sill =
+        clamp(
+          object.sill,
+          0,
+          height
+        );
+
+      const top =
+        clamp(
+          sill +
+            object.height,
+          0,
+          height
+        );
+
+      /*
+        Bottom wall under window.
+      */
+
+      if (
+        sill > 0
+      ) {
+
+        const lower =
+          createWallSegment(
+            wall,
+            opening.start,
+            opening.end,
+            sill,
+            thickness,
+            material
+          );
+
+        if (lower) {
+
+          state.modelGroup.add(
+            lower
+          );
+
+        }
+
+      }
+
+      /*
+        Upper wall above window.
+      */
+
+      if (
+        top < height
+      ) {
+
+        const upper =
+          createWallSegment(
+            wall,
+            opening.start,
+            opening.end,
+            height - top,
+            thickness,
+            material
+          );
+
+        if (upper) {
+
+          /*
+            Move upper wall vertically.
+          */
+
+          upper.position.y =
+            top;
+
+          state.modelGroup.add(
+            upper
+          );
+
+        }
+
+      }
+
+    }
+
+    cursor =
+      opening.end;
+
+  }
+
+  /*
+    Last wall segment.
+  */
+
+  if (
+    cursor <
+    length
+  ) {
+
+    const mesh =
+      createWallSegment(
+        wall,
+        cursor,
+        length,
+        height,
+        thickness,
+        material
+      );
+
+    if (mesh) {
+
+      state.modelGroup.add(
+        mesh
+      );
+
+    }
+
+  }
+
+}
+
+
+/* =========================================================
+   DOOR / WINDOW 3D VISUALS
+========================================================= */
+
+function createDoorVisual(
+  obj
+) {
+
+  const group =
+    new THREE.Group();
+
+  const width =
+    obj.width;
+
+  const thickness =
+    0.045;
+
+  const height =
+    obj.height;
+
+  const material =
+    new THREE.MeshStandardMaterial({
+      color:
+        0x8b5a2b,
+      roughness:
+        0.65
+    });
+
+  const door =
+    new THREE.Mesh(
+      new THREE.BoxGeometry(
+        width,
+        height,
+        thickness
+      ),
+      material
+    );
+
+  /*
+    Position door at bottom.
+  */
+
+  door.position.y =
+    height / 2;
+
+  door.castShadow =
+    true;
+
+  group.add(
+    door
+  );
+
+  /*
+    Door swing leaf line.
+  */
+
+  const arcPoints = [];
+
+  const segments = 20;
+
+  for (
+    let i = 0;
+    i <= segments;
+    i++
+  ) {
+
+    const a =
+      (Math.PI / 2) *
+      (i / segments);
+
+    arcPoints.push(
+      new THREE.Vector3(
+        Math.cos(a) *
+          width,
+        0.02,
+        Math.sin(a) *
+          width
+      )
+    );
+
+  }
+
+  const line =
+    new THREE.Line(
+      new THREE.BufferGeometry()
+        .setFromPoints(
+          arcPoints
+        ),
+      new THREE.LineBasicMaterial({
+        color:
+          0xd5a96a
+      })
+    );
+
+  group.add(
+    line
+  );
+
+  return group;
+
+}
+
+
+function createWindowVisual(
+  obj
+) {
+
+  const group =
+    new THREE.Group();
+
+  const width =
+    obj.width;
+
+  const height =
+    obj.height;
+
+  const sill =
+    obj.sill;
+
+  const frameMat =
+    new THREE.MeshStandardMaterial({
+      color:
+        0x777e87,
+      metalness:
+        0.2,
+      roughness:
+        0.45
+    });
+
+  const glassMat =
+    new THREE.MeshStandardMaterial({
+      color:
+        0x5aa7d6,
+      transparent:
+        true,
+      opacity:
+        0.45,
+      roughness:
+        0.1,
+      metalness:
+        0.05
+    });
+
+  const frameThickness =
+    0.05;
+
+  const depth =
+    0.08;
+
+  const glass =
+    new THREE.Mesh(
+      new THREE.BoxGeometry(
+        width,
+        height,
+        depth
+      ),
+      glassMat
+    );
+
+  glass.position.y =
+    sill +
+    height / 2;
+
+  group.add(
+    glass
+  );
+
+  const top =
+    new THREE.Mesh(
+      new THREE.BoxGeometry(
+        width,
+        frameThickness,
+        depth * 1.3
+      ),
+      frameMat
+    );
+
+  top.position.y =
+    sill +
+    height;
+
+  group.add(top);
+
+  const bottom =
+    new THREE.Mesh(
+      new THREE.BoxGeometry(
+        width,
+        frameThickness,
+        depth * 1.3
+      ),
+      frameMat
+    );
+
+  bottom.position.y =
+    sill;
+
+  group.add(bottom);
+
+  const left =
+    new THREE.Mesh(
+      new THREE.BoxGeometry(
+        frameThickness,
+        height,
+        depth * 1.3
+      ),
+      frameMat
+    );
+
+  left.position.set(
+    -width / 2,
+    sill + height / 2,
+    0
+  );
+
+  group.add(left);
+
+  const right =
+    left.clone();
+
+  right.position.x =
+    width / 2;
+
+  group.add(right);
+
+  return group;
+
+}
+
+
+/* =========================================================
+   STAIRS
+========================================================= */
+
+function createStairs(
+  obj
+) {
+
+  const group =
+    new THREE.Group();
+
+  const material =
+    new THREE.MeshStandardMaterial({
+      color:
+        0xb28b57,
+      roughness:
+        0.75
+    });
+
+  const n =
+    obj.steps;
+
+  const width =
+    obj.width;
+
+  const tread =
+    obj.tread;
+
+  const totalRise =
+    obj.rise;
+
+  const riser =
+    totalRise / n;
+
+  /*
+    Each step gets progressively higher.
+
+    Local:
+      X = stair run
+      Y = height
+      Z = stair width
+  */
+
+  for (
+    let i = 0;
+    i < n;
+    i++
+  ) {
+
+    const stepDepth =
+      tread;
+
+    const stepHeight =
+      riser *
+      (i + 1);
+
+    const mesh =
+      new THREE.Mesh(
+        new THREE.BoxGeometry(
+          stepDepth,
+          stepHeight,
+          width
+        ),
+        material
+      );
+
+    mesh.position.x =
+      -(
+        obj.depth / 2
+      ) +
+      i *
+        tread +
+      tread / 2;
+
+    mesh.position.y =
+      stepHeight / 2;
+
+    mesh.castShadow =
+      true;
+
+    mesh.receiveShadow =
+      true;
+
+    group.add(
+      mesh
+    );
+
+  }
+
+  return group;
 
 }
 
@@ -2945,502 +4686,272 @@ function findWallForAsset(
    BUILD 3D
 ========================================================= */
 
-async function generate3D(){
+function clearModel() {
 
-  if(
-    state.walls.length===0
-  ){
+  if (
+    !state.modelGroup
+  ) return;
 
-    setStatus(
-      "No walls. Trace at least one wall first."
-    );
+  while (
+    state.modelGroup.children.length
+  ) {
 
-    return;
+    const child =
+      state.modelGroup.children.pop();
 
-  }
+    child.traverse(
+      object => {
 
-  loading.style.display =
-    "flex";
+        if (
+          object.geometry
+        ) {
 
-  await new Promise(
-    resolve =>
-      requestAnimationFrame(
-        resolve
-      )
-  );
+          object.geometry.dispose();
 
-  try{
+        }
 
-    /*
-      Clear old model
-    */
+        if (
+          object.material
+        ) {
 
-    if(
-      generatedGroup
-    ){
+          if (
+            Array.isArray(
+              object.material
+            )
+          ) {
 
-      scene.remove(
-        generatedGroup
-      );
+            object.material.forEach(
+              m =>
+                m.dispose()
+            );
 
-      generatedGroup.traverse(
-        obj => {
+          }
+          else {
 
-          if(obj.geometry)
-            obj.geometry.dispose();
-
-          if(obj.material){
-
-            if(
-              Array.isArray(
-                obj.material
-              )
-            ){
-
-              obj.material.forEach(
-                m => m.dispose()
-              );
-
-            }else{
-
-              obj.material.dispose();
-
-            }
+            object.material.dispose();
 
           }
 
         }
-      );
-
-    }
-
-    generatedGroup =
-      new THREE.Group();
-
-    generatedGroup.name =
-      "FloorplanModel";
-
-    /*
-      Convert drawing
-      to centered meters.
-    */
-
-    const model =
-      convertToMeters();
-
-    if(!model)
-      throw new Error(
-        "Could not convert drawing."
-      );
-
-    const height =
-      Number(
-        document
-          .getElementById(
-            "wallHeight"
-          )
-          .value
-      ) || 2.8;
-
-    const thickness =
-      Number(
-        document
-          .getElementById(
-            "wallThickness"
-          )
-          .value
-      ) || .15;
-
-
-    /*
-      WALLS
-    */
-
-    for(
-      const wall of model.walls
-    ){
-
-      for(
-        let i=0;
-        i<wall.points.length-1;
-        i++
-      ){
-
-        const p1 =
-          wall.points[i];
-
-        const p2 =
-          wall.points[i+1];
-
-        let wallBrush =
-          createWallBrush(
-            p1,
-            p2,
-            height,
-            thickness
-          );
-
-        if(!wallBrush)
-          continue;
-
-        /*
-          Find openings attached
-          to this wall.
-        */
-
-        const wallAssets =
-          model.assets.filter(
-            asset =>
-              asset.wallId ===
-              wall.id
-          );
-
-        /*
-          If wallId was lost because
-          coordinate transforms don't
-          preserve object identity,
-          also use distance.
-        */
-
-        const candidates =
-          wallAssets.length
-            ? wallAssets
-            : model.assets.filter(
-                asset => {
-
-                  const q =
-                    closestPointOnSegment(
-                      {
-                        x:asset.position.x,
-                        y:asset.position.z
-                      },
-                      {
-                        x:p1.x,
-                        y:p1.z
-                      },
-                      {
-                        x:p2.x,
-                        y:p2.z
-                      }
-                    );
-
-                  return (
-                    Math.hypot(
-                      asset.position.x-q.x,
-                      asset.position.z-q.y
-                    ) <
-                    .35
-                  );
-
-                }
-              );
-
-        /*
-          BOOLEAN SUBTRACTION
-        */
-
-        for(
-          const asset of candidates
-        ){
-
-          const cutter =
-            createOpeningBrush(
-              asset,
-              p1,
-              p2,
-              height,
-              thickness
-            );
-
-          try{
-
-            wallBrush =
-              csgEvaluator.evaluate(
-                wallBrush,
-                cutter,
-                SUBTRACTION
-              );
-
-          }catch(err){
-
-            console.warn(
-              "Opening subtraction failed:",
-              err
-            );
-
-          }
-
-        }
-
-        wallBrush.material =
-          new THREE.MeshStandardMaterial({
-            color:
-              0xf4f4f4,
-            roughness:.75
-          });
-
-        wallBrush.castShadow = true;
-        wallBrush.receiveShadow = true;
-
-        wallBrush.name =
-          "Wall";
-
-        generatedGroup.add(
-          wallBrush
-        );
 
       }
-
-    }
-
-
-    /*
-      FLOOR SLAB
-    */
-
-    const floorBox =
-      calculateFloorBounds(
-        model.walls
-      );
-
-    if(floorBox){
-
-      const floorGeometry =
-        new THREE.BoxGeometry(
-          floorBox.width+.5,
-          .08,
-          floorBox.depth+.5
-        );
-
-      const floorMaterial =
-        new THREE.MeshStandardMaterial({
-          color:0x50545a,
-          roughness:.9
-        });
-
-      const floorMesh =
-        new THREE.Mesh(
-          floorGeometry,
-          floorMaterial
-        );
-
-      floorMesh.position.set(
-        floorBox.cx,
-        -.04,
-        floorBox.cz
-      );
-
-      floorMesh.receiveShadow = true;
-
-      floorMesh.name =
-        "Floor";
-
-      generatedGroup.add(
-        floorMesh
-      );
-
-    }
-
-
-    /*
-      STAIRS
-    */
-
-    if(
-      window.stairData
-    ){
-
-      addStairsToGroup(
-        generatedGroup,
-        window.stairData
-      );
-
-    }
-
-
-    /*
-      Add model
-    */
-
-    scene.add(
-      generatedGroup
     );
-
-    /*
-      IMPORTANT:
-      force model origin center
-    */
-
-    generatedGroup.position.set(
-      0,
-      0,
-      0
-    );
-
-    /*
-      Center camera
-    */
-
-    focusCamera(
-      generatedGroup
-    );
-
-    state.generated =
-      true;
-
-    objectCount.textContent =
-      "Objects: " +
-      generatedGroup.children.length;
-
-    setStatus(
-      "3D generated successfully."
-    );
-
-    switchTo3D();
-
-  }catch(err){
-
-    console.error(err);
-
-    setStatus(
-      "3D generation error: " +
-      err.message
-    );
-
-    alert(
-      "3D generation error:\n\n" +
-      err.message +
-      "\n\nOpen browser console for details."
-    );
-
-  }finally{
-
-    loading.style.display =
-      "none";
 
   }
 
 }
 
 
-/* =========================================================
-   FLOOR BOUNDS
-========================================================= */
+function generate3D() {
 
-function calculateFloorBounds(
-  walls
-){
+  if (
+    !state.threeScene
+  ) {
 
-  const pts = [];
+    initThree();
 
-  walls.forEach(
-    wall =>
-      wall.points.forEach(
-        p => pts.push(p)
-      )
-  );
+  }
 
-  if(!pts.length)
-    return null;
+  clearModel();
 
-  let minX=Infinity;
-  let maxX=-Infinity;
+  /*
+    Material.
+  */
 
-  let minZ=Infinity;
-  let maxZ=-Infinity;
+  const wallMaterial =
+    new THREE.MeshStandardMaterial({
 
-  pts.forEach(
-    p => {
+      color:
+        0xf0f0f0,
 
-      minX =
-        Math.min(
-          minX,
-          p.x
+      roughness:
+        0.78,
+
+      metalness:
+        0.02
+
+    });
+
+  /*
+    Build every wall.
+  */
+
+  for (
+    const wall of state.walls
+  ) {
+
+    buildWall(
+      wall,
+      wallMaterial
+    );
+
+  }
+
+  /*
+    Build objects.
+  */
+
+  for (
+    const obj of state.objects
+  ) {
+
+    if (
+      obj.type === "door"
+    ) {
+
+      const door =
+        createDoorVisual(
+          obj
         );
 
-      maxX =
-        Math.max(
-          maxX,
-          p.x
-        );
+      door.position.set(
+        obj.position.x,
+        0,
+        -obj.position.y
+      );
 
-      minZ =
-        Math.min(
-          minZ,
-          p.z
-        );
+      door.rotation.y =
+        -obj.rotation;
 
-      maxZ =
-        Math.max(
-          maxZ,
-          p.z
-        );
+      state.modelGroup.add(
+        door
+      );
 
     }
-  );
 
-  return {
+    if (
+      obj.type === "window"
+    ) {
 
-    width:
-      maxX-minX,
+      const win =
+        createWindowVisual(
+          obj
+        );
 
-    depth:
-      maxZ-minZ,
+      win.position.set(
+        obj.position.x,
+        0,
+        -obj.position.y
+      );
 
-    cx:
-      (minX+maxX)/2,
+      win.rotation.y =
+        -obj.rotation;
 
-    cz:
-      (minZ+maxZ)/2
+      state.modelGroup.add(
+        win
+      );
 
-  };
+    }
 
-}
+    if (
+      obj.type === "stair"
+    ) {
 
+      const stairs =
+        createStairs(
+          obj
+        );
 
-/* =========================================================
-   CAMERA FOCUS
-========================================================= */
+      stairs.position.set(
+        obj.position.x,
+        0,
+        -obj.position.y
+      );
 
-function focusCamera(
-  object
-){
+      stairs.rotation.y =
+        -obj.rotation;
+
+      state.modelGroup.add(
+        stairs
+      );
+
+    }
+
+  }
+
+  /*
+    IMPORTANT:
+    Normalize model around 0,0,0.
+  */
 
   const box =
     new THREE.Box3()
       .setFromObject(
-        object
+        state.modelGroup
       );
 
-  const center =
-    box.getCenter(
-      new THREE.Vector3()
+  if (
+    !box.isEmpty()
+  ) {
+
+    const center =
+      box.getCenter(
+        new THREE.Vector3()
+      );
+
+    /*
+      We only center X/Z.
+      Y remains on floor.
+    */
+
+    state.modelGroup.position.x -=
+      center.x;
+
+    state.modelGroup.position.z -=
+      center.z;
+
+  }
+
+  /*
+    Camera framing.
+  */
+
+  const finalBox =
+    new THREE.Box3()
+      .setFromObject(
+        state.modelGroup
+      );
+
+  if (
+    !finalBox.isEmpty()
+  ) {
+
+    const center =
+      finalBox.getCenter(
+        new THREE.Vector3()
+      );
+
+    const size =
+      finalBox.getSize(
+        new THREE.Vector3()
+      );
+
+    const maxDim =
+      Math.max(
+        size.x,
+        size.y,
+        size.z
+      );
+
+    state.threeCamera.position.set(
+      maxDim * 1.35,
+      maxDim * 1.15,
+      maxDim * 1.35
     );
 
-  const size =
-    box.getSize(
-      new THREE.Vector3()
+    state.controls.target.copy(
+      center
     );
 
-  const maxDim =
-    Math.max(
-      size.x,
-      size.y,
-      size.z,
-      1
-    );
+    state.controls.update();
 
-  camera.position.set(
-    center.x+maxDim*1.2,
-    center.y+maxDim*.9,
-    center.z+maxDim*1.2
+  }
+
+  setStatus(
+    "3D generated successfully."
   );
 
-  controls.target.copy(
-    center
-  );
-
-  controls.update();
+  show3D();
 
 }
 
@@ -3451,247 +4962,123 @@ function focusCamera(
 
 document
   .getElementById("generateBtn")
-  .onclick =
-  generate3D;
+  .addEventListener(
+    "click",
+    () => {
+
+      try {
+
+        generate3D();
+
+      }
+      catch (error) {
+
+        console.error(error);
+
+        setStatus(
+          "3D error: " +
+          error.message
+        );
+
+      }
+
+    }
+  );
 
 
 /* =========================================================
    VIEW SWITCH
 ========================================================= */
 
-function switchTo2D(){
+function show2D() {
 
-  traceView.classList.add(
-    "active"
-  );
+  editorWrap.style.display =
+    "block";
 
-  threeView.classList.remove(
-    "active"
-  );
+  threeWrap.style.display =
+    "none";
 
-  resizeCanvas();
+  document.getElementById(
+    "modeBadge"
+  ).textContent =
+    "2D EDITOR";
+
+  draw2D();
 
 }
 
 
-function switchTo3D(){
+function show3D() {
 
-  traceView.classList.remove(
-    "active"
-  );
+  editorWrap.style.display =
+    "none";
 
-  threeView.classList.add(
-    "active"
-  );
+  threeWrap.style.display =
+    "block";
+
+  document.getElementById(
+    "modeBadge"
+  ).textContent =
+    "3D VIEW";
 
   resizeThree();
 
-  if(generatedGroup)
-    focusCamera(
-      generatedGroup
+  if (
+    state.renderer
+  ) {
+
+    state.renderer.render(
+      state.threeScene,
+      state.threeCamera
     );
+
+  }
 
 }
 
 
 document
   .getElementById("view2DBtn")
-  .onclick =
-  switchTo2D;
+  .addEventListener(
+    "click",
+    show2D
+  );
 
 
 document
   .getElementById("view3DBtn")
-  .onclick =
-  switchTo3D;
+  .addEventListener(
+    "click",
+    () => {
 
+      if (
+        state.walls.length === 0
+      ) {
 
-/* =========================================================
-   STAIR DATA
-========================================================= */
+        setStatus(
+          "Draw at least one wall first."
+        );
 
-window.stairData = null;
+        return;
 
+      }
 
-/* =========================================================
-   ADD STAIR
-========================================================= */
+      if (
+        !state.modelGroup ||
+        state.modelGroup.children.length === 0
+      ) {
 
-document
-  .getElementById("stairBtn")
-  .onclick = () => {
+        generate3D();
 
-    window.stairData = {
+      }
+      else {
 
-      position:{
-        x:0,
-        z:0
-      },
+        show3D();
 
-      rotation:0,
-
-      width:
-        Number(
-          document
-            .getElementById(
-              "stairWidth"
-            )
-            .value
-        ) || 1,
-
-      height:
-        Number(
-          document
-            .getElementById(
-              "stairHeight"
-            )
-            .value
-        ) || 2.8,
-
-      steps:
-        Number(
-          document
-            .getElementById(
-              "stairSteps"
-            )
-            .value
-        ) || 14
-
-    };
-
-    setStatus(
-      "Stair created at origin. Move/rotate in 2D later."
-    );
-
-    generate3D();
-
-  };
-
-
-/* =========================================================
-   ROTATE STAIR
-========================================================= */
-
-document
-  .getElementById("rotateStairBtn")
-  .onclick = () => {
-
-    if(!window.stairData){
-
-      setStatus(
-        "Create a stair first."
-      );
-
-      return;
+      }
 
     }
-
-    window.stairData.rotation +=
-      Math.PI/2;
-
-    generate3D();
-
-  };
-
-
-/* =========================================================
-   DELETE STAIR
-========================================================= */
-
-document
-  .getElementById("deleteStairBtn")
-  .onclick = () => {
-
-    window.stairData = null;
-
-    generate3D();
-
-  };
-
-
-/* =========================================================
-   ADD STAIRS
-========================================================= */
-
-function addStairsToGroup(
-  group,
-  data
-){
-
-  const stepCount =
-    Math.max(
-      2,
-      Math.floor(
-        data.steps
-      )
-    );
-
-  const stepHeight =
-    data.height /
-    stepCount;
-
-  const totalRun =
-    Math.max(
-      2,
-      stepCount*.28
-    );
-
-  const stepDepth =
-    totalRun/
-    stepCount;
-
-  const material =
-    new THREE.MeshStandardMaterial({
-      color:0xb8b8b8,
-      roughness:.8
-    });
-
-  for(
-    let i=0;
-    i<stepCount;
-    i++
-  ){
-
-    const geometry =
-      new THREE.BoxGeometry(
-        data.width,
-        stepHeight*(i+1),
-        stepDepth*(i+1)
-      );
-
-    const mesh =
-      new THREE.Mesh(
-        geometry,
-        material
-      );
-
-    mesh.position.set(
-      data.position.x,
-      stepHeight*(i+1)/2,
-      data.position.z +
-      (
-        i*stepDepth
-      )
-    );
-
-    mesh.rotation.y =
-      data.rotation;
-
-    mesh.castShadow = true;
-
-    mesh.receiveShadow = true;
-
-    mesh.name =
-      "StairStep_" +
-      i;
-
-    group.add(
-      mesh
-    );
-
-  }
-
-}
+  );
 
 
 /* =========================================================
@@ -3700,197 +5087,262 @@ function addStairsToGroup(
 
 document
   .getElementById("exportBtn")
-  .onclick = () => {
+  .addEventListener(
+    "click",
+    () => {
 
-    if(
-      !generatedGroup
-    ){
+      if (
+        !state.modelGroup ||
+        state.modelGroup.children.length === 0
+      ) {
 
-      setStatus(
-        "Generate 3D first."
+        setStatus(
+          "Generate 3D before exporting."
+        );
+
+        return;
+
+      }
+
+      const exporter =
+        new GLTFExporter();
+
+      const exportScene =
+        new THREE.Scene();
+
+      const clone =
+        state.modelGroup.clone(
+          true
+        );
+
+      exportScene.add(
+        clone
       );
 
-      return;
+      exporter.parse(
+        exportScene,
+        (result) => {
+
+          const blob =
+            new Blob(
+              [
+                result
+              ],
+              {
+                type:
+                  "model/gltf-binary"
+              }
+            );
+
+          const url =
+            URL.createObjectURL(
+              blob
+            );
+
+          const a =
+            document.createElement(
+              "a"
+            );
+
+          a.href =
+            url;
+
+          a.download =
+            "floorplan-3d.glb";
+
+          document.body.appendChild(
+            a
+          );
+
+          a.click();
+
+          a.remove();
+
+          URL.revokeObjectURL(
+            url
+          );
+
+          setStatus(
+            "GLB exported."
+          );
+
+        },
+        (error) => {
+
+          console.error(error);
+
+          setStatus(
+            "GLB export failed."
+          );
+
+        },
+        {
+          binary:
+            true
+        }
+      );
 
     }
-
-    const exporter =
-      new GLTFExporter();
-
-    exporter.parse(
-      generatedGroup,
-      result => {
-
-        const blob =
-          result instanceof ArrayBuffer
-            ? new Blob(
-                [result],
-                {
-                  type:
-                    "model/gltf-binary"
-                }
-              )
-            : new Blob(
-                [
-                  JSON.stringify(
-                    result
-                  )
-                ],
-                {
-                  type:
-                    "application/json"
-                }
-              );
-
-        const url =
-          URL.createObjectURL(
-            blob
-          );
-
-        const a =
-          document.createElement(
-            "a"
-          );
-
-        a.href =
-          url;
-
-        a.download =
-          "floorplan-3d.glb";
-
-        document.body.appendChild(a);
-
-        a.click();
-
-        a.remove();
-
-        setTimeout(
-          () =>
-            URL.revokeObjectURL(url),
-          1000
-        );
-
-        setStatus(
-          "GLB exported."
-        );
-
-      },
-      error => {
-
-        console.error(error);
-
-        setStatus(
-          "GLB export failed."
-        );
-
-      },
-      {
-        binary:true
-      }
-    );
-
-  };
+  );
 
 
 /* =========================================================
-   ANIMATION
+   RESET
 ========================================================= */
 
-function animateThree(){
+document
+  .getElementById("resetBtn")
+  .addEventListener(
+    "click",
+    () => {
 
-  requestAnimationFrame(
-    animateThree
+      if (
+        !confirm(
+          "Reset floorplan and all objects?"
+        )
+      ) {
+
+        return;
+
+      }
+
+      state.walls = [];
+
+      state.objects = [];
+
+      state.currentWall = [];
+
+      state.selectedWall =
+        null;
+
+      state.selectedObject =
+        null;
+
+      state.camera.x = 0;
+
+      state.camera.y = 0;
+
+      state.camera.zoom = 1;
+
+      state.image = null;
+
+      state.imageVisible = true;
+
+      fileInput.value = "";
+
+      fileNameEl.textContent =
+        "No floorplan uploaded";
+
+      if (
+        state.modelGroup
+      ) {
+
+        clearModel();
+
+      }
+
+      show2D();
+
+      setStatus(
+        "Reset complete."
+      );
+
+    }
   );
 
-  if(controls)
-    controls.update();
 
-  if(renderer && scene && camera){
+/* =========================================================
+   KEYBOARD SHORTCUTS
+========================================================= */
 
-    renderer.render(
-      scene,
-      camera
-    );
+window.addEventListener(
+  "keydown",
+  (e) => {
+
+    /*
+      ESC
+    */
+
+    if (
+      e.key === "Escape"
+    ) {
+
+      state.currentWall = [];
+
+      state.draggingObject =
+        null;
+
+      draw2D();
+
+    }
+
+    /*
+      Delete
+    */
+
+    if (
+      e.key === "Delete" ||
+      e.key === "Backspace"
+    ) {
+
+      if (
+        state.selectedObject
+      ) {
+
+        deleteSelectedObject();
+
+      }
+      else if (
+        state.selectedWall
+      ) {
+
+        document
+          .getElementById(
+            "deleteBtn"
+          )
+          .click();
+
+      }
+
+    }
+
+    /*
+      R = rotate object
+    */
+
+    if (
+      e.key.toLowerCase() === "r"
+    ) {
+
+      if (
+        state.selectedObject
+      ) {
+
+        state.selectedObject.rotation +=
+          Math.PI / 2;
+
+        draw2D();
+
+      }
+
+    }
 
   }
-
-}
+);
 
 
 /* =========================================================
    INITIALIZE
 ========================================================= */
 
-initThree();
-
 resizeCanvas();
 
+initThree();
+
+show2D();
+
 setStatus(
-  "Ready. Upload a floorplan or start tracing."
-);
-
-
-/* =========================================================
-   KEYBOARD
-========================================================= */
-
-window.addEventListener(
-  "keydown",
-  e => {
-
-    if(e.key==="Escape"){
-
-      state.currentWall = [];
-
-      state.selectedWall = null;
-      state.selectedAsset = null;
-
-      draw2D();
-
-    }
-
-    if(
-      e.key==="Delete" ||
-      e.key==="Backspace"
-    ){
-
-      if(
-        state.selectedAsset
-      ){
-
-        state.assets =
-          state.assets.filter(
-            a =>
-              a !==
-              state.selectedAsset
-          );
-
-        state.selectedAsset =
-          null;
-
-      }else if(
-        state.selectedWall
-      ){
-
-        state.walls =
-          state.walls.filter(
-            w =>
-              w !==
-              state.selectedWall
-          );
-
-        state.selectedWall =
-          null;
-
-      }
-
-      state.generated = false;
-
-      draw2D();
-
-    }
-
-  }
+  "Ready. Upload a floorplan or draw walls."
 );
 
 </script>
