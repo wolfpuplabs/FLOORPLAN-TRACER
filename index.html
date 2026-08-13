@@ -27,7 +27,6 @@
             user-select: text;
         }
 
-        /* --- FIX LAYOUT RESPONSIVE --- */
         body { 
             margin: 0; 
             overflow: hidden; 
@@ -40,9 +39,9 @@
             touch-action: none; 
         }
 
-        /* --- SIDEBAR STYLE --- */
+        /* --- SIDEBAR STYLE (DIUBAH MENJADI 160px) --- */
         #sidebar {
-            width: 300px;
+            width: 160px; /* Lebar dibuat setengahnya */
             background: #ffffff;
             border-right: 1px solid #c8c8cc;
             display: flex;
@@ -55,7 +54,7 @@
         }
 
         #sidebar.collapsed {
-            margin-left: -300px;
+            margin-left: -160px; /* Menyesuaikan lebar yang baru */
         }
 
         #sidebarToggleBtn {
@@ -82,19 +81,22 @@
         
         #sidebarToggleBtn:hover { background: #f4f4f5; color: #2563eb; }
 
+        /* Header dibuat menumpuk ke bawah agar muat */
         .sidebar-header {
-            padding: 15px;
+            padding: 12px 10px;
             border-bottom: 1px solid #e4e4e7;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-direction: column;
+            gap: 8px;
+            align-items: flex-start;
             background: #fafafa;
         }
 
-        .sidebar-header h3 { margin: 0; font-size: 16px; color: #18181b; }
+        .sidebar-header h3 { margin: 0; font-size: 14px; color: #18181b; line-height: 1.2; }
 
         .lang-btn-group {
             display: flex;
+            width: 100%;
             border: 1px solid #d4d4d8;
             border-radius: 6px;
             overflow: hidden;
@@ -102,38 +104,42 @@
         }
 
         .lang-btn {
-            padding: 4px 8px;
-            font-size: 11px;
+            flex: 1;
+            padding: 4px 0;
+            font-size: 10px;
             font-weight: bold;
             border: none;
             background: transparent;
             color: #71717a;
             cursor: pointer;
-            width: auto;
+            text-align: center;
         }
 
         .lang-btn.active { background: #2563eb; color: #ffffff; }
 
         .sidebar-content { flex: 1; overflow-y: auto; }
-        .sidebar-section { padding: 15px; border-bottom: 1px solid #e4e4e7; }
-        .sidebar-section h4 { margin: 0 0 12px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #71717a; font-weight: 700; }
-        .sidebar-section label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #3f3f46; }
+        .sidebar-section { padding: 12px 10px; border-bottom: 1px solid #e4e4e7; }
+        .sidebar-section h4 { margin: 0 0 10px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #71717a; font-weight: 700; }
+        .sidebar-section label { display: block; font-size: 11px; font-weight: 600; margin-bottom: 4px; color: #3f3f46; }
 
+        /* Tombol & Input dikecilkan */
         button, select, input[type="number"], input[type="file"]::file-selector-button { 
-            padding: 8px 12px; cursor: pointer; border: 1px solid #d4d4d8; background: #ffffff; 
-            border-radius: 4px; font-size: 13px; color: #3f3f46; transition: 0.15s; width: 100%;
+            padding: 6px 8px; cursor: pointer; border: 1px solid #d4d4d8; background: #ffffff; 
+            border-radius: 4px; font-size: 11px; color: #3f3f46; transition: 0.15s; width: 100%;
         }
-        input[type="file"] { width: 100%; font-size: 12px; margin-bottom: 10px; }
-        input[type="file"]::file-selector-button { background: #f4f4f5; width: auto; margin-right: 10px; padding: 4px 8px;}
-        input[type="number"] { cursor: text; background: #fff; width: 100%; }
-        input[type="range"] { width: 100%; margin-bottom: 12px; accent-color: #2563eb; }
+        input[type="file"] { width: 100%; font-size: 10px; margin-bottom: 8px; }
+        input[type="file"]::file-selector-button { background: #f4f4f5; width: auto; margin-right: 6px; padding: 4px 6px;}
+        input[type="number"] { cursor: text; background: #fff; width: 100%; margin-bottom: 8px;}
+        input[type="range"] { width: 100%; margin-bottom: 10px; accent-color: #2563eb; }
         
         button:hover, select:hover { background: #e4e4e7; }
         button:disabled { cursor: not-allowed; opacity: 0.4; }
         button.active { background: #2563eb; color: white; border-color: #1d4ed8; font-weight: 600; }
         
-        .btn-row { display: flex; gap: 8px; margin-bottom: 8px; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+        .btn-row { display: flex; gap: 6px; margin-bottom: 8px; }
+        
+        /* Grid 2 kolom diubah menjadi 1 kolom agar text muat sempurna */
+        .grid-2 { display: grid; grid-template-columns: 1fr; gap: 6px; margin-bottom: 8px; }
         
         .btn-danger { background: #fee2e2; color: #dc2626; border-color: #fca5a5; font-weight: 600; }
         .btn-danger:hover { background: #fecaca; }
@@ -144,8 +150,8 @@
         .edit-btn-secondary { background: #e4e4e7; color: #18181b; width: 100%; border: none; font-weight: 600; margin-bottom: 10px; }
         .edit-btn-secondary:hover { background: #d4d4d8; }
 
-        #emptySelectionMsg { font-size: 12px; color: #71717a; text-align: center; padding: 15px 0; font-style: italic; }
-        #wallLineControls { background: #f4f4f5; padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px dashed #a1a1aa; text-align: center; }
+        #emptySelectionMsg { font-size: 11px; color: #71717a; text-align: center; padding: 10px 0; font-style: italic; }
+        #wallLineControls { background: #f4f4f5; padding: 8px; border-radius: 6px; margin-bottom: 10px; border: 1px dashed #a1a1aa; text-align: center; }
 
         /* --- MAIN AREA --- */
         #main-container { display: flex; flex: 1; overflow: hidden; flex-direction: row; position: relative; height: 100%; }
@@ -209,27 +215,27 @@
         <div class="sidebar-content">
             <div class="sidebar-section">
                 <h4 id="txtSec1">File & Sistem</h4>
-                <label id="txtLblUpload">Upload Denah (Untuk Tracing):</label>
+                <label id="txtLblUpload">Upload Denah:</label>
                 <input type="file" id="upload" accept="image/*">
                 <div class="btn-row">
-                    <button id="undoBtn" disabled>Undo</button>
-                    <button id="redoBtn" disabled>Redo</button>
+                    <button id="undoBtn" disabled style="flex:1;">Undo</button>
+                    <button id="redoBtn" disabled style="flex:1;">Redo</button>
                 </div>
-                <button id="clearBtn" class="btn-danger">Reset (Bikin Baru)</button>
+                <button id="clearBtn" class="btn-danger">Reset Baru</button>
             </div>
 
             <div class="sidebar-section">
-                <h4 id="txtSec2">Alat Gambar & Bangunan</h4>
+                <h4 id="txtSec2">Alat Gambar</h4>
                 <div class="grid-2">
                     <button id="modeSelect">Pilih / Edit</button>
                     <button id="modeWall" class="active">Tembok</button>
                     <button id="modeDoor">Pintu</button>
                     <button id="modeWindow">Jendela</button>
-                    <button id="modeStairs" style="grid-column: span 2;">Tangga</button>
+                    <button id="modeStairs">Tangga</button>
                 </div>
                 
                 <select id="furnitureSelect" style="margin-bottom: 12px;">
-                    <option value="" id="txtOptDefault">+ Tambah Mebel / Objek...</option>
+                    <option value="" id="txtOptDefault">+ Tambah Mebel...</option>
                     <optgroup label="Ruang Utama" id="optGrp1">
                         <option value="bed" id="optBed">Kasur</option>
                         <option value="sofa" id="optSofa">Sofa</option>
@@ -248,26 +254,23 @@
                     </optgroup>
                 </select>
 
-                <button id="btnSnap" class="active" style="margin-bottom: 12px; display: flex; justify-content: center; gap: 8px; transition: all 0.2s;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15-4-4 6.75-6.77a7.79 7.79 0 0 1 11 11L13 22l-4-4 6.39-6.36a2.14 2.14 0 0 0-3-3L6 15"></path><path d="m5 8 4 4"></path><path d="m12 15 4 4"></path></svg>
+                <button id="btnSnap" class="active" style="margin-bottom: 12px; display: flex; justify-content: center; align-items: center; gap: 6px; transition: all 0.2s;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15-4-4 6.75-6.77a7.79 7.79 0 0 1 11 11L13 22l-4-4 6.39-6.36a2.14 2.14 0 0 0-3-3L6 15"></path><path d="m5 8 4 4"></path><path d="m12 15 4 4"></path></svg>
                     <span id="txtBtnSnap">Snap (Magnet)</span>
                 </button>
 
-                <div class="grid-2" style="margin-bottom: 0;">
-                    <div>
-                        <label id="txtLblWallH">Tinggi Tembok (m)</label>
-                        <input type="number" id="valWallH" value="3.0" step="0.1">
-                    </div>
-                    <div>
-                        <label id="txtLblWallT">Tebal Tembok (m)</label>
-                        <input type="number" id="valWallT" value="0.15" step="0.05">
-                    </div>
+                <div>
+                    <label id="txtLblWallH">Tinggi Tembok (m)</label>
+                    <input type="number" id="valWallH" value="3.0" step="0.1">
+                    
+                    <label id="txtLblWallT" style="margin-top: 4px;">Tebal Tembok (m)</label>
+                    <input type="number" id="valWallT" value="0.15" step="0.05">
                 </div>
             </div>
 
             <div class="sidebar-section">
                 <h4 id="txtSec3">Properti Objek</h4>
-                <div id="emptySelectionMsg">Pilih objek di kanvas (Mode Pilih/Edit) untuk mengatur properti.</div>
+                <div id="emptySelectionMsg">Pilih objek di kanvas.</div>
                 
                 <div id="edit-panel-content" style="display: none;">
                     
@@ -276,14 +279,14 @@
                     </div>
 
                     <div id="wallObjectControls">
-                        <label><span id="txtLblPos">Posisi (Geser):</span> <span id="valPos">50</span>%</label>
+                        <label><span id="txtLblPos">Geser Posisi:</span> <span id="valPos">50</span>%</label>
                         <input type="range" id="editPos" min="0" max="100" step="1" value="50">
 
                         <label><span id="txtLblWidth">Lebar:</span> <span id="valWidth">0.9</span> m</label>
                         <input type="range" id="editWidth" min="0.4" max="4.0" step="0.1" value="0.9">
                         
                         <div id="doorControls">
-                            <label><span id="txtLblSwing">Rotasi (Swing):</span> <span id="valSwing">45</span>°</label>
+                            <label><span id="txtLblSwing">Rotasi:</span> <span id="valSwing">45</span>°</label>
                             <input type="range" id="editSwing" min="-180" max="180" step="5" value="45">
                             <button id="flipHingeBtn" class="edit-btn-secondary">Balik Engsel</button>
                         </div>
@@ -293,7 +296,7 @@
                         <label><span id="txtLblRot">Rotasi:</span> <span id="valRot">0</span>°</label>
                         <input type="range" id="editRot" min="0" max="360" step="5" value="0">
 
-                        <label><span id="txtLblScale">Skala Ukuran:</span> <span id="valScale">1.0</span>x</label>
+                        <label><span id="txtLblScale">Skala:</span> <span id="valScale">1.0</span>x</label>
                         <input type="range" id="editScale" min="0.5" max="3.0" step="0.1" value="1.0">
 
                         <div id="stairsControls">
@@ -305,14 +308,14 @@
                         </div>
                     </div>
 
-                    <button id="delObjBtn" class="btn-danger" style="margin-top: 5px;">Hapus Objek / Tembok</button>
+                    <button id="delObjBtn" class="btn-danger" style="margin-top: 5px;">Hapus</button>
                 </div>
             </div>
 
             <div class="sidebar-section" style="border-bottom: none;">
                 <h4 id="txtSec4">Output</h4>
-                <button id="arBtn" class="btn-purple" style="margin-bottom: 8px;">View di AR (Mobile)</button>
-                <button id="exportBtn" class="btn-primary">Export GLB (3D Model)</button>
+                <button id="arBtn" class="btn-purple" style="margin-bottom: 8px;">View AR</button>
+                <button id="exportBtn" class="btn-primary">Export GLB</button>
             </div>
         </div>
     </div>
@@ -355,30 +358,30 @@
         let currentLang = 'id';
         const texts = {
             id: {
-                title: "BIM Architect", sec1: "File & Sistem", sec2: "Alat Gambar & Bangunan", sec3: "Properti Objek", sec4: "Output",
-                lblUpload: "Upload Denah (Untuk Tracing):", undo: "Undo", redo: "Redo", clear: "Reset (Bikin Baru)",
+                title: "BIM Architect", sec1: "File & Sistem", sec2: "Alat Gambar", sec3: "Properti Objek", sec4: "Output",
+                lblUpload: "Upload Denah:", undo: "Undo", redo: "Redo", clear: "Reset Baru",
                 sel: "Pilih / Edit", wall: "Tembok", door: "Pintu", win: "Jendela", stairs: "Tangga",
-                optDef: "+ Tambah Mebel / Objek...", grp1: "Ruang Utama", grp2: "Dapur", grp3: "Kamar Mandi", snapBtn: "Snap (Magnet)",
+                optDef: "+ Tambah Mebel...", grp1: "Ruang Utama", grp2: "Dapur", grp3: "Kamar Mandi", snapBtn: "Snap (Magnet)",
                 bed: "Kasur", sofa: "Sofa", table: "Meja", chair: "Kursi", kitchen: "Kitchen Set", stove: "Kompor", fridge: "Kulkas", toilet: "Kloset / Toilet", shower: "Shower", bathtub: "Bathtub",
-                lblWallH: "Tinggi Tembok (m)", lblWallT: "Tebal Tembok (m)", emptyMsg: "Pilih objek di kanvas (Mode Pilih/Edit) untuk mengatur properti.",
-                lblPos: "Posisi (Geser):", lblWidth: "Lebar:", lblSwing: "Rotasi (Swing):", flipBtn: "Balik Engsel",
-                lblRot: "Rotasi:", lblScale: "Skala Ukuran:", lblSteps: "Anak Tangga:", lblStairW: "Lebar Tangga:", lblWallLen: "Panjang Tembok:",
-                delBtn: "Hapus Objek / Tembok", arBtn: "View di AR (Mobile)", exportBtn: "Export GLB (3D Model)",
+                lblWallH: "Tinggi Tembok (m)", lblWallT: "Tebal Tembok (m)", emptyMsg: "Pilih objek di kanvas.",
+                lblPos: "Geser Posisi:", lblWidth: "Lebar:", lblSwing: "Rotasi:", flipBtn: "Balik Engsel",
+                lblRot: "Rotasi:", lblScale: "Skala:", lblSteps: "Anak Tangga:", lblStairW: "Lebar Tangga:", lblWallLen: "Panjang Tembok:",
+                delBtn: "Hapus", arBtn: "View AR", exportBtn: "Export GLB",
                 gTitle: "Panduan Singkat", 
                 g1: "<b>Free Draw / Bebas:</b> Mulai gambar langsung! Tiap kotak (grid) = 1 meter.",
                 g2: "<b>Tembok:</b> Tap 1x titik awal, tap posisi lain. Tap 2x (atau ESC) untuk mengakhiri garis tembok.",
                 g3: "<b>Edit & Hapus Tembok:</b> Gunakan Mode 'Pilih/Edit', klik garis tembok untuk menggeser posisinya atau menghapusnya."
             },
             en: {
-                title: "BIM Architect", sec1: "File & System", sec2: "Drawing & Building Tools", sec3: "Object Properties", sec4: "Output",
-                lblUpload: "Upload Floorplan (For Tracing):", undo: "Undo", redo: "Redo", clear: "Reset (New Plan)",
-                sel: "Select / Edit", wall: "Wall", door: "Door", win: "Window", stairs: "Stairs",
-                optDef: "+ Add Furniture / Objects...", grp1: "Living Area", grp2: "Kitchen", grp3: "Bathroom", snapBtn: "Snap to Grid/Wall",
-                bed: "Bed", sofa: "Sofa", table: "Table", chair: "Chair", kitchen: "Kitchen Set", stove: "Stove", fridge: "Fridge", toilet: "Toilet / WC", shower: "Shower", bathtub: "Bathtub",
-                lblWallH: "Wall Height (m)", lblWallT: "Wall Thickness (m)", emptyMsg: "Select an object on the canvas (Select/Edit Mode) to adjust properties.",
-                lblPos: "Slide Position:", lblWidth: "Width:", lblSwing: "Rotation (Swing):", flipBtn: "Flip Hinge",
-                lblRot: "Rotation:", lblScale: "Scale:", lblSteps: "Steps Count:", lblStairW: "Stairs Width:", lblWallLen: "Wall Length:",
-                delBtn: "Delete Object / Wall", arBtn: "View in AR (Mobile)", exportBtn: "Export GLB (3D Model)",
+                title: "BIM Architect", sec1: "File & System", sec2: "Draw Tools", sec3: "Properties", sec4: "Output",
+                lblUpload: "Upload Floorplan:", undo: "Undo", redo: "Redo", clear: "Reset Plan",
+                sel: "Select/Edit", wall: "Wall", door: "Door", win: "Window", stairs: "Stairs",
+                optDef: "+ Add Furniture...", grp1: "Living Area", grp2: "Kitchen", grp3: "Bathroom", snapBtn: "Snap (Magnet)",
+                bed: "Bed", sofa: "Sofa", table: "Table", chair: "Chair", kitchen: "Kitchen Set", stove: "Stove", fridge: "Fridge", toilet: "Toilet/WC", shower: "Shower", bathtub: "Bathtub",
+                lblWallH: "Wall Height (m)", lblWallT: "Wall Thick (m)", emptyMsg: "Select object on canvas.",
+                lblPos: "Slide Pos:", lblWidth: "Width:", lblSwing: "Rotation:", flipBtn: "Flip Hinge",
+                lblRot: "Rotation:", lblScale: "Scale:", lblSteps: "Steps:", lblStairW: "Stairs W:", lblWallLen: "Wall Length:",
+                delBtn: "Delete", arBtn: "View AR", exportBtn: "Export GLB",
                 gTitle: "Quick Guide", 
                 g1: "<b>Free Draw:</b> Start drawing right away! Each grid box = 1 meter.",
                 g2: "<b>Wall:</b> Tap 1x start point, tap other pos. Tap 2x (or ESC) to finish the wall line.",
@@ -507,37 +510,25 @@
         document.getElementById('undoBtn').onclick = () => restoreState(true);
         document.getElementById('redoBtn').onclick = () => restoreState(false);
 
-        // === PAN, ZOOM & SELECTION (PERBAIKAN TOTAL) ===
+        // === PAN, ZOOM & SELECTION ===
         
-        // 1. Mouse Wheel Zoom (Multiplicative & Smooth)
         workspaceContainer.addEventListener('wheel', (e) => {
             e.preventDefault(); 
             const zoomFactor = Math.exp(e.deltaY * -0.002);
             const newScale = Math.min(Math.max(0.05, scale * zoomFactor), 10);
-            
             const rect = workspaceContainer.getBoundingClientRect(); 
-            const mouseX = e.clientX - rect.left; 
-            const mouseY = e.clientY - rect.top;
-            
-            panX = mouseX - ((mouseX - panX) * (newScale / scale)); 
-            panY = mouseY - ((mouseY - panY) * (newScale / scale));
-            scale = newScale; 
-            applyTransform();
+            const mouseX = e.clientX - rect.left; const mouseY = e.clientY - rect.top;
+            panX = mouseX - ((mouseX - panX) * (newScale / scale)); panY = mouseY - ((mouseY - panY) * (newScale / scale));
+            scale = newScale; applyTransform();
         }, { passive: false });
 
-        // 2. Pinch-to-Zoom & 2-Finger Pan (Touch)
         let lastMidX = 0, lastMidY = 0, lastDist = 0;
 
         workspaceContainer.addEventListener('touchstart', (e) => {
             if (e.touches.length >= 2) {
-                isPinchZooming = true;
-                stopDrawing(); 
-                isDraggingObject = false; 
-                isDraggingCanvas = false; 
-
+                isPinchZooming = true; stopDrawing(); isDraggingObject = false; isDraggingCanvas = false; 
                 lastDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-                lastMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-                lastMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                lastMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2; lastMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
             }
         }, { passive: false });
 
@@ -545,54 +536,27 @@
             if (e.touches.length >= 2 && isPinchZooming) {
                 e.preventDefault(); 
                 const currentDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-                const currentMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2; 
-                const currentMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-
-                // Hitung pergeseran pan (Delta)
-                panX += (currentMidX - lastMidX);
-                panY += (currentMidY - lastMidY);
-
-                // Hitung perbesaran (Scale)
+                const currentMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2; const currentMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                panX += (currentMidX - lastMidX); panY += (currentMidY - lastMidY);
                 if (lastDist > 0) {
                     const zoomFactor = currentDist / lastDist;
                     const newScale = Math.min(Math.max(0.05, scale * zoomFactor), 10);
-                    
                     const rect = workspaceContainer.getBoundingClientRect();
-                    const focusX = currentMidX - rect.left; 
-                    const focusY = currentMidY - rect.top;
-                    
-                    panX = focusX - ((focusX - panX) * (newScale / scale));
-                    panY = focusY - ((focusY - panY) * (newScale / scale));
-                    
+                    const focusX = currentMidX - rect.left; const focusY = currentMidY - rect.top;
+                    panX = focusX - ((focusX - panX) * (newScale / scale)); panY = focusY - ((focusY - panY) * (newScale / scale));
                     scale = newScale;
                 }
-
-                lastMidX = currentMidX;
-                lastMidY = currentMidY;
-                lastDist = currentDist;
-                applyTransform();
+                lastMidX = currentMidX; lastMidY = currentMidY; lastDist = currentDist; applyTransform();
             }
         }, { passive: false });
 
-        window.addEventListener('touchend', (e) => {
-            if (e.touches.length < 2) {
-                isPinchZooming = false;
-            }
-        });
+        window.addEventListener('touchend', (e) => { if (e.touches.length < 2) isPinchZooming = false; });
 
-        // 3. Pointer events (Mouse Click & 1-Finger Touch)
         canvas.addEventListener('pointerdown', (e) => {
-            if (isPinchZooming) return; // Abaikan jika sedang zoom 2 jari
+            if (isPinchZooming) return; 
             if (e.pointerType === 'touch' && !e.isPrimary) return; 
-            
-            // Pan dengan klik tengah / kanan mouse
             if (e.button === 2 || e.button === 1) { 
-                isDraggingCanvas = true; 
-                startPanX = e.clientX - panX; 
-                startPanY = e.clientY - panY; 
-                workspaceContainer.style.cursor = 'grabbing'; 
-                stopDrawing(); 
-                return;
+                isDraggingCanvas = true; startPanX = e.clientX - panX; startPanY = e.clientY - panY; workspaceContainer.style.cursor = 'grabbing'; stopDrawing(); return;
             }
             if (e.button !== 0 && e.button !== undefined) return;
             
@@ -621,10 +585,8 @@
                         selectedItem.origEnd = { ...lines[selectedItem.index].end };
                     }
                 } else { 
-                    selectedItem = null; closeEditPanel(); 
-                    isDraggingCanvas = true; // 1-finger pan on select mode
-                    startPanX = e.clientX - panX; startPanY = e.clientY - panY; 
-                    workspaceContainer.style.cursor = 'grabbing';
+                    selectedItem = null; closeEditPanel(); isDraggingCanvas = true; 
+                    startPanX = e.clientX - panX; startPanY = e.clientY - panY; workspaceContainer.style.cursor = 'grabbing';
                 } 
                 draw2D();
             } 
@@ -647,35 +609,21 @@
         });
 
         window.addEventListener('pointermove', (e) => { 
-            if (isPinchZooming) return; // Prevent conflict with 2-finger touchmove
-
-            if (isDraggingCanvas) { 
-                panX = e.clientX - startPanX; panY = e.clientY - startPanY; applyTransform(); 
-            }
+            if (isPinchZooming) return; 
+            if (isDraggingCanvas) { panX = e.clientX - startPanX; panY = e.clientY - startPanY; applyTransform(); }
             else {
                 let { x, y } = getTrueCoords(e.clientX, e.clientY);
-                if (isDrawing && mode === 'wall' && currentLine) { 
-                    currentLine.end = getSnapped(x, y, currentLine.start); draw2D(); 
-                }
+                if (isDrawing && mode === 'wall' && currentLine) { currentLine.end = getSnapped(x, y, currentLine.start); draw2D(); }
                 else if (isDraggingObject && selectedItem) { 
                     if (selectedItem.isWall) {
-                        let dx = x - selectedItem.dragStartX;
-                        let dy = y - selectedItem.dragStartY;
-                        
-                        if (isSnappingEnabled) {
-                            const gridSnap = 50;
-                            dx = Math.round(dx / gridSnap) * gridSnap;
-                            dy = Math.round(dy / gridSnap) * gridSnap;
-                        }
-                        
+                        let dx = x - selectedItem.dragStartX; let dy = y - selectedItem.dragStartY;
+                        if (isSnappingEnabled) { const gridSnap = 50; dx = Math.round(dx / gridSnap) * gridSnap; dy = Math.round(dy / gridSnap) * gridSnap; }
                         lines[selectedItem.index].start = { x: selectedItem.origStart.x + dx, y: selectedItem.origStart.y + dy };
                         lines[selectedItem.index].end = { x: selectedItem.origEnd.x + dx, y: selectedItem.origEnd.y + dy };
                         draw2D(); update3D();
                     }
                     else if (selectedItem.lineIndex === undefined) { 
-                        let snapPos = getSnapped(x, y);
-                        selectedItem.x = snapPos.x; selectedItem.y = snapPos.y; 
-                        draw2D(); update3D(); 
+                        let snapPos = getSnapped(x, y); selectedItem.x = snapPos.x; selectedItem.y = snapPos.y; draw2D(); update3D(); 
                     }
                 }
             }
