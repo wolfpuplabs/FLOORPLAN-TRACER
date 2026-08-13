@@ -93,34 +93,19 @@
 
         .sidebar-header h3 { margin: 0; font-size: 16px; color: #18181b; }
 
-        .lang-switch {
-            display: flex;
-            align-items: center;
+        #langToggle {
             background: #e4e4e7;
-            border-radius: 20px;
-            padding: 2px;
+            border: 1px solid #d4d4d8;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 12px;
             cursor: pointer;
-            position: relative;
-            width: 50px;
-            height: 26px;
-        }
-        .lang-switch-thumb {
-            position: absolute;
-            width: 22px;
-            height: 22px;
-            background: white;
-            border-radius: 50%;
-            transition: 0.3s;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            left: 2px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 10px;
             font-weight: bold;
             color: #2563eb;
+            transition: 0.2s;
+            width: auto;
         }
-        .lang-switch.en-active .lang-switch-thumb { left: calc(100% - 24px); }
+        #langToggle:hover { background: #d4d4d8; }
 
         .sidebar-content { flex: 1; overflow-y: auto; }
         .sidebar-section { padding: 15px; border-bottom: 1px solid #e4e4e7; }
@@ -239,11 +224,7 @@
         
         <div class="sidebar-header">
             <h3 id="txtTitle">BIM Architect</h3>
-            <div style="display: flex; align-items: center;">
-                <div class="lang-switch" id="langToggle" title="Toggle Language">
-                    <div class="lang-switch-thumb" id="langThumb">ID</div>
-                </div>
-            </div>
+            <button id="langToggle">ID 🔄 EN</button>
         </div>
         
         <div class="sidebar-content">
@@ -273,20 +254,20 @@
                 <select id="furnitureSelect" style="margin-bottom: 12px;">
                     <option value="" id="txtOptDefault">+ Tambah Mebel / Objek...</option>
                     <optgroup label="Ruang Utama" id="optGrp1">
-                        <option value="bed">Kasur</option>
-                        <option value="sofa">Sofa</option>
-                        <option value="table">Meja</option>
-                        <option value="chair">Kursi</option>
+                        <option value="bed" id="optBed">Kasur</option>
+                        <option value="sofa" id="optSofa">Sofa</option>
+                        <option value="table" id="optTable">Meja</option>
+                        <option value="chair" id="optChair">Kursi</option>
                     </optgroup>
                     <optgroup label="Dapur" id="optGrp2">
-                        <option value="kitchen_set">Kitchen Set</option>
-                        <option value="stove">Kompor</option>
-                        <option value="fridge">Kulkas</option>
+                        <option value="kitchen_set" id="optKitchen">Kitchen Set</option>
+                        <option value="stove" id="optStove">Kompor</option>
+                        <option value="fridge" id="optFridge">Kulkas</option>
                     </optgroup>
                     <optgroup label="Kamar Mandi" id="optGrp3">
-                        <option value="toilet">Kloset / Toilet</option>
-                        <option value="shower">Shower</option>
-                        <option value="bathtub">Bathtub</option>
+                        <option value="toilet" id="optToilet">Kloset / Toilet</option>
+                        <option value="shower" id="optShower">Shower</option>
+                        <option value="bathtub" id="optBathtub">Bathtub</option>
                     </optgroup>
                 </select>
 
@@ -386,14 +367,16 @@
     </div>
 
     <script>
-        // === TRANSLATION LOGIC (ID / EN) ===
+        // === TRANSLATION LOGIC (ID / EN) FIX ===
         let currentLang = 'id';
         const texts = {
             id: {
+                title: "BIM Architect",
                 sec1: "File & Sistem", sec2: "Alat Gambar & Bangunan", sec3: "Properti Objek", sec4: "Output",
                 lblUpload: "Upload Denah (Untuk Tracing):", undo: "Undo", redo: "Redo", clear: "Reset (Bikin Baru)",
                 sel: "Pilih / Edit", wall: "Tembok", door: "Pintu", win: "Jendela", stairs: "Tangga",
                 optDef: "+ Tambah Mebel / Objek...", grp1: "Ruang Utama", grp2: "Dapur", grp3: "Kamar Mandi",
+                bed: "Kasur", sofa: "Sofa", table: "Meja", chair: "Kursi", kitchen: "Kitchen Set", stove: "Kompor", fridge: "Kulkas", toilet: "Kloset / Toilet", shower: "Shower", bathtub: "Bathtub",
                 lblWallH: "Tinggi Tembok (m)", lblWallT: "Tebal Tembok (m)", emptyMsg: "Pilih objek di kanvas (Mode Pilih/Edit) untuk mengatur properti.",
                 lblPos: "Posisi Tembok:", lblWidth: "Lebar:", lblSwing: "Rotasi (Swing):", flipBtn: "Balik Engsel",
                 lblRot: "Rotasi:", lblScale: "Skala Ukuran:", lblSteps: "Anak Tangga:", lblStairW: "Lebar Tangga:",
@@ -404,10 +387,12 @@
                 g3: "<b>Navigasi 2D:</b> Gunakan Mode 'Pilih/Edit', lalu kamu bebas menggeser (Pan) layar dengan 1 jari. Scroll/Cubit untuk Zoom."
             },
             en: {
+                title: "BIM Architect",
                 sec1: "File & System", sec2: "Drawing & Building Tools", sec3: "Object Properties", sec4: "Output",
                 lblUpload: "Upload Floorplan (For Tracing):", undo: "Undo", redo: "Redo", clear: "Reset (New Plan)",
                 sel: "Select / Edit", wall: "Wall", door: "Door", win: "Window", stairs: "Stairs",
                 optDef: "+ Add Furniture / Objects...", grp1: "Living Area", grp2: "Kitchen", grp3: "Bathroom",
+                bed: "Bed", sofa: "Sofa", table: "Table", chair: "Chair", kitchen: "Kitchen Set", stove: "Stove", fridge: "Fridge", toilet: "Toilet / WC", shower: "Shower", bathtub: "Bathtub",
                 lblWallH: "Wall Height (m)", lblWallT: "Wall Thickness (m)", emptyMsg: "Select an object on the canvas (Select/Edit Mode) to adjust properties.",
                 lblPos: "Wall Position:", lblWidth: "Width:", lblSwing: "Rotation (Swing):", flipBtn: "Flip Hinge",
                 lblRot: "Rotation:", lblScale: "Scale:", lblSteps: "Steps Count:", lblStairW: "Stairs Width:",
@@ -423,14 +408,7 @@
             currentLang = currentLang === 'id' ? 'en' : 'id';
             const t = texts[currentLang];
             
-            if(currentLang === 'en') {
-                this.classList.add('en-active');
-                document.getElementById('langThumb').innerText = 'EN';
-            } else {
-                this.classList.remove('en-active');
-                document.getElementById('langThumb').innerText = 'ID';
-            }
-            
+            document.getElementById('txtTitle').innerText = t.title;
             document.getElementById('txtSec1').innerText = t.sec1;
             document.getElementById('txtSec2').innerText = t.sec2;
             document.getElementById('txtSec3').innerText = t.sec3;
@@ -448,6 +426,18 @@
             document.getElementById('optGrp1').label = t.grp1;
             document.getElementById('optGrp2').label = t.grp2;
             document.getElementById('optGrp3').label = t.grp3;
+            
+            document.getElementById('optBed').innerText = t.bed;
+            document.getElementById('optSofa').innerText = t.sofa;
+            document.getElementById('optTable').innerText = t.table;
+            document.getElementById('optChair').innerText = t.chair;
+            document.getElementById('optKitchen').innerText = t.kitchen;
+            document.getElementById('optStove').innerText = t.stove;
+            document.getElementById('optFridge').innerText = t.fridge;
+            document.getElementById('optToilet').innerText = t.toilet;
+            document.getElementById('optShower').innerText = t.shower;
+            document.getElementById('optBathtub').innerText = t.bathtub;
+
             document.getElementById('txtLblWallH').innerText = t.lblWallH;
             document.getElementById('txtLblWallT').innerText = t.lblWallT;
             document.getElementById('emptySelectionMsg').innerText = t.emptyMsg;
@@ -508,7 +498,7 @@
         // === STATE & DATA ===
         let lines = []; let openings = []; let freeObjects = [];
         let mode = 'wall'; let scale3D = 0.02; 
-        let isTracingMode = false; // Flag penanda mode trace
+        let isTracingMode = false;
 
         let selectedItem = null; let isDraggingObject = false; let isDraggingCanvas = false;
         let undoStack = []; let redoStack = [];
@@ -726,7 +716,6 @@
                 if (dist < minDist) { minDist = dist; snapX = projX; snapY = projY; }
             }
             
-            // Snap to Grid (Hanya berjalan di Free Draw)
             if (!isTracingMode && minDist > SNAP_RADIUS / scale) {
                 const gridSnap = 50; 
                 if (Math.abs(x % gridSnap) < (SNAP_RADIUS / scale)) snapX = Math.round(x / gridSnap) * gridSnap;
@@ -794,11 +783,11 @@
 
         // === FUNGSI MENGGAMBAR GRID LANGSUNG KE CANVAS ===
         function drawCanvasGrid() {
-            if (isTracingMode) return; // Jangan gambar grid kalau lagi mode jiplak denah
+            if (isTracingMode) return; 
             ctx.save();
             ctx.strokeStyle = '#e4e4e7';
             ctx.lineWidth = 1;
-            const gridSize = 50; // 50px = 1 meter
+            const gridSize = 50; 
             for (let x = 0; x <= canvas.width; x += gridSize) {
                 ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
             }
@@ -813,7 +802,6 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height); 
             ctx.lineCap = 'round';
             
-            // Panggil Fungsi Gambar Grid
             drawCanvasGrid();
             
             const globalThick2D = parseFloat(inputWallT.value) / scale3D; ctx.lineWidth = Math.max(2, globalThick2D); 
@@ -848,7 +836,7 @@
                 imgElement.onload = () => {
                     canvas.width = imgElement.width; canvas.height = imgElement.height; 
                     
-                    isTracingMode = true; // Aktifkan mode jiplak agar grid menghilang
+                    isTracingMode = true; 
                     workspace.style.backgroundColor = "transparent";
                     workspace.style.boxShadow = "none";
                     
@@ -862,7 +850,6 @@
             }; reader.readAsDataURL(file);
         });
 
-        // Event Hapus / Reset
         document.getElementById('clearBtn').onclick = () => { initDefaultCanvas(); lines = []; openings = []; freeObjects = []; undoStack = []; redoStack = []; stopDrawing(); closeEditPanel(); update3D(); };
 
         // === 3D ENGINE ===
