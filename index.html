@@ -40,7 +40,7 @@
             touch-action: none; 
         }
         
-        /* Redesign UI/UX Layout */
+        /* Top UI / Toolbar */
         #top-ui {
             background: #ffffff;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
@@ -83,31 +83,11 @@
             transition: 0.15s; 
         }
 
-        input[type="file"]::file-selector-button {
-            background: #f4f4f5;
-        }
-
-        input[type="number"] { 
-            cursor: text; 
-            background: #fff; 
-            width: 50px;
-        }
-
-        button:hover, select:hover, input[type="file"]::file-selector-button:hover { 
-            background: #e4e4e7; 
-        }
-
-        button:disabled { 
-            cursor: not-allowed; 
-            opacity: 0.4; 
-        }
-
-        button.active { 
-            background: #2563eb; 
-            color: white; 
-            border-color: #1d4ed8; 
-            font-weight: 600; 
-        }
+        input[type="file"]::file-selector-button { background: #f4f4f5; }
+        input[type="number"] { cursor: text; background: #fff; width: 50px; }
+        button:hover, select:hover, input[type="file"]::file-selector-button:hover { background: #e4e4e7; }
+        button:disabled { cursor: not-allowed; opacity: 0.4; }
+        button.active { background: #2563eb; color: white; border-color: #1d4ed8; font-weight: 600; }
         
         .btn-action { background: #f4f4f5; font-weight: 500; }
         .btn-danger { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
@@ -120,47 +100,77 @@
         .spacer { flex-grow: 1; }
         .divider { width: 1px; height: 24px; background-color: #d4d4d8; margin: 0 4px; }
         
-        #main-container { display: flex; flex: 1; overflow: hidden; }
-        #left-panel { flex: 1; position: relative; background: #e4e4e7; overflow: hidden; border-right: 2px solid #a1a1aa; touch-action: none; cursor: crosshair; }
-        #right-panel { flex: 1; position: relative; background: #18181b; }
-
-        #workspace { transform-origin: 0 0; position: relative; }
-        #floorplan-img { display: block; max-width: none; pointer-events: none; }
-        #draw-canvas { position: absolute; top: 0; left: 0; }
-
-        #instructions { 
-            position: absolute; bottom: 15px; left: 15px; background: rgba(0,0,0,0.7); 
-            color: white; padding: 10px 15px; border-radius: 6px; font-size: 12px; 
-            pointer-events: none; z-index: 20; line-height: 1.5; border: 1px solid rgba(255,255,255,0.2); 
+        /* Layout Utama 3 Kolom */
+        #main-container { 
+            display: flex; 
+            flex: 1; 
+            overflow: hidden; 
+            flex-direction: row; 
         }
 
-        #edit-panel {
-            display: none; position: absolute; top: 15px; right: 15px; background: white; 
-            padding: 15px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); 
-            z-index: 100; width: 240px; border: 1px solid #d4d4d8; max-height: 80vh; overflow-y: auto;
+        /* Sidebar Kiri (Properties) */
+        #sidebar {
+            width: 260px;
+            background: #ffffff;
+            border-right: 1px solid #d4d4d8;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.03);
+            z-index: 5;
         }
+
+        .sidebar-section {
+            padding: 16px;
+            border-bottom: 1px solid #e4e4e7;
+        }
+
+        .sidebar-section h4 { margin: 0 0 12px 0; color: #18181b; font-size: 14px; }
+        .sidebar-section label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #3f3f46; }
+        .sidebar-section input[type="range"] { width: 100%; margin-bottom: 12px; accent-color: #2563eb; }
         
-        #edit-panel h4 { margin: 0 0 12px 0; border-bottom: 1px solid #e4e4e7; padding-bottom: 8px; color: #18181b; }
-        #edit-panel label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #3f3f46; }
-        #edit-panel input[type="range"] { width: 100%; margin-bottom: 12px; accent-color: #2563eb; }
+        #emptySelectionMsg { font-size: 13px; color: #71717a; text-align: center; padding: 20px 0; font-style: italic; }
+        
         .edit-btn-danger { background: #ef4444; color: white; width: 100%; border: none; padding: 8px; border-radius: 4px; font-weight: bold; margin-top: 10px; }
         .edit-btn-danger:hover { background: #dc2626; }
+        .edit-btn-secondary { background: #e4e4e7; color: #18181b; width: 100%; border: none; padding: 8px; border-radius: 4px; font-weight: 600; margin-bottom: 10px; }
+        .edit-btn-secondary:hover { background: #d4d4d8; }
 
+        /* Workspace Tengah (2D) */
+        #workspace-container { 
+            flex: 1; 
+            position: relative; 
+            background: #e4e4e7; 
+            overflow: hidden; 
+            border-right: 2px solid #a1a1aa; 
+            touch-action: none; 
+            cursor: crosshair; 
+        }
+
+        #workspace { transform-origin: 0 0; position: relative; }
+        #floorplan-img { display: none; max-width: none; pointer-events: none; } /* Default sembunyi */
+        #draw-canvas { position: absolute; top: 0; left: 0; }
+
+        /* Render Kanan (3D) */
+        #render-container { flex: 1; position: relative; background: #18181b; }
+
+        /* Modal AR */
         #ar-modal {
             display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; flex-direction: column;
         }
         model-viewer { width: 90vw; height: 80vh; background-color: #111; border-radius: 8px; }
-        
         #closeArBtn {
             position: absolute; top: 20px; right: 20px; padding: 10px 20px; background: #ef4444; color: white;
             border: none; border-radius: 6px; font-weight: bold; font-size: 14px; z-index: 1001;
         }
 
+        /* Responsive Layout */
         @media (max-width: 900px) {
             #main-container { flex-direction: column; }
-            #left-panel, #right-panel { flex: none; height: 50%; border-right: none; border-bottom: 2px solid #a1a1aa; }
-            #edit-panel { top: auto; bottom: 15px; right: 15px; }
+            #sidebar { width: 100%; border-right: none; border-bottom: 2px solid #a1a1aa; max-height: 25vh; flex: none; }
+            #workspace-container { flex: 1; min-height: 35vh; border-right: none; border-bottom: 2px solid #a1a1aa; }
+            #render-container { flex: 1; min-height: 35vh; }
         }
     </style>
 </head>
@@ -169,6 +179,7 @@
     <div id="top-ui">
         <!-- Baris 1: Sistem & File -->
         <div class="toolbar-row">
+            <label style="font-size:12px; font-weight:bold; margin-right:4px;">Upload Trace:</label>
             <input type="file" id="upload" accept="image/*" style="max-width: 200px;">
             
             <div class="divider"></div>
@@ -176,7 +187,7 @@
             <div class="tool-group">
                 <button id="undoBtn" class="btn-action" disabled>Undo</button>
                 <button id="redoBtn" class="btn-action" disabled>Redo</button>
-                <button id="clearBtn" class="btn-danger">Hapus Semua</button>
+                <button id="clearBtn" class="btn-danger">Reset Kanvas</button>
             </div>
 
             <div class="spacer"></div>
@@ -227,42 +238,71 @@
         </div>
     </div>
 
-    <div id="edit-panel">
-        <h4 id="editTitle">Parameter Objek</h4>
+    <div id="main-container">
+        <!-- SIDEBAR PROPERTIES -->
+        <div id="sidebar">
+            <div class="sidebar-section">
+                <h4>Editor Objek</h4>
+                <div id="emptySelectionMsg">Pilih objek di kanvas untuk melihat propertinya.</div>
+                
+                <div id="edit-panel-content" style="display: none;">
+                    <div id="wallObjectControls">
+                        <label>Posisi Tembok: <span id="valPos">50</span>%</label>
+                        <input type="range" id="editPos" min="0" max="100" step="1" value="50">
+
+                        <label>Lebar: <span id="valWidth">0.9</span> m</label>
+                        <input type="range" id="editWidth" min="0.4" max="4.0" step="0.1" value="0.9">
+                        
+                        <div id="doorControls">
+                            <label>Rotasi (Swing): <span id="valSwing">45</span>°</label>
+                            <input type="range" id="editSwing" min="-180" max="180" step="5" value="45">
+                            <button id="flipHingeBtn" class="edit-btn-secondary">Balik Engsel</button>
+                        </div>
+                    </div>
+
+                    <div id="freeObjectControls">
+                        <label>Rotasi: <span id="valRot">0</span>°</label>
+                        <input type="range" id="editRot" min="0" max="360" step="5" value="0">
+
+                        <label>Skala Ukuran: <span id="valScale">1.0</span>x</label>
+                        <input type="range" id="editScale" min="0.5" max="3.0" step="0.1" value="1.0">
+
+                        <div id="stairsControls">
+                            <label>Anak Tangga: <span id="valSteps">14</span></label>
+                            <input type="range" id="editSteps" min="5" max="25" step="1" value="14">
+
+                            <label>Lebar Tangga: <span id="valStairW">1.0</span> m</label>
+                            <input type="range" id="editStairW" min="0.8" max="2.5" step="0.1" value="1.0">
+                        </div>
+                    </div>
+
+                    <button id="delObjBtn" class="edit-btn-danger">Hapus Objek</button>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h4>Panduan Kontrol</h4>
+                <p style="font-size: 12px; color: #52525b; line-height: 1.6; margin: 0;">
+                    <b>Tembok:</b> Tap 1x titik awal, tap posisi lain, tap 2x (atau ESC) untuk akhiri.<br>
+                    <b>Navigasi 2D:</b> Scroll untuk Zoom, Klik Kanan/Tap 2 Jari untuk Geser (Pan).<br>
+                    <b>Edit:</b> Gunakan mode "Pilih/Edit", tekan dan geser objek untuk memindahkannya.
+                </p>
+            </div>
+        </div>
+
+        <!-- KANVAS 2D -->
+        <div id="workspace-container">
+            <div id="workspace">
+                <img id="floorplan-img" src="">
+                <canvas id="draw-canvas"></canvas>
+            </div>
+        </div>
         
-        <div id="wallObjectControls">
-            <label>Posisi Tembok: <span id="valPos">50</span>%</label>
-            <input type="range" id="editPos" min="0" max="100" step="1" value="50">
-
-            <label>Lebar: <span id="valWidth">0.9</span> m</label>
-            <input type="range" id="editWidth" min="0.4" max="4.0" step="0.1" value="0.9">
-            
-            <div id="doorControls">
-                <label>Rotasi (Swing): <span id="valSwing">45</span>°</label>
-                <input type="range" id="editSwing" min="-180" max="180" step="5" value="45">
-                <button id="flipHingeBtn" style="width: 100%; margin-bottom: 10px; background: #e4e4e7; font-weight: 500;">Balik Engsel</button>
-            </div>
-        </div>
-
-        <div id="freeObjectControls">
-            <label>Rotasi: <span id="valRot">0</span>°</label>
-            <input type="range" id="editRot" min="0" max="360" step="5" value="0">
-
-            <label>Skala Ukuran: <span id="valScale">1.0</span>x</label>
-            <input type="range" id="editScale" min="0.5" max="3.0" step="0.1" value="1.0">
-
-            <div id="stairsControls">
-                <label>Jumlah Anak Tangga: <span id="valSteps">14</span></label>
-                <input type="range" id="editSteps" min="5" max="25" step="1" value="14">
-
-                <label>Lebar Tangga: <span id="valStairW">1.0</span> m</label>
-                <input type="range" id="editStairW" min="0.8" max="2.5" step="0.1" value="1.0">
-            </div>
-        </div>
-
-        <button id="delObjBtn" class="edit-btn-danger">Hapus Objek</button>
+        <!-- VIEWER 3D -->
+        <div id="render-container"></div>
     </div>
 
+    <!-- MODAL AR -->
     <div id="ar-modal">
         <button id="closeArBtn">Tutup AR</button>
         <model-viewer id="arViewer" ar ar-modes="webxr scene-viewer quick-look" camera-controls touch-action="pan-y" shadow-intensity="1" alt="Denah 3D AR">
@@ -270,22 +310,6 @@
                 Lihat di Ruangan Nyata (AR)
             </button>
         </model-viewer>
-    </div>
-
-    <div id="main-container">
-        <div id="left-panel">
-            <div id="workspace">
-                <img id="floorplan-img" src="">
-                <canvas id="draw-canvas"></canvas>
-            </div>
-            <div id="instructions">
-                <b>Mode Tembok:</b><br>
-                1. Tap/Klik 1x untuk titik awal.<br>
-                2. Tap/Klik di titik lain untuk menyambung.<br>
-                3. Tap 2x di posisi yang sama (Atau ESC/Klik Kanan) untuk memutus garis.
-            </div>
-        </div>
-        <div id="right-panel"></div>
     </div>
 
     <script>
@@ -300,11 +324,11 @@
         let isDraggingObject = false; 
         let undoStack = []; let redoStack = [];
 
+        const workspaceContainer = document.getElementById('workspace-container');
         const workspace = document.getElementById('workspace');
         const canvas = document.getElementById('draw-canvas');
         const ctx = canvas.getContext('2d');
         const imgElement = document.getElementById('floorplan-img');
-        const leftPanel = document.getElementById('left-panel');
         
         const inputWallH = document.getElementById('valWallH');
         const inputWallT = document.getElementById('valWallT');
@@ -313,7 +337,37 @@
         inputWallH.addEventListener('change', () => { saveState(); update3D(); });
         inputWallT.addEventListener('change', () => { saveState(); update3D(); draw2D(); });
 
-        // === UNDO / REDO LOGIC ===
+        // === INITIALIZE CANVAS (DEFAULT FREE DRAWING) ===
+        let scale = 1; let panX = 0, panY = 0; let isPanning = false, startPanX = 0, startPanY = 0;
+        let touchStartDist = 0, initialScale = 1;
+
+        function initDefaultCanvas() {
+            imgElement.src = "";
+            imgElement.style.display = "none";
+            // Set area kanvas bebas yang luas
+            canvas.width = 2500;
+            canvas.height = 2500;
+            
+            const panelWidth = workspaceContainer.clientWidth; 
+            const panelHeight = workspaceContainer.clientHeight;
+            
+            scale = 0.5; // Zoom out sedikit
+            panX = (panelWidth - (canvas.width * scale)) / 2;
+            panY = (panelHeight - (canvas.height * scale)) / 2;
+            
+            applyTransform();
+            scale3D = 20 / Math.max(canvas.width, canvas.height); 
+            draw2D();
+        }
+
+        window.addEventListener('load', () => {
+            initDefaultCanvas();
+            setTimeout(initDefaultCanvas, 100); // Pastikan ukuran layout stabil
+        });
+
+        function applyTransform() { workspace.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`; }
+
+        // === UNDO / REDO ===
         function saveState() {
             undoStack.push({ 
                 lines: JSON.parse(JSON.stringify(lines)), 
@@ -326,11 +380,7 @@
 
         function restoreState(isUndo) {
             stopDrawing();
-            const current = { 
-                lines: JSON.parse(JSON.stringify(lines)), 
-                openings: JSON.parse(JSON.stringify(openings)),
-                freeObjects: JSON.parse(JSON.stringify(freeObjects))
-            };
+            const current = { lines: JSON.parse(JSON.stringify(lines)), openings: JSON.parse(JSON.stringify(openings)), freeObjects: JSON.parse(JSON.stringify(freeObjects)) };
             if (isUndo) {
                 redoStack.push(current); const prev = undoStack.pop();
                 lines = prev.lines; openings = prev.openings; freeObjects = prev.freeObjects || [];
@@ -346,42 +396,37 @@
         document.getElementById('undoBtn').onclick = () => restoreState(true);
         document.getElementById('redoBtn').onclick = () => restoreState(false);
 
-        // === ZOOM & PAN 2D LOGIC ===
-        let scale = 1; let panX = 0, panY = 0; let isPanning = false, startPanX = 0, startPanY = 0;
-        let touchStartDist = 0, initialScale = 1;
-
-        function applyTransform() { workspace.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`; }
-
-        leftPanel.addEventListener('wheel', (e) => {
+        // === PAN & ZOOM ===
+        workspaceContainer.addEventListener('wheel', (e) => {
             e.preventDefault();
             const newScale = Math.min(Math.max(0.05, scale + (e.deltaY * -0.001)), 10);
-            const rect = leftPanel.getBoundingClientRect();
+            const rect = workspaceContainer.getBoundingClientRect();
             const mouseX = e.clientX - rect.left; const mouseY = e.clientY - rect.top;
             panX = mouseX - ((mouseX - panX) * (newScale / scale)); panY = mouseY - ((mouseY - panY) * (newScale / scale));
             scale = newScale; applyTransform();
         }, { passive: false });
 
-        leftPanel.addEventListener('pointerdown', (e) => {
+        workspaceContainer.addEventListener('pointerdown', (e) => {
             if (e.button === 2 || e.button === 1) { 
                 isPanning = true; startPanX = e.clientX - panX; startPanY = e.clientY - panY;
-                leftPanel.style.cursor = 'grabbing';
+                workspaceContainer.style.cursor = 'grabbing';
             }
         });
         
         window.addEventListener('pointerup', () => { 
             isPanning = false; 
             if (isDraggingObject) { isDraggingObject = false; saveState(); }
-            leftPanel.style.cursor = 'crosshair'; 
+            workspaceContainer.style.cursor = 'crosshair'; 
         });
         
         window.addEventListener('pointermove', (e) => { 
             if (isPanning) { panX = e.clientX - startPanX; panY = e.clientY - startPanY; applyTransform(); }
         });
         
-        leftPanel.addEventListener('contextmenu', e => e.preventDefault());
+        workspaceContainer.addEventListener('contextmenu', e => e.preventDefault());
 
-        // Multi-Touch Logic
-        leftPanel.addEventListener('touchstart', (e) => {
+        // Multi-Touch Pan/Zoom
+        workspaceContainer.addEventListener('touchstart', (e) => {
             if (e.touches.length === 2) {
                 isPanning = true;
                 touchStartDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
@@ -391,32 +436,25 @@
             }
         }, { passive: false });
 
-        leftPanel.addEventListener('touchmove', (e) => {
+        workspaceContainer.addEventListener('touchmove', (e) => {
             if (e.touches.length === 2) {
                 e.preventDefault(); 
                 const currentDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
                 const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2; const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
                 const newScale = Math.min(Math.max(0.05, initialScale * (currentDist / touchStartDist)), 10);
-                const rect = leftPanel.getBoundingClientRect();
+                const rect = workspaceContainer.getBoundingClientRect();
                 const focusX = midX - rect.left; const focusY = midY - rect.top;
                 panX = focusX - ((focusX - (midX - startPanX)) * (newScale / scale)); panY = focusY - ((focusY - (midY - startPanY)) * (newScale / scale));
                 scale = newScale; applyTransform();
             }
         }, { passive: false });
-        leftPanel.addEventListener('touchend', () => { 
-            isPanning = false; 
-            if (isDraggingObject) { isDraggingObject = false; saveState(); }
-        });
+        workspaceContainer.addEventListener('touchend', () => { isPanning = false; if (isDraggingObject) { isDraggingObject = false; saveState(); } });
 
-        // === UI EDITOR & INTERAKSI KANVAS ===
+        // === TOOLS & DRAWING LOGIC ===
         let isDrawing = false, currentLine = null;
         const SNAP_RADIUS = 20;
 
-        function stopDrawing() {
-            isDrawing = false;
-            currentLine = null;
-            draw2D();
-        }
+        function stopDrawing() { isDrawing = false; currentLine = null; draw2D(); }
 
         document.getElementById('modeSelect').onclick = (e) => setMode('select', e.target);
         document.getElementById('modeWall').onclick = (e) => setMode('wall', e.target);
@@ -425,23 +463,18 @@
         document.getElementById('modeStairs').onclick = (e) => setMode('stairs', e.target);
 
         furnitureSelect.addEventListener('change', (e) => {
-            if(e.target.value) {
-                setMode(e.target.value, null);
-            }
+            if(e.target.value) { setMode(e.target.value, null); }
         });
 
         function setMode(newMode, btn) {
-            stopDrawing();
-            mode = newMode;
+            stopDrawing(); mode = newMode;
             document.querySelectorAll('#top-ui button.active').forEach(b => b.classList.remove('active'));
             if(btn) btn.classList.add('active');
             if (mode !== 'select') closeEditPanel();
             draw2D();
         }
 
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') { stopDrawing(); }
-        });
+        window.addEventListener('keydown', (e) => { if (e.key === 'Escape') stopDrawing(); });
 
         function getTrueCoords(x, y) {
             const rect = canvas.getBoundingClientRect();
@@ -451,8 +484,8 @@
         function getSnapped(x, y) {
             let snapX = x, snapY = y; let minDist = SNAP_RADIUS / scale;
             for (let l of lines) {
-                if (Math.hypot(l.start.x - x, l.start.y - y) < minDist) { return { x: l.start.x, y: l.start.y }; }
-                if (Math.hypot(l.end.x - x, l.end.y - y) < minDist) { return { x: l.end.x, y: l.end.y }; }
+                if (Math.hypot(l.start.x - x, l.start.y - y) < minDist) return { x: l.start.x, y: l.start.y };
+                if (Math.hypot(l.end.x - x, l.end.y - y) < minDist) return { x: l.end.x, y: l.end.y };
             }
             for (let l of lines) {
                 const l2 = Math.pow(l.end.x - l.start.x, 2) + Math.pow(l.end.y - l.start.y, 2);
@@ -465,18 +498,15 @@
             return { x: snapX, y: snapY };
         }
 
-        function handlePointerDown(clientX, clientY, button) {
-            if (button === 2) {
-                stopDrawing();
-                return; 
-            }
-            if (button !== 0 && button !== undefined) return;
+        canvas.addEventListener('pointerdown', (e) => {
+            if (isPanning) return;
+            if (e.button === 2) { stopDrawing(); return; }
+            if (e.button !== 0 && e.button !== undefined) return;
 
-            let { x, y } = getTrueCoords(clientX, clientY);
+            let { x, y } = getTrueCoords(e.clientX, e.clientY);
             
             if (mode === 'select') {
                 let clickedItem = null; let minDist = 30 / scale;
-                
                 openings.forEach(op => {
                     let l = lines[op.lineIndex];
                     if(l) {
@@ -485,38 +515,25 @@
                         if (Math.hypot(cx - x, cy - y) < minDist) { clickedItem = op; minDist = Math.hypot(cx - x, cy - y); }
                     }
                 });
-
                 freeObjects.forEach(obj => {
-                    if (Math.hypot(obj.x - x, obj.y - y) < minDist) {
-                        clickedItem = obj; minDist = Math.hypot(obj.x - x, obj.y - y);
-                    }
+                    if (Math.hypot(obj.x - x, obj.y - y) < minDist) { clickedItem = obj; minDist = Math.hypot(obj.x - x, obj.y - y); }
                 });
 
                 if (clickedItem) { 
-                    selectedItem = clickedItem; 
-                    openEditPanel(selectedItem); 
-                    if (selectedItem.lineIndex === undefined) {
-                        isDraggingObject = true; 
-                    }
-                } 
-                else { selectedItem = null; closeEditPanel(); }
+                    selectedItem = clickedItem; openEditPanel(selectedItem); 
+                    if (selectedItem.lineIndex === undefined) isDraggingObject = true; 
+                } else { selectedItem = null; closeEditPanel(); }
                 draw2D();
             } 
             else if (mode === 'wall') {
                 let snap = getSnapped(x, y);
                 if (!isDrawing) {
-                    saveState(); 
-                    isDrawing = true; 
-                    currentLine = { start: snap, end: snap };
+                    saveState(); isDrawing = true; currentLine = { start: snap, end: snap };
                 } else {
                     const dist = Math.hypot(snap.x - currentLine.start.x, snap.y - currentLine.start.y);
-                    
-                    if (dist < 10 / scale) {
-                        stopDrawing();
-                    } else {
-                        currentLine.end = snap;
-                        lines.push({...currentLine});
-                        update3D();
+                    if (dist < 10 / scale) { stopDrawing(); } 
+                    else {
+                        currentLine.end = snap; lines.push({...currentLine}); update3D();
                         currentLine = { start: snap, end: snap };
                     }
                 }
@@ -538,35 +555,22 @@
                 saveState();
                 freeObjects.push({
                     id: Date.now(), type: mode, x: x, y: y,
-                    rotation: 0, scaleVal: 1.0, steps: 14,
-                    width3D: mode === 'stairs' ? 1.0 : 1.0
+                    rotation: 0, scaleVal: 1.0, steps: 14, width3D: mode === 'stairs' ? 1.0 : 1.0
                 });
                 furnitureSelect.value = "";
                 setMode('select', document.getElementById('modeSelect'));
                 update3D(); draw2D();
             }
-        }
-
-        canvas.addEventListener('pointerdown', (e) => {
-            if (isPanning) return;
-            handlePointerDown(e.clientX, e.clientY, e.button);
         });
 
-        function handlePointerMove(clientX, clientY) {
-            let { x, y } = getTrueCoords(clientX, clientY);
+        canvas.addEventListener('pointermove', (e) => {
+            let { x, y } = getTrueCoords(e.clientX, e.clientY);
             if (isDrawing && mode === 'wall' && currentLine) {
-                currentLine.end = getSnapped(x, y); 
-                draw2D();
+                currentLine.end = getSnapped(x, y); draw2D();
             }
             else if (isDraggingObject && selectedItem && selectedItem.lineIndex === undefined) {
-                selectedItem.x = x;
-                selectedItem.y = y;
-                draw2D(); update3D();
+                selectedItem.x = x; selectedItem.y = y; draw2D(); update3D();
             }
-        }
-
-        canvas.addEventListener('pointermove', (e) => {
-            handlePointerMove(e.clientX, e.clientY);
         });
 
         function findNearestLine(px, py) {
@@ -582,27 +586,24 @@
             return result;
         }
 
-        // === PANEL EDITOR ===
-        const editPanel = document.getElementById('edit-panel');
+        // === PANEL EDITOR SIDEBAR ===
+        const emptySelectionMsg = document.getElementById('emptySelectionMsg');
+        const editPanelContent = document.getElementById('edit-panel-content');
         const wallObjectControls = document.getElementById('wallObjectControls');
         const freeObjectControls = document.getElementById('freeObjectControls');
         const stairsControls = document.getElementById('stairsControls');
         
-        const editPos = document.getElementById('editPos');
-        const editWidth = document.getElementById('editWidth');
-        const editSwing = document.getElementById('editSwing');
-        const editRot = document.getElementById('editRot');
-        const editScale = document.getElementById('editScale');
-        const editSteps = document.getElementById('editSteps');
+        const editPos = document.getElementById('editPos'); const editWidth = document.getElementById('editWidth');
+        const editSwing = document.getElementById('editSwing'); const editRot = document.getElementById('editRot');
+        const editScale = document.getElementById('editScale'); const editSteps = document.getElementById('editSteps');
         const editStairW = document.getElementById('editStairW');
 
         function openEditPanel(item) {
-            editPanel.style.display = 'block';
+            emptySelectionMsg.style.display = 'none';
+            editPanelContent.style.display = 'block';
             
             if (item.lineIndex !== undefined) { 
-                wallObjectControls.style.display = 'block';
-                freeObjectControls.style.display = 'none';
-                
+                wallObjectControls.style.display = 'block'; freeObjectControls.style.display = 'none';
                 editPos.value = Math.round(item.ratio * 100); document.getElementById('valPos').innerText = Math.round(item.ratio * 100);
                 editWidth.value = item.width3D; document.getElementById('valWidth').innerText = item.width3D;
                 if (item.type === 'door') {
@@ -610,9 +611,7 @@
                     editSwing.value = item.swing; document.getElementById('valSwing').innerText = item.swing;
                 } else { document.getElementById('doorControls').style.display = 'none'; }
             } else { 
-                wallObjectControls.style.display = 'none';
-                freeObjectControls.style.display = 'block';
-                
+                wallObjectControls.style.display = 'none'; freeObjectControls.style.display = 'block';
                 editRot.value = item.rotation || 0; document.getElementById('valRot').innerText = item.rotation || 0;
                 editScale.value = item.scaleVal || 1.0; document.getElementById('valScale').innerText = item.scaleVal || 1.0;
 
@@ -620,13 +619,15 @@
                     stairsControls.style.display = 'block';
                     editSteps.value = item.steps || 14; document.getElementById('valSteps').innerText = item.steps || 14;
                     editStairW.value = item.width3D || 1.0; document.getElementById('valStairW').innerText = item.width3D || 1.0;
-                } else {
-                    stairsControls.style.display = 'none';
-                }
+                } else { stairsControls.style.display = 'none'; }
             }
         }
 
-        function closeEditPanel() { editPanel.style.display = 'none'; selectedItem = null; }
+        function closeEditPanel() { 
+            emptySelectionMsg.style.display = 'block';
+            editPanelContent.style.display = 'none';
+            selectedItem = null; 
+        }
 
         editPos.addEventListener('input', (e) => { if (selectedItem && selectedItem.lineIndex !== undefined) { selectedItem.ratio = parseFloat(e.target.value) / 100; document.getElementById('valPos').innerText = e.target.value; update3D(); draw2D(); } });
         editPos.addEventListener('change', () => saveState());
@@ -643,24 +644,24 @@
         editStairW.addEventListener('input', (e) => { if (selectedItem && selectedItem.type === 'stairs') { selectedItem.width3D = parseFloat(e.target.value); document.getElementById('valStairW').innerText = selectedItem.width3D; update3D(); draw2D(); } });
         editStairW.addEventListener('change', () => saveState());
 
-        document.getElementById('flipHingeBtn').addEventListener('click', () => {
-            if (selectedItem && selectedItem.type === 'door') {
-                saveState(); selectedItem.flipHinge = !selectedItem.flipHinge; update3D(); draw2D();
-            }
-        });
-
-        document.getElementById('delObjBtn').addEventListener('click', () => {
-            if (selectedItem) { 
-                saveState(); 
-                if (selectedItem.lineIndex !== undefined) openings = openings.filter(o => o.id !== selectedItem.id); 
-                else freeObjects = freeObjects.filter(o => o.id !== selectedItem.id);
-                closeEditPanel(); update3D(); draw2D(); 
-            }
-        });
+        document.getElementById('flipHingeBtn').addEventListener('click', () => { if (selectedItem && selectedItem.type === 'door') { saveState(); selectedItem.flipHinge = !selectedItem.flipHinge; update3D(); draw2D(); }});
+        document.getElementById('delObjBtn').addEventListener('click', () => { if (selectedItem) { saveState(); if (selectedItem.lineIndex !== undefined) openings = openings.filter(o => o.id !== selectedItem.id); else freeObjects = freeObjects.filter(o => o.id !== selectedItem.id); closeEditPanel(); update3D(); draw2D(); }});
 
         // === 2D RENDER ===
+        function drawGrid() {
+            ctx.save();
+            ctx.strokeStyle = '#d4d4d8';
+            ctx.lineWidth = 1 / scale; 
+            const gridSize = 50; 
+            for (let x = 0; x <= canvas.width; x += gridSize) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+            for (let y = 0; y <= canvas.height; y += gridSize) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+            ctx.restore();
+        }
+
         function draw2D() {
             ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.lineCap = 'round';
+            drawGrid(); // Tambahkan visual papan gambar
+            
             const globalThick2D = parseFloat(inputWallT.value) / scale3D;
             ctx.lineWidth = Math.max(2, globalThick2D); 
             
@@ -689,7 +690,6 @@
                 if (op.type === 'door') {
                     ctx.clearRect(-opWidth2D/2, -ctx.lineWidth, opWidth2D, ctx.lineWidth * 2);
                     let swingDir = op.swing >= 0 ? -1 : 1;
-                    
                     ctx.beginPath(); ctx.moveTo(-opWidth2D/2, 0); ctx.lineTo(-opWidth2D/2, opWidth2D * swingDir); 
                     ctx.lineWidth = Math.max(2, canvas.width * 0.002); ctx.strokeStyle = '#8B4513'; ctx.stroke();
                     ctx.beginPath(); ctx.arc(-opWidth2D/2, 0, opWidth2D, swingDir < 0 ? -Math.PI/2 : 0, swingDir < 0 ? 0 : Math.PI/2);
@@ -703,37 +703,21 @@
             });
 
             freeObjects.forEach(obj => {
-                ctx.save();
-                ctx.translate(obj.x, obj.y);
-                ctx.rotate((obj.rotation || 0) * Math.PI / 180);
+                ctx.save(); ctx.translate(obj.x, obj.y); ctx.rotate((obj.rotation || 0) * Math.PI / 180);
                 const s = obj.scaleVal || 1.0;
-
-                if (obj === selectedItem) {
-                    ctx.shadowColor = '#2563eb'; ctx.shadowBlur = 15;
-                }
+                if (obj === selectedItem) { ctx.shadowColor = '#2563eb'; ctx.shadowBlur = 15; }
 
                 if (obj.type === 'stairs') {
-                    const w = ((obj.width3D || 1.0) / scale3D) * s;
-                    const h = (1.5 / scale3D) * s;
-                    ctx.fillStyle = 'rgba(212, 212, 216, 0.8)';
-                    ctx.fillRect(-w/2, -h/2, w, h);
-                    ctx.strokeStyle = '#3f3f46'; ctx.lineWidth = 1.5;
-                    ctx.strokeRect(-w/2, -h/2, w, h);
+                    const w = ((obj.width3D || 1.0) / scale3D) * s; const h = (1.5 / scale3D) * s;
+                    ctx.fillStyle = 'rgba(212, 212, 216, 0.8)'; ctx.fillRect(-w/2, -h/2, w, h);
+                    ctx.strokeStyle = '#3f3f46'; ctx.lineWidth = 1.5; ctx.strokeRect(-w/2, -h/2, w, h);
                     const steps = obj.steps || 14;
-                    for(let i=1; i<steps; i++) {
-                        let yStep = -h/2 + (h/steps)*i;
-                        ctx.beginPath(); ctx.moveTo(-w/2, yStep); ctx.lineTo(w/2, yStep); ctx.stroke();
-                    }
+                    for(let i=1; i<steps; i++) { let yStep = -h/2 + (h/steps)*i; ctx.beginPath(); ctx.moveTo(-w/2, yStep); ctx.lineTo(w/2, yStep); ctx.stroke(); }
                 } else {
                     const size = (30 / scale) * s;
-                    ctx.fillStyle = ['bed','sofa','table','chair'].includes(obj.type) ? '#f59e0b' : 
-                                    (['kitchen_set','stove','fridge'].includes(obj.type) ? '#ec4899' : '#06b6d4');
-                    ctx.fillRect(-size/2, -size/2, size, size);
-                    ctx.strokeStyle = '#27272a'; ctx.lineWidth = 1;
-                    ctx.strokeRect(-size/2, -size/2, size, size);
-                    
-                    ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.max(10, size*0.4)}px sans-serif`;
-                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.fillStyle = ['bed','sofa','table','chair'].includes(obj.type) ? '#f59e0b' : (['kitchen_set','stove','fridge'].includes(obj.type) ? '#ec4899' : '#06b6d4');
+                    ctx.fillRect(-size/2, -size/2, size, size); ctx.strokeStyle = '#27272a'; ctx.lineWidth = 1; ctx.strokeRect(-size/2, -size/2, size, size);
+                    ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.max(10, size*0.4)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
                     const labels = { bed:'BED', sofa:'SOFA', table:'TBL', chair:'CHR', kitchen_set:'KIT', stove:'STV', fridge:'FRG', toilet:'WC', shower:'SHW', bathtub:'BAT' };
                     ctx.fillText(labels[obj.type] || 'OBJ', 0, 0);
                 }
@@ -747,9 +731,10 @@
             const reader = new FileReader();
             reader.onload = (event) => {
                 imgElement.src = event.target.result;
+                imgElement.style.display = "block";
                 imgElement.onload = () => {
                     canvas.width = imgElement.width; canvas.height = imgElement.height;
-                    const panelWidth = leftPanel.clientWidth; const panelHeight = leftPanel.clientHeight;
+                    const panelWidth = workspaceContainer.clientWidth; const panelHeight = workspaceContainer.clientHeight;
                     scale = Math.min(panelWidth / imgElement.width, panelHeight / imgElement.height) * 0.9;
                     panX = (panelWidth - (imgElement.width * scale)) / 2; panY = (panelHeight - (imgElement.height * scale)) / 2;
                     applyTransform();
@@ -761,13 +746,13 @@
         });
 
         // === 3D ENGINE ===
-        const rightPanel = document.getElementById('right-panel');
+        const renderContainer = document.getElementById('render-container');
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(45, rightPanel.clientWidth / rightPanel.clientHeight, 0.1, 1000);
+        const camera = new THREE.PerspectiveCamera(45, renderContainer.clientWidth / renderContainer.clientHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         
-        renderer.setSize(rightPanel.clientWidth, rightPanel.clientHeight);
-        renderer.setClearColor(0x27272a); rightPanel.appendChild(renderer.domElement);
+        renderer.setSize(renderContainer.clientWidth, renderContainer.clientHeight);
+        renderer.setClearColor(0x27272a); renderContainer.appendChild(renderer.domElement);
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         
         scene.add(new THREE.AmbientLight(0xffffff, 0.8));
@@ -778,36 +763,28 @@
         camera.position.set(0, 15, 20); 
 
         window.addEventListener('resize', () => {
-            camera.aspect = rightPanel.clientWidth / rightPanel.clientHeight;
-            camera.updateProjectionMatrix(); renderer.setSize(rightPanel.clientWidth, rightPanel.clientHeight);
+            camera.aspect = renderContainer.clientWidth / renderContainer.clientHeight;
+            camera.updateProjectionMatrix(); renderer.setSize(renderContainer.clientWidth, renderContainer.clientHeight);
         });
 
         function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); } animate();
 
-        // ==============================================================
-        // MODEL GENERATOR LENGKAP
-        // ==============================================================
         function createStairsMesh(stepsCount, stairWidth, totalHeight) {
             const stairsGroup = new THREE.Group();
             const matStairs = new THREE.MeshLambertMaterial({ color: 0xd2b48c });
             const stepHeight = totalHeight / stepsCount;
             const stepDepth = 0.28;
-
             for (let i = 0; i < stepsCount; i++) {
-                const geom = new THREE.BoxGeometry(stairWidth, stepHeight, stepDepth * (stepsCount - i));
-                const mesh = new THREE.Mesh(geom, matStairs);
-                mesh.position.set(0, (i * stepHeight) + (stepHeight / 2), (i * stepDepth) / 2);
-                stairsGroup.add(mesh);
+                const mesh = new THREE.Mesh(new THREE.BoxGeometry(stairWidth, stepHeight, stepDepth * (stepsCount - i)), matStairs);
+                mesh.position.set(0, (i * stepHeight) + (stepHeight / 2), (i * stepDepth) / 2); stairsGroup.add(mesh);
             }
             return stairsGroup;
         }
 
         function createFurnitureMesh(type) {
             const group = new THREE.Group();
-            const matWood = new THREE.MeshLambertMaterial({ color: 0x8b5a2b });
-            const matFabric = new THREE.MeshLambertMaterial({ color: 0x34495e });
-            const matWhite = new THREE.MeshLambertMaterial({ color: 0xecf0f1 });
-            const matMetal = new THREE.MeshLambertMaterial({ color: 0x7f8c8d });
+            const matWood = new THREE.MeshLambertMaterial({ color: 0x8b5a2b }); const matFabric = new THREE.MeshLambertMaterial({ color: 0x34495e });
+            const matWhite = new THREE.MeshLambertMaterial({ color: 0xecf0f1 }); const matMetal = new THREE.MeshLambertMaterial({ color: 0x7f8c8d });
             const matGlass = new THREE.MeshLambertMaterial({ color: 0x87CEEB, transparent: true, opacity: 0.4 });
 
             if (type === 'bed') {
@@ -819,9 +796,7 @@
                 const back = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.6, 0.2), matFabric); back.position.set(0, 0.6, -0.3); group.add(back);
             } else if (type === 'table') {
                 const top = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.05, 0.8), matWood); top.position.y = 0.75; group.add(top);
-                for(let x of [-0.5, 0.5]) { for(let z of [-0.3, 0.3]) {
-                    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.72, 0.06), matWood); leg.position.set(x, 0.36, z); group.add(leg);
-                }}
+                for(let x of [-0.5, 0.5]) { for(let z of [-0.3, 0.3]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.72, 0.06), matWood); leg.position.set(x, 0.36, z); group.add(leg); } }
             } else if (type === 'chair') {
                 const seat = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.04, 0.45), matWood); seat.position.y = 0.45; group.add(seat);
                 const back = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.45, 0.04), matWood); back.position.set(0, 0.68, -0.2); group.add(back);
@@ -851,9 +826,7 @@
             while(modelGroup.children.length > 0) modelGroup.remove(modelGroup.children[0]); 
             if(lines.length === 0 && freeObjects.length === 0) return;
 
-            const heightWall = parseFloat(inputWallH.value); 
-            const thickWall = parseFloat(inputWallT.value);
-
+            const heightWall = parseFloat(inputWallH.value); const thickWall = parseFloat(inputWallT.value);
             let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
             lines.forEach(l => {
                 minX = Math.min(minX, l.start.x, l.end.x); maxX = Math.max(maxX, l.start.x, l.end.x);
@@ -864,64 +837,40 @@
                 minY = Math.min(minY, o.y); maxY = Math.max(maxY, o.y);
             });
 
-            const center2DX = (minX === Infinity) ? 0 : (minX + maxX) / 2; 
-            const center2DY = (minY === Infinity) ? 0 : (minY + maxY) / 2;
+            const center2DX = (minX === Infinity) ? 0 : (minX + maxX) / 2; const center2DY = (minY === Infinity) ? 0 : (minY + maxY) / 2;
             
-            const matWall = new THREE.MeshLambertMaterial({ color: 0xefefef });
-            const matDoor = new THREE.MeshLambertMaterial({ color: 0x5c4033 }); 
+            const matWall = new THREE.MeshLambertMaterial({ color: 0xefefef }); const matDoor = new THREE.MeshLambertMaterial({ color: 0x5c4033 }); 
             const matWindow = new THREE.MeshLambertMaterial({ color: 0x87CEEB, transparent: true, opacity: 0.5 }); 
-            const matFrame = new THREE.MeshLambertMaterial({ color: 0x3f3f46 }); 
-            const matFloor = new THREE.MeshLambertMaterial({ color: 0xd4d4d8, side: THREE.DoubleSide });
+            const matFrame = new THREE.MeshLambertMaterial({ color: 0x3f3f46 }); const matFloor = new THREE.MeshLambertMaterial({ color: 0xd4d4d8, side: THREE.DoubleSide });
 
-            // 1. LANTAI 3D (Solusi Bounding Box Pad agar tidak ada glitch segitiga)
             if (minX !== Infinity) {
-                const floorPadding = 1.0; // 1 meter ekstra
-                const floorW = (maxX - minX) * scale3D + floorPadding;
-                const floorH = (maxY - minY) * scale3D + floorPadding;
-                
-                const floorGeom = new THREE.PlaneGeometry(floorW, floorH);
-                const floorMesh = new THREE.Mesh(floorGeom, matFloor);
-                floorMesh.rotation.x = -Math.PI / 2;
-                floorMesh.position.set(0, 0.001, 0); // Posisikan persis di center scene
-                modelGroup.add(floorMesh);
+                const floorW = (maxX - minX) * scale3D + 1.0; const floorH = (maxY - minY) * scale3D + 1.0;
+                const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(floorW, floorH), matFloor);
+                floorMesh.rotation.x = -Math.PI / 2; floorMesh.position.set(0, 0.001, 0); modelGroup.add(floorMesh);
             }
 
-            // 2. TEMBOK & BUKAAN
             lines.forEach((line, index) => {
                 const dx = line.end.x - line.start.x; const dy = line.end.y - line.start.y;
                 const length = Math.sqrt(dx*dx + dy*dy) * scale3D; const angle = Math.atan2(dy, dx);
                 const midX = (line.start.x + line.end.x) / 2; const midY = (line.start.y + line.end.y) / 2;
-                
                 const posX = (midX - center2DX) * scale3D; const posZ = (midY - center2DY) * scale3D;
-
                 const wallObj = new THREE.Group(); const wallShape = new THREE.Shape();
-                wallShape.moveTo(0, 0); wallShape.lineTo(length, 0);
-                wallShape.lineTo(length, heightWall); wallShape.lineTo(0, heightWall); wallShape.lineTo(0, 0);
+                wallShape.moveTo(0, 0); wallShape.lineTo(length, 0); wallShape.lineTo(length, heightWall); wallShape.lineTo(0, heightWall); wallShape.lineTo(0, 0);
 
                 let ops = openings.filter(o => o.lineIndex === index).sort((a,b) => a.ratio - b.ratio);
-                
                 ops.forEach(op => {
                     const opCenter = length * op.ratio; const opStart = opCenter - op.width3D/2; const opEnd = opCenter + op.width3D/2;
                     const hole = new THREE.Path();
-                    
                     if (op.type === 'door') {
                         hole.moveTo(opStart, op.elevation); hole.lineTo(opEnd, op.elevation); hole.lineTo(opEnd, op.elevation + op.height3D); hole.lineTo(opStart, op.elevation + op.height3D); hole.lineTo(opStart, op.elevation);
                         const leafGeom = new THREE.BoxGeometry(op.width3D, op.height3D, 0.04);
-                        
                         if (op.flipHinge) {
-                            leafGeom.translate(-op.width3D/2, op.height3D/2, 0); 
-                            const doorMesh = new THREE.Mesh(leafGeom, matDoor);
-                            doorMesh.position.set((opEnd) - length/2, op.elevation, 0); 
-                            doorMesh.rotation.y = THREE.MathUtils.degToRad(-op.swing); 
-                            wallObj.add(doorMesh);
+                            leafGeom.translate(-op.width3D/2, op.height3D/2, 0); const doorMesh = new THREE.Mesh(leafGeom, matDoor);
+                            doorMesh.position.set((opEnd) - length/2, op.elevation, 0); doorMesh.rotation.y = THREE.MathUtils.degToRad(-op.swing); wallObj.add(doorMesh);
                         } else {
-                            leafGeom.translate(op.width3D/2, op.height3D/2, 0); 
-                            const doorMesh = new THREE.Mesh(leafGeom, matDoor);
-                            doorMesh.position.set((opStart) - length/2, op.elevation, 0); 
-                            doorMesh.rotation.y = THREE.MathUtils.degToRad(op.swing); 
-                            wallObj.add(doorMesh);
+                            leafGeom.translate(op.width3D/2, op.height3D/2, 0); const doorMesh = new THREE.Mesh(leafGeom, matDoor);
+                            doorMesh.position.set((opStart) - length/2, op.elevation, 0); doorMesh.rotation.y = THREE.MathUtils.degToRad(op.swing); wallObj.add(doorMesh);
                         }
-
                     } else if (op.type === 'window') {
                         hole.moveTo(opStart, op.elevation); hole.lineTo(opEnd, op.elevation); hole.lineTo(opEnd, op.elevation + op.height3D); hole.lineTo(opStart, op.elevation + op.height3D); hole.lineTo(opStart, op.elevation);
                         const winMesh = new THREE.Mesh(new THREE.BoxGeometry(op.width3D, op.height3D, 0.02), matWindow);
@@ -933,70 +882,37 @@
                     }
                     wallShape.holes.push(hole);
                 });
-
-                const extrudeSettings = { depth: thickWall, bevelEnabled: false };
-                const wallMesh = new THREE.Mesh(new THREE.ExtrudeGeometry(wallShape, extrudeSettings), matWall);
+                const wallMesh = new THREE.Mesh(new THREE.ExtrudeGeometry(wallShape, { depth: thickWall, bevelEnabled: false }), matWall);
                 wallMesh.position.set(-length/2, 0, -thickWall/2); wallObj.add(wallMesh);
                 wallObj.position.set(posX, 0, posZ); wallObj.rotation.y = -angle; modelGroup.add(wallObj);
             });
 
-            // 3. PILAR SUDUT TEMBOK
             const cornerGeom = new THREE.CylinderGeometry(thickWall/2, thickWall/2, heightWall, 16);
             let uniqueVertices = [];
-            lines.forEach(l => {
-                [l.start, l.end].forEach(pt => { if(!uniqueVertices.some(v => Math.hypot(v.x - pt.x, v.y - pt.y) < 1)) uniqueVertices.push(pt); });
-            });
+            lines.forEach(l => { [l.start, l.end].forEach(pt => { if(!uniqueVertices.some(v => Math.hypot(v.x - pt.x, v.y - pt.y) < 1)) uniqueVertices.push(pt); }); });
             uniqueVertices.forEach(v => {
                 const posX = (v.x - center2DX) * scale3D; const posZ = (v.y - center2DY) * scale3D;
-                const cornerMesh = new THREE.Mesh(cornerGeom, matWall);
-                cornerMesh.position.set(posX, heightWall / 2, posZ); modelGroup.add(cornerMesh);
+                const cornerMesh = new THREE.Mesh(cornerGeom, matWall); cornerMesh.position.set(posX, heightWall / 2, posZ); modelGroup.add(cornerMesh);
             });
 
-            // 4. TANGGA & FULL MEBEL 3D
             freeObjects.forEach(obj => {
-                const posX = (obj.x - center2DX) * scale3D;
-                const posZ = (obj.y - center2DY) * scale3D;
-
-                let meshGroup;
-                if (obj.type === 'stairs') {
-                    meshGroup = createStairsMesh(obj.steps || 14, obj.width3D || 1.0, heightWall);
-                } else {
-                    meshGroup = createFurnitureMesh(obj.type);
-                }
-
-                meshGroup.position.set(posX, 0, posZ);
-                meshGroup.rotation.y = THREE.MathUtils.degToRad(obj.rotation || 0);
-                const s = obj.scaleVal || 1.0;
-                meshGroup.scale.set(s, s, s);
-
-                modelGroup.add(meshGroup);
+                const posX = (obj.x - center2DX) * scale3D; const posZ = (obj.y - center2DY) * scale3D;
+                let meshGroup = (obj.type === 'stairs') ? createStairsMesh(obj.steps || 14, obj.width3D || 1.0, heightWall) : createFurnitureMesh(obj.type);
+                meshGroup.position.set(posX, 0, posZ); meshGroup.rotation.y = THREE.MathUtils.degToRad(obj.rotation || 0);
+                const s = obj.scaleVal || 1.0; meshGroup.scale.set(s, s, s); modelGroup.add(meshGroup);
             });
         }
 
-        // === WEBAR INTEGRATION LOGIC ===
         const arModal = document.getElementById('ar-modal');
-        const arViewer = document.getElementById('arViewer');
-
         document.getElementById('arBtn').addEventListener('click', () => {
-            if (lines.length === 0 && freeObjects.length === 0) {
-                alert("Buat denah terlebih dahulu sebelum melihat dalam AR!");
-                return;
-            }
-
+            if (lines.length === 0 && freeObjects.length === 0) return alert("Buat denah terlebih dahulu sebelum melihat dalam AR!");
             new THREE.GLTFExporter().parse(modelGroup, (gltf) => {
-                const blob = new Blob([gltf], { type: 'model/gltf-binary' });
-                const modelUrl = URL.createObjectURL(blob);
-                
-                arViewer.src = modelUrl;
+                document.getElementById('arViewer').src = URL.createObjectURL(new Blob([gltf], { type: 'model/gltf-binary' }));
                 arModal.style.display = 'flex';
             }, { binary: true });
         });
-
-        document.getElementById('closeArBtn').addEventListener('click', () => {
-            arModal.style.display = 'none';
-        });
-
-        document.getElementById('clearBtn').onclick = () => { saveState(); lines = []; openings = []; freeObjects = []; stopDrawing(); closeEditPanel(); draw2D(); update3D(); };
+        document.getElementById('closeArBtn').addEventListener('click', () => arModal.style.display = 'none');
+        document.getElementById('clearBtn').onclick = () => { initDefaultCanvas(); lines = []; openings = []; freeObjects = []; undoStack = []; redoStack = []; stopDrawing(); closeEditPanel(); update3D(); };
         document.getElementById('exportBtn').onclick = () => {
             new THREE.GLTFExporter().parse(modelGroup, (gltf) => {
                 const link = document.createElement('a');
