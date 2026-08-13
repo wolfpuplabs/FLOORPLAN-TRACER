@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Floor Plan Extruder (Snap, Undo, Export)</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: #f5f5f5;
+        }
+        #controls {
+            padding: 10px 20px;
+            background-color: #ffffff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            z-index: 10;
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-right: 1px solid #ccc;
+            padding-right: 15px;
+        }
+        .control-group:last-child {
+            border-right: none;
+        }
+        input[type="number"] {
+            width: 50px;
+            padding: 5px;
+        }
+        button {
+            padding: 7px 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        button:hover { background-color: #0056b3; }
+        .btn-danger { background-color: #dc3545; }
+        .btn-danger:hover { background-color: #a71d2a; }
+        .btn-success { background-color: #28a745; }
+        .btn-success:hover { background-color: #1e7e34; }
+        
+        #workspace {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        .panel {
+            flex: 1;
+            position: relative;
+            border-right: 2px solid #ddd;
+            overflow: auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #e9ecef;
+        }
+        canvas {
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            cursor: crosshair;
+        }
+        #canvas3d-container {
+            flex: 1;
+            position: relative;
+            background-color: #2b2b2b;
+        }
+        .instructions {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            pointer-events: none;
+            line-height: 1.5;
+        }
+    </style>
+    <!-- Import map untuk Three.js -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <div id="controls">
+        <div class="control-group">
+            <input type="file" id="imageUpload" accept="image/*">
+        </div>
+        <div class="control-group">
+            <label for="wallHeight"><strong>Tinggi:</strong></label>
+            <input type="number" id="wallHeight" value="40">
+            <label for="wallThickness"><strong>Tebal:</strong></label>
+            <input type="number" id="wallThickness" value="4">
+        </div>
+        <div class="control-group">
+            <button id="btnUndo">Undo (Ctrl+Z)</button>
+            <button id="btnRedo">Redo (Ctrl+Y)</button>
+            <button id="clearWalls" class="btn-danger">Clear</button>
+        </div>
+        <div class="control-group">
+            <button id="btnExportGLB" class="btn-success">Export .GLB</button>
+            <button id="btnExportOBJ" class="btn-success">Export .OBJ</button>
+        </div>
+    </div>
+
+    <div id="workspace">
+        <!-- 2D Tracing Panel -->
+        <div class="panel" id="panel2d">
+            <canvas id="canvas2d" width="700" height="700"></canvas>
+            <div class="instructions">
+                <strong>Cara Kerja:</strong><br>
+                1. Upload file denah<br>
+                2. Klik kiri mulai garis, klik lagi akhiri garis<br>
+                3. Dekatkan ke ujung garis lain untuk <strong>SNAP</strong><br>
+                4. Gunakan Ctrl+Z (Undo) dan Ctrl+Y (Redo)
+            </div>
+        </div>
+
+        <!-- 3D Render Panel -->
+        <div id="canvas3d-container"></div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        // Import Exporters
+        import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+        import { OBJExporter } from 'three/addons/exporters/OBJExporter.js';
+
+        // --- 2D CANVAS & STATE LOGIC ---
+        const canvas2d = document.getElementById('canvas2d');
+        const ctx = canvas2d.getContext('2d');
+        const imageUpload = document.getElementById('imageUpload');
+        
+        let backgroundImage = new Image();
+        let walls = []; 
+        let redoStack = []; // Menyimpan state untuk fungsi Redo
+        
+        let isDrawing = false;
+        let startX, startY;
+        let currentX, currentY;
+        let rawMouseX, rawMouseY; 
+
+        const SNAP_DISTANCE = 15;
+
+        // Undo & Redo Functions
+        function undo() {
+            if (walls.length === 0) return;
+            redoStack.push(walls.pop());
+            drawCanvas();
+            generate3D();
+        }
+
+        function redo() {
+            if (redoStack.length === 0) return;
+            walls.push(redoStack.pop());
+            drawCanvas();
+            generate3D();
+        }
+
+        // Keyboard Shortcuts
+        window.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key.toLowerCase() === 'z') {
+                e.preventDefault();
+                undo();
+            }
+            if (e.ctrlKey && e.key.toLowerCase() === 'y') {
+                e.preventDefault();
+                redo();
+            }
+        });
+
+        document.getElementById('btnUndo').addEventListener('click', undo);
+        document.getElementById('btnRedo').addEventListener('click', redo);
+
+        function getSnapPoint(x, y) {
+            for (let wall of walls) {
+                if (Math.hypot(wall.x1 - x, wall.y1 - y) < SNAP_DISTANCE) return { x: wall.x1, y: wall.y1 };
+                if (Math.hypot(wall.x2 - x, wall.y2 - y) < SNAP_DISTANCE) return { x: wall.x2, y: wall.y2 };
+            }
+            return { x, y }; 
+        }
+
+        function drawCanvas() {
+            ctx.clearRect(0, 0, canvas2d.width, canvas2d.height);
+            
+            if (backgroundImage.src) {
+                const scale = Math.min(canvas2d.width / backgroundImage.width, canvas2d.height / backgroundImage.height);
+                const w = backgroundImage.width * scale;
+                const h = backgroundImage.height * scale;
+                const x = (canvas2d.width - w) / 2;
+                const y = (canvas2d.height - h) / 2;
+                ctx.drawImage(backgroundImage, x, y, w, h);
+            }
+
+            ctx.lineWidth = document.getElementById('wallThickness').value;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = 'rgba(255, 0, 0, 0.7)';
+            
+            walls.forEach(wall => {
+                ctx.beginPath();
+                ctx.moveTo(wall.x1, wall.y1);
+                ctx.lineTo(wall.x2, wall.y2);
+                ctx.stroke();
+            });
+
+            if (isDrawing) {
+                ctx.strokeStyle = 'rgba(0, 0, 255, 0.7)';
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(currentX, currentY);
+                ctx.stroke();
+            }
+
+            if (rawMouseX !== undefined && rawMouseY !== undefined) {
+                const snapped = getSnapPoint(rawMouseX, rawMouseY);
+                if (snapped.x !== rawMouseX || snapped.y !== rawMouseY) {
+                    ctx.beginPath();
+                    ctx.arc(snapped.x, snapped.y, 6, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(0, 255, 0, 0.8)';
+                    ctx.fill();
+                }
+            }
+        }
+
+        imageUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    backgroundImage.onload = () => drawCanvas();
+                    backgroundImage.src = event.target.result;
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        canvas2d.addEventListener('mousedown', (e) => {
+            const rect = canvas2d.getBoundingClientRect();
+            rawMouseX = e.clientX - rect.left;
+            rawMouseY = e.clientY - rect.top;
+
+            const snapped = getSnapPoint(rawMouseX, rawMouseY);
+
+            if (!isDrawing) {
+                isDrawing = true;
+                startX = snapped.x;
+                startY = snapped.y;
+                currentX = startX;
+                currentY = startY;
+            } else {
+                walls.push({
+                    x1: startX, y1: startY,
+                    x2: snapped.x, y2: snapped.y
+                });
+                redoStack = []; // Reset redo stack jika ada aksi baru
+                isDrawing = false;
+                generate3D(); 
+            }
+            drawCanvas();
+        });
+
+        canvas2d.addEventListener('mousemove', (e) => {
+            const rect = canvas2d.getBoundingClientRect();
+            rawMouseX = e.clientX - rect.left;
+            rawMouseY = e.clientY - rect.top;
+            
+            const snapped = getSnapPoint(rawMouseX, rawMouseY);
+            currentX = snapped.x;
+            currentY = snapped.y;
+
+            drawCanvas();
+        });
+
+        document.getElementById('clearWalls').addEventListener('click', () => {
+            walls = [];
+            redoStack = [];
+            drawCanvas();
+            generate3D();
+        });
+
+        document.getElementById('wallHeight').addEventListener('input', generate3D);
+        document.getElementById('wallThickness').addEventListener('input', () => {
+            drawCanvas();
+            generate3D();
+        });
+
+
+        // --- 3D SCENE LOGIC (Three.js) ---
+        const container3d = document.getElementById('canvas3d-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x2b2b2b);
+
+        const camera = new THREE.PerspectiveCamera(45, container3d.clientWidth / container3d.clientHeight, 1, 5000);
+        camera.position.set(0, 500, 500);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+        renderer.setSize(container3d.clientWidth, container3d.clientHeight);
+        container3d.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(100, 200, 50);
+        scene.add(dirLight);
+
+        const gridHelper = new THREE.GridHelper(1000, 50, 0x444444, 0x444444);
+        scene.add(gridHelper);
+
+        let wallGroup = new THREE.Group();
+        scene.add(wallGroup);
+
+        function generate3D() {
+            while(wallGroup.children.length > 0){ 
+                const child = wallGroup.children[0];
+                wallGroup.remove(child); 
+            }
+
+            const height = parseFloat(document.getElementById('wallHeight').value) || 30;
+            const thickness = parseFloat(document.getElementById('wallThickness').value) || 4;
+            const material = new THREE.MeshStandardMaterial({ color: 0xeeeeee });
+
+            walls.forEach(wall => {
+                const dx = wall.x2 - wall.x1;
+                const dy = wall.y2 - wall.y1;
+                const length = Math.sqrt(dx*dx + dy*dy);
+                const angle = Math.atan2(dy, dx);
+
+                const geometry = new THREE.BoxGeometry(length, height, thickness);
+                const mesh = new THREE.Mesh(geometry, material);
+
+                const centerX = (wall.x1 + wall.x2) / 2 - (canvas2d.width / 2);
+                const centerZ = (wall.y1 + wall.y2) / 2 - (canvas2d.height / 2);
+
+                mesh.position.set(centerX, height / 2, centerZ);
+                mesh.rotation.y = -angle;
+
+                wallGroup.add(mesh);
+            });
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        
+        window.addEventListener('resize', () => {
+            camera.aspect = container3d.clientWidth / container3d.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container3d.clientWidth, container3d.clientHeight);
+        });
+
+        // --- EXPORT LOGIC ---
+        function save(blob, filename) {
+            const link = document.createElement('a');
+            link.style.display = 'none';
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Export GLB
+        document.getElementById('btnExportGLB').addEventListener('click', () => {
+            if (wallGroup.children.length === 0) return alert("Belum ada model 3D yang dibuat!");
+            const exporter = new GLTFExporter();
+            exporter.parse(
+                wallGroup,
+                function (gltf) {
+                    const blob = new Blob([gltf], { type: 'application/octet-stream' });
+                    save(blob, 'floorplan_3d.glb');
+                },
+                function (error) { console.error('An error happened during GLTF export:', error); },
+                { binary: true } // format GLB (Binary)
+            );
+        });
+
+        // Export OBJ
+        document.getElementById('btnExportOBJ').addEventListener('click', () => {
+            if (wallGroup.children.length === 0) return alert("Belum ada model 3D yang dibuat!");
+            const exporter = new OBJExporter();
+            const result = exporter.parse(wallGroup);
+            const blob = new Blob([result], { type: 'text/plain' });
+            save(blob, 'floorplan_3d.obj');
+        });
+
+        animate();
+        drawCanvas();
+    </script>
+</body>
+</html>
