@@ -2,8 +2,8 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Floor Plan Generator (Pro Features)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D Floor Plan & Furniture Generator</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -15,27 +15,34 @@
             background-color: #f5f5f5;
             overflow: hidden;
         }
+        
+        /* Responsive Controls */
         #controls {
-            padding: 10px 20px;
+            padding: 10px 15px;
             background-color: #ffffff;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             display: flex;
-            gap: 15px;
+            gap: 10px;
             align-items: center;
-            flex-wrap: wrap;
+            flex-wrap: wrap; /* Memungkinkan UI turun ke baris baru jika kepotong */
             z-index: 10;
-            font-size: 14px;
+            font-size: 13px;
+            max-height: 30vh;
+            overflow-y: auto;
         }
         .control-group {
             display: flex;
             align-items: center;
             gap: 5px;
             border-right: 1px solid #ddd;
-            padding-right: 15px;
+            padding-right: 10px;
+            flex-wrap: wrap;
         }
-        input[type="number"] { width: 50px; padding: 4px; }
-        input[type="color"] { width: 30px; height: 30px; padding: 0; border: none; cursor: pointer; }
-        select { padding: 4px; }
+        .control-group:last-child { border-right: none; }
+        
+        input[type="number"] { width: 45px; padding: 4px; }
+        input[type="color"] { width: 28px; height: 28px; padding: 0; border: none; cursor: pointer; }
+        select { padding: 4px; font-size: 13px; }
         button {
             padding: 6px 12px;
             background-color: #dc3545;
@@ -44,11 +51,15 @@
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
+            font-size: 13px;
+            white-space: nowrap;
         }
         button:hover { background-color: #c82333; }
         
+        /* Responsive Workspace */
         #workspace {
             display: flex;
+            flex-direction: row;
             flex: 1;
             overflow: hidden;
         }
@@ -59,23 +70,40 @@
             background-color: #e9ecef;
             overflow: hidden;
         }
-        canvas { display: block; }
+        #canvas2d { display: block; touch-action: none; /* Mencegah scroll saat drag di kanvas */ }
+        
         #canvas3d-container {
             flex: 1;
             position: relative;
             background-color: #2b2b2b;
         }
+        
         .instructions {
             position: absolute;
             bottom: 10px;
             left: 10px;
             background: rgba(0,0,0,0.75);
             color: white;
-            padding: 10px;
+            padding: 8px;
             border-radius: 5px;
-            font-size: 12px;
+            font-size: 11px;
             pointer-events: none;
             line-height: 1.4;
+            max-width: 80%;
+        }
+
+        /* Media Query untuk Layar Kecil (Tablet Portrait / HP) */
+        @media (max-width: 768px) {
+            #workspace {
+                flex-direction: column; /* Tumpuk atas-bawah */
+            }
+            .panel, #canvas3d-container {
+                flex: none;
+                height: 50%; /* Bagi dua layar */
+                border-right: none;
+                border-bottom: 2px solid #333;
+            }
+            #controls { justify-content: center; }
         }
     </style>
     <!-- Import map untuk Three.js -->
@@ -93,7 +121,7 @@
     <div id="controls">
         <div class="control-group">
             <label><strong>Plan:</strong></label>
-            <input type="file" id="imageUpload" accept="image/*" style="width: 150px;">
+            <input type="file" id="imageUpload" accept="image/*" style="width: 130px;">
         </div>
         <div class="control-group">
             <label><strong>Mode:</strong></label>
@@ -101,6 +129,10 @@
                 <option value="wall">✏️ Tembok</option>
                 <option value="door">🚪 Pintu</option>
                 <option value="window">🪟 Jendela</option>
+                <option value="stairs">🪜 Tangga</option>
+                <option value="bed">🛏️ Kasur</option>
+                <option value="table">🍽️ Meja</option>
+                <option value="chair">🪑 Kursi</option>
             </select>
         </div>
         <div class="control-group">
@@ -110,12 +142,12 @@
             <input type="number" id="wallThickness" value="4">
         </div>
         <div class="control-group">
-            <label>Warna Tembok:</label>
+            <label>Tembok:</label>
             <input type="color" id="wallColor" value="#f0f0f0">
             <label>Lantai:</label>
             <input type="color" id="floorColor" value="#888888">
         </div>
-        <button id="clearWalls">Hapus Semua</button>
+        <button id="clearAll">Hapus Semua</button>
     </div>
 
     <div id="workspace">
@@ -124,9 +156,8 @@
             <canvas id="canvas2d"></canvas>
             <div class="instructions">
                 <strong>Kontrol 2D:</strong><br>
-                - <b>Kiri Klik:</b> Gambar Tembok / Taruh Pintu & Jendela<br>
-                - <b>Scroll Mouse:</b> Zoom In / Zoom Out<br>
-                - <b>Kanan Klik + Geser:</b> Pan (Geser Kanvas)
+                - <b>Klik Kiri:</b> Taruh Item / Gambar Tembok<br>
+                - <b>Scroll:</b> Zoom | <b>Klik Kanan & Geser:</b> Pan
             </div>
         </div>
 
@@ -144,7 +175,9 @@
         const ctx = canvas2d.getContext('2d');
         
         let backgroundImage = new Image();
-        let walls = []; // { x1, y1, x2, y2, doors: [], windows: [] }
+        let walls = []; 
+        let items = []; // Menyimpan Furnitur & Tangga
+        
         let isDrawing = false;
         let startX, startY, currentX, currentY;
         
@@ -167,25 +200,20 @@
             drawCanvas();
         }
         window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
+        // Delay dikit buat nunggu layout kebentuk sempurna
+        setTimeout(resizeCanvas, 100);
 
         // Convert Screen to World and vice versa
         function toWorld(x, y) { return { x: (x - panX) / zoom, y: (y - panY) / zoom }; }
-        function toScreen(x, y) { return { x: x * zoom + panX, y: y * zoom + panY }; }
-
-        // Find nearest point on any line segment
+        
+        // Snap ke Tembok (Untuk Pintu/Jendela)
         function getClosestWallPoint(px, py) {
-            let closest = null;
-            let minDist = Infinity;
-            let targetWall = null;
-
+            let closest = null, minDist = Infinity, targetWall = null;
             walls.forEach(wall => {
-                const dx = wall.x2 - wall.x1;
-                const dy = wall.y2 - wall.y1;
+                const dx = wall.x2 - wall.x1, dy = wall.y2 - wall.y1;
                 let t = ((px - wall.x1) * dx + (py - wall.y1) * dy) / (dx * dx + dy * dy);
                 t = Math.max(0, Math.min(1, t)); 
-                const projX = wall.x1 + t * dx;
-                const projY = wall.y1 + t * dy;
+                const projX = wall.x1 + t * dx, projY = wall.y1 + t * dy;
                 const dist = Math.hypot(px - projX, py - projY);
 
                 if (dist < minDist && dist < SNAP_DIST / zoom) {
@@ -197,6 +225,7 @@
             return { point: closest, wall: targetWall };
         }
 
+        // Snap antar ujung Tembok
         function getSnapPoint(x, y) {
             for (let wall of walls) {
                 if (Math.hypot(wall.x1 - x, wall.y1 - y) < SNAP_DIST / zoom) return { x: wall.x1, y: wall.y1 };
@@ -208,65 +237,53 @@
         // --- DRAW 2D ---
         function drawCanvas() {
             ctx.clearRect(0, 0, canvas2d.width, canvas2d.height);
-            
             ctx.save();
             ctx.translate(panX, panY);
             ctx.scale(zoom, zoom);
 
-            // Draw Background Image
-            if (backgroundImage.src && backgroundImage.width > 0) {
-                ctx.drawImage(backgroundImage, 0, 0);
-            }
+            if (backgroundImage.src && backgroundImage.width > 0) ctx.drawImage(backgroundImage, 0, 0);
 
-            // Draw Walls
+            // Draw Items (Furnitur & Tangga)
+            items.forEach(item => {
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillRect(item.x - 10, item.y - 10, 20, 20);
+                ctx.fillStyle = 'white';
+                ctx.font = '10px Arial';
+                ctx.fillText(item.type.substring(0,3).toUpperCase(), item.x - 8, item.y + 3);
+            });
+
+            // Draw Walls, Doors, Windows
             const thickness = document.getElementById('wallThickness').value;
             ctx.lineCap = 'round';
             
             walls.forEach(wall => {
                 ctx.lineWidth = thickness;
                 ctx.strokeStyle = '#333333';
-                ctx.beginPath();
-                ctx.moveTo(wall.x1, wall.y1);
-                ctx.lineTo(wall.x2, wall.y2);
-                ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(wall.x1, wall.y1); ctx.lineTo(wall.x2, wall.y2); ctx.stroke();
 
-                // Draw Doors
                 wall.doors.forEach(door => {
-                    const dx = wall.x2 - wall.x1;
-                    const dy = wall.y2 - wall.y1;
-                    const posX = wall.x1 + dx * door.t;
-                    const posY = wall.y1 + dy * door.t;
+                    const posX = wall.x1 + (wall.x2 - wall.x1) * door.t;
+                    const posY = wall.y1 + (wall.y2 - wall.y1) * door.t;
                     ctx.fillStyle = '#ffcc00';
-                    ctx.beginPath();
-                    ctx.arc(posX, posY, DOOR_WIDTH/2, 0, Math.PI * 2);
-                    ctx.fill();
+                    ctx.beginPath(); ctx.arc(posX, posY, DOOR_WIDTH/2, 0, Math.PI * 2); ctx.fill();
                 });
 
-                // Draw Windows
                 wall.windows.forEach(win => {
-                    const dx = wall.x2 - wall.x1;
-                    const dy = wall.y2 - wall.y1;
-                    const posX = wall.x1 + dx * win.t;
-                    const posY = wall.y1 + dy * win.t;
+                    const posX = wall.x1 + (wall.x2 - wall.x1) * win.t;
+                    const posY = wall.y1 + (wall.y2 - wall.y1) * win.t;
                     ctx.fillStyle = '#00ccff';
-                    ctx.beginPath();
-                    ctx.arc(posX, posY, WIN_WIDTH/2, 0, Math.PI * 2);
-                    ctx.fill();
+                    ctx.beginPath(); ctx.arc(posX, posY, WIN_WIDTH/2, 0, Math.PI * 2); ctx.fill();
                 });
             });
 
-            // Draw Drawing Preview
+            // Preview Interaksi
             const mode = document.getElementById('drawMode').value;
             if (mode === 'wall') {
                 if (isDrawing) {
                     ctx.lineWidth = thickness;
                     ctx.strokeStyle = 'rgba(0, 120, 255, 0.7)';
-                    ctx.beginPath();
-                    ctx.moveTo(startX, startY);
-                    ctx.lineTo(currentX, currentY);
-                    ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(currentX, currentY); ctx.stroke();
                 }
-                // Snap Point Indicator
                 const snapped = getSnapPoint(worldMouseX, worldMouseY);
                 if (snapped.x !== worldMouseX || snapped.y !== worldMouseY) {
                     ctx.fillStyle = 'rgba(0, 255, 0, 0.8)';
@@ -278,6 +295,10 @@
                     ctx.fillStyle = mode === 'door' ? 'rgba(255, 204, 0, 0.8)' : 'rgba(0, 204, 255, 0.8)';
                     ctx.beginPath(); ctx.arc(snap.point.x, snap.point.y, 6/zoom, 0, Math.PI*2); ctx.fill();
                 }
+            } else {
+                // Preview furnitur ngikutin mouse
+                ctx.fillStyle = 'rgba(255, 100, 100, 0.6)';
+                ctx.fillRect(worldMouseX - 10, worldMouseY - 10, 20, 20);
             }
 
             ctx.restore();
@@ -287,10 +308,7 @@
         canvas2d.addEventListener('contextmenu', e => e.preventDefault());
 
         canvas2d.addEventListener('mousedown', (e) => {
-            if (e.button === 2) { // Right click = Pan
-                isPanning = true;
-                return;
-            }
+            if (e.button === 2) { isPanning = true; return; }
 
             const mode = document.getElementById('drawMode').value;
             
@@ -305,25 +323,23 @@
                     isDrawing = false;
                     generate3D();
                 }
-            } else {
+            } else if (mode === 'door' || mode === 'window') {
                 const snap = getClosestWallPoint(worldMouseX, worldMouseY);
                 if (snap.point && snap.wall) {
                     if (mode === 'door') snap.wall.doors.push({ t: snap.point.t });
                     if (mode === 'window') snap.wall.windows.push({ t: snap.point.t });
                     generate3D();
                 }
+            } else {
+                // Tambah item (Kasur, Meja, dll)
+                items.push({ type: mode, x: worldMouseX, y: worldMouseY });
+                generate3D();
             }
             drawCanvas();
         });
 
         canvas2d.addEventListener('mousemove', (e) => {
-            if (isPanning) {
-                panX += e.movementX;
-                panY += e.movementY;
-                drawCanvas();
-                return;
-            }
-            
+            if (isPanning) { panX += e.movementX; panY += e.movementY; drawCanvas(); return; }
             const rect = canvas2d.getBoundingClientRect();
             rawMouseX = e.clientX - rect.left;
             rawMouseY = e.clientY - rect.top;
@@ -331,7 +347,7 @@
             const world = toWorld(rawMouseX, rawMouseY);
             worldMouseX = world.x; worldMouseY = world.y;
 
-            if (isDrawing) {
+            if (isDrawing && document.getElementById('drawMode').value === 'wall') {
                 const snapped = getSnapPoint(worldMouseX, worldMouseY);
                 currentX = snapped.x; currentY = snapped.y;
             }
@@ -344,8 +360,6 @@
             e.preventDefault();
             const zoomAmount = Math.pow(0.999, e.deltaY * 0.5);
             const newZoom = zoom * zoomAmount;
-            
-            // Zoom towards mouse
             panX = rawMouseX - (rawMouseX - panX) * (newZoom / zoom);
             panY = rawMouseY - (rawMouseY - panY) * (newZoom / zoom);
             zoom = newZoom;
@@ -360,7 +374,6 @@
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     backgroundImage.onload = () => {
-                        // Center image initially
                         panX = (canvas2d.width - backgroundImage.width)/2;
                         panY = (canvas2d.height - backgroundImage.height)/2;
                         drawCanvas();
@@ -370,7 +383,7 @@
                 reader.readAsDataURL(file);
             }
         });
-        document.getElementById('clearWalls').addEventListener('click', () => { walls = []; drawCanvas(); generate3D(); });
+        document.getElementById('clearAll').addEventListener('click', () => { walls = []; items = []; drawCanvas(); generate3D(); });
         document.getElementById('wallHeight').addEventListener('input', generate3D);
         document.getElementById('wallThickness').addEventListener('input', () => { drawCanvas(); generate3D(); });
         document.getElementById('wallColor').addEventListener('input', generate3D);
@@ -393,14 +406,12 @@
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
 
-        // Lighting
         scene.add(new THREE.AmbientLight(0xffffff, 0.5));
         const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
         dirLight.position.set(100, 200, 100);
         dirLight.castShadow = true;
         scene.add(dirLight);
 
-        // Floor Mesh
         const floorGeo = new THREE.PlaneGeometry(2000, 2000);
         const floorMat = new THREE.MeshStandardMaterial({ color: document.getElementById('floorColor').value });
         const floorMesh = new THREE.Mesh(floorGeo, floorMat);
@@ -408,98 +419,149 @@
         floorMesh.receiveShadow = true;
         scene.add(floorMesh);
 
-        let wallGroup = new THREE.Group();
-        scene.add(wallGroup);
+        let mainGroup = new THREE.Group();
+        scene.add(mainGroup);
+
+        // --- PROCEDURAL 3D GENERATOR ---
+        function createBed() {
+            const group = new THREE.Group();
+            const frameGeo = new THREE.BoxGeometry(22, 5, 32);
+            const frameMat = new THREE.MeshStandardMaterial({ color: 0x5c4033 });
+            const frame = new THREE.Mesh(frameGeo, frameMat);
+            frame.position.y = 2.5;
+            
+            const mattGeo = new THREE.BoxGeometry(20, 3, 30);
+            const mattMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+            const matt = new THREE.Mesh(mattGeo, mattMat);
+            matt.position.y = 6.5;
+
+            group.add(frame); group.add(matt);
+            return group;
+        }
+
+        function createTable() {
+            const group = new THREE.Group();
+            const topGeo = new THREE.BoxGeometry(30, 2, 20);
+            const woodMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b });
+            const top = new THREE.Mesh(topGeo, woodMat);
+            top.position.y = 15;
+            group.add(top);
+
+            const legGeo = new THREE.CylinderGeometry(1, 1, 14);
+            const pos = [[-13,-8], [13,-8], [-13,8], [13,8]];
+            pos.forEach(p => {
+                const leg = new THREE.Mesh(legGeo, woodMat);
+                leg.position.set(p[0], 7, p[1]);
+                group.add(leg);
+            });
+            return group;
+        }
+
+        function createChair() {
+            const group = new THREE.Group();
+            const mat = new THREE.MeshStandardMaterial({ color: 0x444444 });
+            const seat = new THREE.Mesh(new THREE.BoxGeometry(10, 1, 10), mat);
+            seat.position.y = 8;
+            const back = new THREE.Mesh(new THREE.BoxGeometry(10, 10, 1), mat);
+            back.position.set(0, 13, -4.5);
+            
+            group.add(seat); group.add(back);
+            
+            const legGeo = new THREE.CylinderGeometry(0.5, 0.5, 8);
+            const pos = [[-4,-4], [4,-4], [-4,4], [4,4]];
+            pos.forEach(p => {
+                const leg = new THREE.Mesh(legGeo, mat);
+                leg.position.set(p[0], 4, p[1]);
+                group.add(leg);
+            });
+            return group;
+        }
+
+        function createStairs() {
+            const group = new THREE.Group();
+            const mat = new THREE.MeshStandardMaterial({ color: 0x999999 });
+            const stepCount = 12;
+            const stepHeight = 2.5;
+            const stepDepth = 5;
+            const width = 20;
+
+            for(let i=0; i<stepCount; i++) {
+                const step = new THREE.Mesh(new THREE.BoxGeometry(width, stepHeight, stepDepth), mat);
+                step.position.set(0, (i * stepHeight) + (stepHeight/2), i * stepDepth);
+                group.add(step);
+            }
+            return group;
+        }
 
         function generate3D() {
-            // Clear old
-            while(wallGroup.children.length > 0){ 
-                const child = wallGroup.children[0];
-                if(child.geometry) child.geometry.dispose();
-                if(child.material) child.material.dispose();
-                wallGroup.remove(child); 
+            // Bersihkan objek lama
+            while(mainGroup.children.length > 0){ 
+                const child = mainGroup.children[0];
+                mainGroup.remove(child); 
             }
 
-            // Update Floor Color
             floorMesh.material.color.set(document.getElementById('floorColor').value);
 
             const height = parseFloat(document.getElementById('wallHeight').value) || 30;
             const thickness = parseFloat(document.getElementById('wallThickness').value) || 4;
             const wallColor = document.getElementById('wallColor').value;
             
-            const material = new THREE.MeshStandardMaterial({ color: wallColor, side: THREE.DoubleSide });
-            const glassMaterial = new THREE.MeshStandardMaterial({ color: 0x88ccff, transparent: true, opacity: 0.5 });
+            const wallMat = new THREE.MeshStandardMaterial({ color: wallColor, side: THREE.DoubleSide });
+            const glassMat = new THREE.MeshStandardMaterial({ color: 0x88ccff, transparent: true, opacity: 0.5 });
 
+            // Render Tembok
             walls.forEach(wall => {
-                const dx = wall.x2 - wall.x1;
-                const dy = wall.y2 - wall.y1;
-                const length = Math.hypot(dx, dy);
-                const angle = Math.atan2(dy, dx);
+                const dx = wall.x2 - wall.x1, dy = wall.y2 - wall.y1;
+                const length = Math.hypot(dx, dy), angle = Math.atan2(dy, dx);
 
-                // Buat 2D Shape untuk Tembok
                 const shape = new THREE.Shape();
-                shape.moveTo(0, 0);
-                shape.lineTo(length, 0);
-                shape.lineTo(length, height);
-                shape.lineTo(0, height);
-                shape.lineTo(0, 0);
+                shape.moveTo(0, 0); shape.lineTo(length, 0); shape.lineTo(length, height); shape.lineTo(0, height); shape.lineTo(0, 0);
 
-                // Tambahkan Lubang Pintu
                 wall.doors.forEach(door => {
                     const pos = length * door.t;
                     const hole = new THREE.Path();
-                    hole.moveTo(pos - DOOR_WIDTH/2, 0);
-                    hole.lineTo(pos + DOOR_WIDTH/2, 0);
-                    hole.lineTo(pos + DOOR_WIDTH/2, DOOR_HEIGHT);
-                    hole.lineTo(pos - DOOR_WIDTH/2, DOOR_HEIGHT);
-                    hole.lineTo(pos - DOOR_WIDTH/2, 0);
+                    hole.moveTo(pos - DOOR_WIDTH/2, 0); hole.lineTo(pos + DOOR_WIDTH/2, 0);
+                    hole.lineTo(pos + DOOR_WIDTH/2, DOOR_HEIGHT); hole.lineTo(pos - DOOR_WIDTH/2, DOOR_HEIGHT); hole.lineTo(pos - DOOR_WIDTH/2, 0);
                     shape.holes.push(hole);
                 });
 
-                // Tambahkan Lubang Jendela
                 wall.windows.forEach(win => {
                     const pos = length * win.t;
                     const hole = new THREE.Path();
-                    hole.moveTo(pos - WIN_WIDTH/2, WIN_BOTTOM);
-                    hole.lineTo(pos + WIN_WIDTH/2, WIN_BOTTOM);
-                    hole.lineTo(pos + WIN_WIDTH/2, WIN_BOTTOM + WIN_HEIGHT);
-                    hole.lineTo(pos - WIN_WIDTH/2, WIN_BOTTOM + WIN_HEIGHT);
-                    hole.lineTo(pos - WIN_WIDTH/2, WIN_BOTTOM);
+                    hole.moveTo(pos - WIN_WIDTH/2, WIN_BOTTOM); hole.lineTo(pos + WIN_WIDTH/2, WIN_BOTTOM);
+                    hole.lineTo(pos + WIN_WIDTH/2, WIN_BOTTOM + WIN_HEIGHT); hole.lineTo(pos - WIN_WIDTH/2, WIN_BOTTOM + WIN_HEIGHT); hole.lineTo(pos - WIN_WIDTH/2, WIN_BOTTOM);
                     shape.holes.push(hole);
 
-                    // Buat Kaca Jendela (Mesh terpisah)
-                    const glassGeo = new THREE.BoxGeometry(WIN_WIDTH, WIN_HEIGHT, thickness - 1);
-                    const glass = new THREE.Mesh(glassGeo, glassMaterial);
-                    // Hitung posisi kaca
+                    const glass = new THREE.Mesh(new THREE.BoxGeometry(WIN_WIDTH, WIN_HEIGHT, thickness - 1), glassMat);
                     glass.position.set(pos, WIN_BOTTOM + WIN_HEIGHT/2, 0);
-                    
-                    // Container untuk orientasi
                     const winPivot = new THREE.Group();
-                    winPivot.add(glass);
-                    winPivot.position.set(wall.x1, 0, wall.y1);
-                    winPivot.rotation.y = -angle;
-                    wallGroup.add(winPivot);
+                    winPivot.add(glass); winPivot.position.set(wall.x1, 0, wall.y1); winPivot.rotation.y = -angle;
+                    mainGroup.add(winPivot);
                 });
 
-                // Extrude Shape jadi 3D
-                const extrudeSettings = { depth: thickness, bevelEnabled: false };
-                const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-                
-                // Posisikan geometri agar berada di tengah Z (thickness)
+                const geometry = new THREE.ExtrudeGeometry(shape, { depth: thickness, bevelEnabled: false });
                 geometry.translate(0, 0, -thickness/2);
 
-                const mesh = new THREE.Mesh(geometry, material);
-                mesh.castShadow = true;
-                mesh.receiveShadow = true;
-
-                // Posisi dan Rotasi Tembok di World 3D
-                // Koordinat 2D (x, y) menjadi (x, 0, z) di 3D
+                const mesh = new THREE.Mesh(geometry, wallMat);
+                mesh.castShadow = true; mesh.receiveShadow = true;
                 mesh.position.set(wall.x1, 0, wall.y1);
-                
-                // Rotasi menyesuaikan garis (Extrude dibuat di sumbu X, kita rotasikan di sumbu Y)
                 mesh.rotation.y = -angle;
+                mainGroup.add(mesh);
+            });
 
-                wallGroup.add(mesh);
+            // Render Furnitur & Tangga
+            items.forEach(item => {
+                let meshObj;
+                if(item.type === 'bed') meshObj = createBed();
+                else if(item.type === 'table') meshObj = createTable();
+                else if(item.type === 'chair') meshObj = createChair();
+                else if(item.type === 'stairs') meshObj = createStairs();
+
+                if(meshObj) {
+                    meshObj.position.set(item.x, 0, item.y);
+                    meshObj.castShadow = true;
+                    mainGroup.add(meshObj);
+                }
             });
         }
 
