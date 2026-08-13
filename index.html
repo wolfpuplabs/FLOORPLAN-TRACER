@@ -11,7 +11,6 @@
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
     
     <style>
-        /* CSS Reset untuk Touch Behavior & Responsivitas */
         * {
             -webkit-touch-callout: none;
             -webkit-user-select: none;
@@ -93,19 +92,30 @@
 
         .sidebar-header h3 { margin: 0; font-size: 16px; color: #18181b; }
 
-        #langToggle {
-            background: #e4e4e7;
+        /* Style Toggle Bahasa Tanpa Emoji */
+        .lang-btn-group {
+            display: flex;
             border: 1px solid #d4d4d8;
-            padding: 5px 10px;
             border-radius: 6px;
-            font-size: 12px;
-            cursor: pointer;
+            overflow: hidden;
+            background: #e4e4e7;
+        }
+
+        .lang-btn {
+            padding: 4px 8px;
+            font-size: 11px;
             font-weight: bold;
-            color: #2563eb;
-            transition: 0.2s;
+            border: none;
+            background: transparent;
+            color: #71717a;
+            cursor: pointer;
             width: auto;
         }
-        #langToggle:hover { background: #d4d4d8; }
+
+        .lang-btn.active {
+            background: #2563eb;
+            color: #ffffff;
+        }
 
         .sidebar-content { flex: 1; overflow-y: auto; }
         .sidebar-section { padding: 15px; border-bottom: 1px solid #e4e4e7; }
@@ -157,7 +167,6 @@
         #workspace { 
             transform-origin: 0 0; 
             position: relative; 
-            transition: background-color 0.3s, box-shadow 0.3s;
         }
         
         #floorplan-img { display: none; max-width: none; pointer-events: none; }
@@ -201,7 +210,6 @@
         model-viewer { width: 90vw; height: 80vh; background-color: #111; border-radius: 8px; }
         #closeArBtn { position: absolute; top: 20px; right: 20px; padding: 10px 20px; background: #ef4444; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 14px; z-index: 1001; cursor:pointer;}
 
-        /* Responsive Layout - Fix untuk iPad/Tablet & Mobile */
         @media (max-width: 1024px) {
             #main-container { flex-direction: column; }
             
@@ -220,11 +228,14 @@
 <body>
 
     <div id="sidebar">
-        <button id="sidebarToggleBtn" title="Toggle Sidebar">◀</button>
+        <button id="sidebarToggleBtn" title="Toggle Sidebar">&lt;</button>
         
         <div class="sidebar-header">
             <h3 id="txtTitle">BIM Architect</h3>
-            <button id="langToggle">ID 🔄 EN</button>
+            <div class="lang-btn-group">
+                <button class="lang-btn active" id="btnLangID">ID</button>
+                <button class="lang-btn" id="btnLangEN">EN</button>
+            </div>
         </div>
         
         <div class="sidebar-content">
@@ -339,7 +350,6 @@
             
             <button id="helpBtnToggle" title="Panduan">?</button>
 
-            <!-- Popup/Modal Bantuan -->
             <div id="helpModal">
                 <div class="help-content">
                     <button class="close-help" id="closeHelpBtn">&times;</button>
@@ -367,7 +377,7 @@
     </div>
 
     <script>
-        // === TRANSLATION LOGIC (ID / EN) FIX ===
+        // === TRANSLATION LOGIC PERBAIKAN ===
         let currentLang = 'id';
         const texts = {
             id: {
@@ -404,10 +414,13 @@
             }
         };
 
-        document.getElementById('langToggle').addEventListener('click', function() {
-            currentLang = currentLang === 'id' ? 'en' : 'id';
+        function setLanguage(lang) {
+            currentLang = lang;
             const t = texts[currentLang];
             
+            document.getElementById('btnLangID').classList.toggle('active', lang === 'id');
+            document.getElementById('btnLangEN').classList.toggle('active', lang === 'en');
+
             document.getElementById('txtTitle').innerText = t.title;
             document.getElementById('txtSec1').innerText = t.sec1;
             document.getElementById('txtSec2').innerText = t.sec2;
@@ -456,7 +469,10 @@
             document.getElementById('txtGuide1').innerHTML = t.g1;
             document.getElementById('txtGuide2').innerHTML = t.g2;
             document.getElementById('txtGuide3').innerHTML = t.g3;
-        });
+        }
+
+        document.getElementById('btnLangID').addEventListener('click', () => setLanguage('id'));
+        document.getElementById('btnLangEN').addEventListener('click', () => setLanguage('en'));
 
         // === UI SIDEBAR TOGGLE & GUIDE TOGGLE ===
         const sidebar = document.getElementById('sidebar');
@@ -464,9 +480,9 @@
         
         function updateToggleIcon() {
             if (sidebar.classList.contains('collapsed')) {
-                sidebarToggleBtn.innerHTML = '▶';
+                sidebarToggleBtn.innerHTML = '&gt;';
             } else {
-                sidebarToggleBtn.innerHTML = '◀';
+                sidebarToggleBtn.innerHTML = '&lt;';
             }
         }
 
@@ -781,13 +797,17 @@
         document.getElementById('flipHingeBtn').addEventListener('click', () => { if (selectedItem && selectedItem.type === 'door') { saveState(); selectedItem.flipHinge = !selectedItem.flipHinge; update3D(); draw2D(); }});
         document.getElementById('delObjBtn').addEventListener('click', () => { if (selectedItem) { saveState(); if (selectedItem.lineIndex !== undefined) openings = openings.filter(o => o.id !== selectedItem.id); else freeObjects = freeObjects.filter(o => o.id !== selectedItem.id); closeEditPanel(); update3D(); draw2D(); }});
 
-        // === FUNGSI MENGGAMBAR GRID LANGSUNG KE CANVAS ===
+        // === FUNGSI MENGGAMBAR GRID LANGSUNG KE CANVAS (DIJAMIN MUNCUL) ===
         function drawCanvasGrid() {
             if (isTracingMode) return; 
             ctx.save();
-            ctx.strokeStyle = '#e4e4e7';
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height); // Warnai alas kanvas menjadi putih bersih
+            
+            ctx.strokeStyle = '#d4d4d8';
             ctx.lineWidth = 1;
-            const gridSize = 50; 
+            const gridSize = 50; // 1 Kotak = 50px (Skala 1 Meter)
+            
             for (let x = 0; x <= canvas.width; x += gridSize) {
                 ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
             }
