@@ -285,6 +285,11 @@
                     </optgroup>
                 </select>
 
+                <button id="btnSnap" class="active" style="margin-bottom: 12px; display: flex; justify-content: center; gap: 8px; transition: all 0.2s;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15-4-4 6.75-6.77a7.79 7.79 0 0 1 11 11L13 22l-4-4 6.39-6.36a2.14 2.14 0 0 0-3-3L6 15"></path><path d="m5 8 4 4"></path><path d="m12 15 4 4"></path></svg>
+                    <span id="txtBtnSnap">Snap (Magnet)</span>
+                </button>
+
                 <div class="grid-2" style="margin-bottom: 0;">
                     <div>
                         <label id="txtLblWallH">Tinggi Tembok (m)</label>
@@ -389,6 +394,7 @@
                 lblUpload: "Upload Denah (Untuk Tracing):", undo: "Undo", redo: "Redo", clear: "Reset (Bikin Baru)",
                 sel: "Pilih / Edit", wall: "Tembok", door: "Pintu", win: "Jendela", stairs: "Tangga",
                 optDef: "+ Tambah Mebel / Objek...", grp1: "Ruang Utama", grp2: "Dapur", grp3: "Kamar Mandi",
+                snapBtn: "Snap (Magnet)",
                 bed: "Kasur", sofa: "Sofa", table: "Meja", chair: "Kursi", kitchen: "Kitchen Set", stove: "Kompor", fridge: "Kulkas", toilet: "Kloset / Toilet", shower: "Shower", bathtub: "Bathtub",
                 lblWallH: "Tinggi Tembok (m)", lblWallT: "Tebal Tembok (m)", emptyMsg: "Pilih objek di kanvas (Mode Pilih/Edit) untuk mengatur properti.",
                 lblPos: "Posisi Tembok:", lblWidth: "Lebar:", lblSwing: "Rotasi (Swing):", flipBtn: "Balik Engsel",
@@ -405,6 +411,7 @@
                 lblUpload: "Upload Floorplan (For Tracing):", undo: "Undo", redo: "Redo", clear: "Reset (New Plan)",
                 sel: "Select / Edit", wall: "Wall", door: "Door", win: "Window", stairs: "Stairs",
                 optDef: "+ Add Furniture / Objects...", grp1: "Living Area", grp2: "Kitchen", grp3: "Bathroom",
+                snapBtn: "Snap to Grid/Wall",
                 bed: "Bed", sofa: "Sofa", table: "Table", chair: "Chair", kitchen: "Kitchen Set", stove: "Stove", fridge: "Fridge", toilet: "Toilet / WC", shower: "Shower", bathtub: "Bathtub",
                 lblWallH: "Wall Height (m)", lblWallT: "Wall Thickness (m)", emptyMsg: "Select an object on the canvas (Select/Edit Mode) to adjust properties.",
                 lblPos: "Wall Position:", lblWidth: "Width:", lblSwing: "Rotation (Swing):", flipBtn: "Flip Hinge",
@@ -442,6 +449,7 @@
             document.getElementById('optGrp1').label = t.grp1;
             document.getElementById('optGrp2').label = t.grp2;
             document.getElementById('optGrp3').label = t.grp3;
+            document.getElementById('txtBtnSnap').innerText = t.snapBtn;
             
             document.getElementById('optBed').innerText = t.bed;
             document.getElementById('optSofa').innerText = t.sofa;
@@ -509,11 +517,14 @@
             updateToggleIcon();
         });
 
-        // === STATE & DATA (DEKLARASI SEMUA VARIABEL UTAMA DI AWAL) ===
+        // === STATE & DATA ===
         let lines = []; let openings = []; let freeObjects = [];
         let mode = 'wall'; let scale3D = 0.02; 
         let isTracingMode = false;
         let isDrawing = false; let currentLine = null;
+        
+        // State untuk Snap/Magnet
+        let isSnappingEnabled = true;
 
         let selectedItem = null; let isDraggingObject = false; let isDraggingCanvas = false;
         let undoStack = []; let redoStack = [];
@@ -528,6 +539,20 @@
         const inputWallH = document.getElementById('valWallH');
         const inputWallT = document.getElementById('valWallT');
         const furnitureSelect = document.getElementById('furnitureSelect');
+        const btnSnap = document.getElementById('btnSnap');
+
+        // Logic Toggle Snap yang benar-benar memutus snapping
+        btnSnap.addEventListener('click', () => {
+            isSnappingEnabled = !isSnappingEnabled;
+            if (isSnappingEnabled) {
+                btnSnap.classList.add('active');
+                btnSnap.style.opacity = '1';
+            } else {
+                btnSnap.classList.remove('active');
+                btnSnap.style.opacity = '0.55'; // Efek visual buram kalau nonaktif
+            }
+            draw2D(); // Update garis kotak-kotak (grid) langsung
+        });
 
         inputWallH.addEventListener('change', () => { saveState(); update3D(); });
         inputWallT.addEventListener('change', () => { saveState(); update3D(); draw2D(); });
@@ -598,7 +623,6 @@
         canvas.addEventListener('pointerdown', (e) => {
             if (isPanning) return; 
             
-            // --- TAMBAHAN FIX: Abaikan jari kedua agar tidak bikin garis ---
             if (e.pointerType === 'touch' && !e.isPrimary) return; 
             
             if (e.button === 2 || e.button === 1) { 
@@ -633,7 +657,7 @@
                 draw2D();
             } 
             else if (mode === 'wall') {
-                let snap = getSnapped(x, y);
+                let snap = getSnapped(x, y, isDrawing ? currentLine.start : null);
                 if (!isDrawing) { saveState(); isDrawing = true; currentLine = { start: snap, end: snap }; } 
                 else { const dist = Math.hypot(snap.x - currentLine.start.x, snap.y - currentLine.start.y);
                     if (dist < 10 / scale) { stopDrawing(); } else { currentLine.end = snap; lines.push({...currentLine}); update3D(); currentLine = { start: snap, end: snap }; }
@@ -644,7 +668,9 @@
                 if (nearest) { saveState(); openings.push({ id: Date.now(), type: mode, lineIndex: nearest.index, ratio: nearest.ratio, width3D: mode === 'door' ? 0.9 : 1.2, height3D: mode === 'door' ? 2.1 : 1.2, elevation: mode === 'door' ? 0 : 0.9, swing: 85, flipHinge: false }); update3D(); draw2D(); }
             }
             else { 
-                saveState(); freeObjects.push({ id: Date.now(), type: mode, x: x, y: y, rotation: 0, scaleVal: 1.0, steps: 14, width3D: mode === 'stairs' ? 1.0 : 1.0 });
+                saveState(); 
+                let snapPos = getSnapped(x, y); // Snap posisi objek baru juga
+                freeObjects.push({ id: Date.now(), type: mode, x: snapPos.x, y: snapPos.y, rotation: 0, scaleVal: 1.0, steps: 14, width3D: mode === 'stairs' ? 1.0 : 1.0 });
                 furnitureSelect.value = ""; setMode('select', document.getElementById('modeSelect')); update3D(); draw2D();
             }
         });
@@ -655,8 +681,15 @@
             }
             else {
                 let { x, y } = getTrueCoords(e.clientX, e.clientY);
-                if (isDrawing && mode === 'wall' && currentLine) { currentLine.end = getSnapped(x, y); draw2D(); }
-                else if (isDraggingObject && selectedItem && selectedItem.lineIndex === undefined) { selectedItem.x = x; selectedItem.y = y; draw2D(); update3D(); }
+                if (isDrawing && mode === 'wall' && currentLine) { 
+                    currentLine.end = getSnapped(x, y, currentLine.start); draw2D(); 
+                }
+                else if (isDraggingObject && selectedItem && selectedItem.lineIndex === undefined) { 
+                    let snapPos = getSnapped(x, y);
+                    selectedItem.x = snapPos.x; 
+                    selectedItem.y = snapPos.y; 
+                    draw2D(); update3D(); 
+                }
             }
         });
 
@@ -676,10 +709,8 @@
             if (e.touches.length >= 2) {
                 isPanning = true; 
                 
-                // --- TAMBAHAN FIX ---
-                stopDrawing(); // Batalkan garis yang terlanjur terbuat oleh jari pertama
-                isDraggingObject = false; // Batalkan juga kalau lagi ga sengaja geser objek
-                // --------------------
+                stopDrawing(); 
+                isDraggingObject = false; 
 
                 touchStartDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
                 initialScale = scale; const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2; const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
@@ -701,9 +732,7 @@
 
         // === TOOLS & DRAWING LOGIC ===
         function stopDrawing() { 
-            if (isDrawing && currentLine) {
-                draw2D(); // Re-render untuk menghilangkan garis yang nyangkut
-            }
+            if (isDrawing && currentLine) { draw2D(); }
             isDrawing = false; currentLine = null; draw2D(); 
         }
 
@@ -715,7 +744,8 @@
         furnitureSelect.addEventListener('change', (e) => { if(e.target.value) { setMode(e.target.value, null); } });
 
         function setMode(newMode, btn) {
-            stopDrawing(); mode = newMode; document.querySelectorAll('#sidebar button.active').forEach(b => b.classList.remove('active'));
+            stopDrawing(); mode = newMode; 
+            document.querySelectorAll('#sidebar .grid-2 > button').forEach(b => b.classList.remove('active'));
             if(btn) btn.classList.add('active');
             if (mode !== 'select') closeEditPanel();
             
@@ -734,24 +764,52 @@
         }
 
         const SNAP_RADIUS = 20;
-        function getSnapped(x, y) {
-            let snapX = x, snapY = y; let minDist = SNAP_RADIUS / scale;
+        
+        // FUNGSI SNAP YANG DIROMBAK TOTAL
+        function getSnapped(x, y, refPoint = null) {
+            // Jika Snap mati, biarkan x,y 100% bebas (freeform tulen)
+            if (!isSnappingEnabled) return { x, y };
+
+            let snapX = x, snapY = y;
+            let minDist = SNAP_RADIUS / scale;
+            let snappedToPoint = false;
+
+            // 1. Point Snap (Prioritas 1: Magnet ke ujung tembok lain)
             for (let l of lines) {
-                if (Math.hypot(l.start.x - x, l.start.y - y) < minDist) return { x: l.start.x, y: l.start.y };
-                if (Math.hypot(l.end.x - x, l.end.y - y) < minDist) return { x: l.end.x, y: l.end.y };
+                if (Math.hypot(l.start.x - x, l.start.y - y) < minDist) { snapX = l.start.x; snapY = l.start.y; snappedToPoint = true; break; }
+                if (Math.hypot(l.end.x - x, l.end.y - y) < minDist) { snapX = l.end.x; snapY = l.end.y; snappedToPoint = true; break; }
             }
-            for (let l of lines) {
-                const l2 = Math.pow(l.end.x - l.start.x, 2) + Math.pow(l.end.y - l.start.y, 2); if (l2 === 0) continue;
-                let t = Math.max(0, Math.min(1, ((x - l.start.x) * (l.end.x - l.start.x) + (y - l.start.y) * (l.end.y - l.start.y)) / l2));
-                const projX = l.start.x + t * (l.end.x - l.start.x); const projY = l.start.y + t * (l.end.y - l.start.y);
-                const dist = Math.hypot(x - projX, y - projY);
-                if (dist < minDist) { minDist = dist; snapX = projX; snapY = projY; }
+
+            // 2. Line Snap (Prioritas 2: Magnet ke tengah-tengah tembok)
+            if (!snappedToPoint) {
+                for (let l of lines) {
+                    const l2 = Math.pow(l.end.x - l.start.x, 2) + Math.pow(l.end.y - l.start.y, 2); if (l2 === 0) continue;
+                    let t = Math.max(0, Math.min(1, ((x - l.start.x) * (l.end.x - l.start.x) + (y - l.start.y) * (l.end.y - l.start.y)) / l2));
+                    const projX = l.start.x + t * (l.end.x - l.start.x); const projY = l.start.y + t * (l.end.y - l.start.y);
+                    if (Math.hypot(x - projX, y - projY) < minDist) { snapX = projX; snapY = projY; snappedToPoint = true; break; }
+                }
             }
-            
-            if (!isTracingMode && minDist > SNAP_RADIUS / scale) {
+
+            // 3. Grid Snap (Prioritas 3: Magnet ke kotak-kotak grid)
+            if (!snappedToPoint && !isTracingMode) {
                 const gridSnap = 50; 
-                if (Math.abs(x % gridSnap) < (SNAP_RADIUS / scale)) snapX = Math.round(x / gridSnap) * gridSnap;
-                if (Math.abs(y % gridSnap) < (SNAP_RADIUS / scale)) snapY = Math.round(y / gridSnap) * gridSnap;
+                if (Math.abs(x % gridSnap) < minDist) snapX = Math.round(x / gridSnap) * gridSnap;
+                if (Math.abs(y % gridSnap) < minDist) snapY = Math.round(y / gridSnap) * gridSnap;
+            }
+
+            // 4. Ortho Snap (Prioritas 4: Magnet garis lurus 0/90/180/270 derajat)
+            if (refPoint && !snappedToPoint) {
+                const dx = snapX - refPoint.x;
+                const dy = snapY - refPoint.y;
+                const angle = Math.atan2(dy, dx);
+                
+                // Cek apakah posisi mouse dekat dengan sudut kelipatan 90 derajat
+                const orthoAngle = Math.round(angle / (Math.PI/2)) * (Math.PI/2);
+                if (Math.abs(angle - orthoAngle) < 0.15) { // Toleransi kemiringan sedikit saja
+                    const dist = Math.hypot(dx, dy);
+                    snapX = refPoint.x + Math.cos(orthoAngle) * dist;
+                    snapY = refPoint.y + Math.sin(orthoAngle) * dist;
+                }
             }
 
             return { x: snapX, y: snapY };
@@ -813,16 +871,17 @@
         document.getElementById('flipHingeBtn').addEventListener('click', () => { if (selectedItem && selectedItem.type === 'door') { saveState(); selectedItem.flipHinge = !selectedItem.flipHinge; update3D(); draw2D(); }});
         document.getElementById('delObjBtn').addEventListener('click', () => { if (selectedItem) { saveState(); if (selectedItem.lineIndex !== undefined) openings = openings.filter(o => o.id !== selectedItem.id); else freeObjects = freeObjects.filter(o => o.id !== selectedItem.id); closeEditPanel(); update3D(); draw2D(); }});
 
-        // === FUNGSI MENGGAMBAR GRID ===
+        // === FUNGSI MENGGAMBAR GRID (Berubah Saat Snap Mati) ===
         function drawCanvasGrid() {
             if (isTracingMode) return; 
             ctx.save();
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, canvas.width, canvas.height); 
             
-            ctx.strokeStyle = '#d4d4d8';
+            // Grid menjadi pudar (samar) saat Snap dimatikan
+            ctx.strokeStyle = isSnappingEnabled ? '#d4d4d8' : '#f0f0f4';
             ctx.lineWidth = 1;
-            const gridSize = 50; // 1 Kotak = 50px (Skala 1 Meter)
+            const gridSize = 50; 
             
             for (let x = 0; x <= canvas.width; x += gridSize) {
                 ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
@@ -902,7 +961,6 @@
         scene.add(dirLight); scene.add(new THREE.GridHelper(50, 50, 0x555555, 0x333333));
         const modelGroup = new THREE.Group(); scene.add(modelGroup); camera.position.set(0, 15, 20); 
 
-        // === FIX AUTO-RESIZE THREE.JS ===
         function resizeViewports() {
             const renderRect = renderContainer.getBoundingClientRect();
             if (renderRect.width > 0 && renderRect.height > 0) {
