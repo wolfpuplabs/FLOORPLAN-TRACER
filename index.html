@@ -31,7 +31,7 @@
         #floorplan-img { display: block; max-width: none; pointer-events: none; user-select: none; }
         #draw-canvas { position: absolute; top: 0; left: 0; }
 
-        #instructions { position: absolute; bottom: 15px; left: 15px; background: rgba(0,0,0,0.7); color: white; padding: 10px 15px; border-radius: 8px; font-size: 12px; pointer-events: none; z-index: 20; line-height: 1.5; }
+        #instructions { position: absolute; bottom: 15px; left: 15px; background: rgba(0,0,0,0.75); color: white; padding: 10px 15px; border-radius: 8px; font-size: 12px; pointer-events: none; z-index: 20; line-height: 1.5; }
 
         #edit-panel {
             display: none; position: absolute; top: 70px; right: 20px; background: white; 
@@ -121,9 +121,9 @@
                 <canvas id="draw-canvas"></canvas>
             </div>
             <div id="instructions">
-                <b>Fitur Otomatis:</b><br>
-                - <b>Auto-Lantai</b>: Hubungkan tembok menjadi siklus tertutup untuk buat lantai<br>
-                - <b>AR View</b>: Buka di iPad/HP untuk proyeksi AR di dunia nyata
+                <b>Fitur Terbaru:</b><br>
+                - <b>Tracing Transparan</b>: Garis menggambar dibuat transparan agar gambar acuan tetap terlihat.<br>
+                - <b>Auto-Lantai</b>: Begitu tembok saling terhubung membentuk area tertutup, lantai 3D akan otomatis terisi.
             </div>
         </div>
         <div id="right-panel"></div>
@@ -388,17 +388,18 @@
             if (selectedOpening) { saveState(); openings = openings.filter(o => o.id !== selectedOpening.id); closeEditPanel(); update3D(); draw2D(); }
         });
 
-        // === 2D RENDER ===
+        // === 2D RENDER (TERAS TRANSPARAN AGAR ACUAN GAMBAR TERLIHAT) ===
         function draw2D() {
             ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.lineCap = 'round';
             const globalThick2D = parseFloat(inputWallT.value) / scale3D;
             ctx.lineWidth = Math.max(2, globalThick2D); 
             
-            ctx.strokeStyle = '#222';
+            // Menggunakan warna semi-transparan (Alpha 0.45) untuk garis tembok
+            ctx.strokeStyle = 'rgba(33, 150, 243, 0.45)';
             lines.forEach(l => { ctx.beginPath(); ctx.moveTo(l.start.x, l.start.y); ctx.lineTo(l.end.x, l.end.y); ctx.stroke(); });
 
             if (currentLine) { 
-                ctx.strokeStyle = '#f44336'; 
+                ctx.strokeStyle = 'rgba(244, 67, 54, 0.65)'; 
                 ctx.beginPath(); ctx.moveTo(currentLine.start.x, currentLine.start.y); ctx.lineTo(currentLine.end.x, currentLine.end.y); ctx.stroke(); 
             }
 
@@ -412,7 +413,7 @@
                 if (op.flipHinge) { ctx.scale(-1, 1); }
 
                 if (op === selectedOpening) {
-                    ctx.shadowColor = '#2196F3'; ctx.shadowBlur = 15; ctx.fillStyle = 'rgba(33, 150, 243, 0.3)';
+                    ctx.shadowColor = '#2196F3'; ctx.shadowBlur = 15; ctx.fillStyle = 'rgba(33, 150, 243, 0.4)';
                     ctx.fillRect(-opWidth2D/2, -ctx.lineWidth, opWidth2D, ctx.lineWidth*2);
                 }
 
@@ -423,7 +424,7 @@
                     ctx.beginPath(); ctx.moveTo(-opWidth2D/2, 0); ctx.lineTo(-opWidth2D/2, opWidth2D * swingDir); 
                     ctx.lineWidth = Math.max(2, canvas.width * 0.002); ctx.strokeStyle = '#8B4513'; ctx.stroke();
                     ctx.beginPath(); ctx.arc(-opWidth2D/2, 0, opWidth2D, swingDir < 0 ? -Math.PI/2 : 0, swingDir < 0 ? 0 : Math.PI/2);
-                    ctx.strokeStyle = 'rgba(139, 69, 19, 0.4)'; ctx.stroke();
+                    ctx.strokeStyle = 'rgba(139, 69, 19, 0.6)'; ctx.stroke();
                 } else {
                     ctx.fillStyle = 'rgba(135, 206, 235, 0.8)'; const th = ctx.lineWidth * 1.5;
                     ctx.fillRect(-opWidth2D/2, -th/2, opWidth2D, th); ctx.strokeStyle = '#555';
@@ -462,8 +463,8 @@
         renderer.setClearColor(0x2d2d2d); rightPanel.appendChild(renderer.domElement);
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         
-        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.6); dirLight.position.set(20, 40, 20); scene.add(dirLight);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.7); dirLight.position.set(20, 40, 20); scene.add(dirLight);
         scene.add(new THREE.GridHelper(50, 50, 0x555555, 0x333333));
         
         const modelGroup = new THREE.Group(); scene.add(modelGroup);
@@ -476,31 +477,28 @@
 
         function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); } animate();
 
-        // LOGIKA BARU: DETEKSI SIKLUS TERTIUP (OTOMATIS MEMBUAT LANTAI)
+        // LOGIKA PENYEMPURNAAN KONTUR OTOMATIS LANTAI (POLAR SORTED)
         function findClosedLoops() {
             if (lines.length < 3) return [];
             
-            // Buat adjacency list dari titik-titik
             let nodes = [];
             const getIndex = (p) => {
-                let idx = nodes.findIndex(n => Math.hypot(n.x - p.x, n.y - p.y) < 2);
-                if (idx === -1) { nodes.push(p); return nodes.length - 1; }
+                let idx = nodes.findIndex(n => Math.hypot(n.x - p.x, n.y - p.y) < 3);
+                if (idx === -1) { nodes.push({ x: p.x, y: p.y }); return nodes.length - 1; }
                 return idx;
             };
 
-            let adj = {};
-            lines.forEach(l => {
-                let u = getIndex(l.start);
-                let v = getIndex(l.end);
-                if (!adj[u]) adj[u] = [];
-                if (!adj[v]) adj[v] = [];
-                adj[u].push(v);
-                adj[v].push(u);
-            });
+            lines.forEach(l => { getIndex(l.start); getIndex(l.end); });
+            if (nodes.length < 3) return [];
 
-            // Urutkan simpul terluar/convex hull sederhana untuk membentuk lantai polygon
-            if(nodes.length >= 3) return nodes;
-            return [];
+            // Hitung centroid / titik tengah area
+            let centerX = nodes.reduce((sum, n) => sum + n.x, 0) / nodes.length;
+            let centerY = nodes.reduce((sum, n) => sum + n.y, 0) / nodes.length;
+
+            // Urutkan simpul melingkar berdasarkan sudut terhadap centroid
+            nodes.sort((a, b) => Math.atan2(a.y - centerY, a.x - centerX) - Math.atan2(b.y - centerY, b.x - centerX));
+
+            return nodes;
         }
 
         function update3D() {
@@ -517,13 +515,20 @@
             });
             const center2DX = (minX + maxX) / 2; const center2DY = (minY + maxY) / 2;
             
-            const matWall = new THREE.MeshLambertMaterial({ color: 0xf5f5f5 });
+            // Tembok dibuat sedikit transparan (0.85) agar terlihat modern & bagian dalam ruangan kelihatan
+            const matWall = new THREE.MeshLambertMaterial({ color: 0xdedede, transparent: true, opacity: 0.85 });
             const matDoor = new THREE.MeshLambertMaterial({ color: 0x5c4033 }); 
             const matWindow = new THREE.MeshLambertMaterial({ color: 0x87CEEB, transparent: true, opacity: 0.5 }); 
             const matFrame = new THREE.MeshLambertMaterial({ color: 0x333333 }); 
-            const matFloor = new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.4 });
+            
+            // Material Lantai (Warna abu terang dengan DoubleSide)
+            const matFloor = new THREE.MeshStandardMaterial({ 
+                color: 0xc8c8c8, 
+                roughness: 0.3, 
+                side: THREE.DoubleSide 
+            });
 
-            // 1. OTOMATIS GENERATE LANTAI JIKA TERHUBUNG (CLOSED LOOP)
+            // 1. OTOMATIS GENERATE LANTAI BILA KONTUR TERBENTUK
             const floorVertices = findClosedLoops();
             if (floorVertices.length >= 3) {
                 const floorShape = new THREE.Shape();
@@ -536,8 +541,8 @@
                 
                 const floorGeom = new THREE.ShapeGeometry(floorShape);
                 const floorMesh = new THREE.Mesh(floorGeom, matFloor);
-                floorMesh.rotation.x = Math.PI / 2; // Flat horizontal
-                floorMesh.position.y = -0.01; // Bawah lantai sedikit agar tidak z-fight
+                floorMesh.rotation.x = Math.PI / 2; // Datar horizontal
+                floorMesh.position.y = 0; // Sejajar batas bawah
                 modelGroup.add(floorMesh);
             }
 
@@ -595,7 +600,7 @@
                 wallObj.position.set(posX, 0, posZ); wallObj.rotation.y = -angle; modelGroup.add(wallObj);
             });
 
-            // 3. PILAR SUDUT
+            // 3. PILAR SUDUT TEMBOK
             const cornerGeom = new THREE.CylinderGeometry(thickWall/2, thickWall/2, heightWall, 16);
             let uniqueVertices = [];
             lines.forEach(l => {
@@ -619,7 +624,6 @@
                 return;
             }
 
-            // Export temporary GLB Blob untuk dipasang di <model-viewer>
             new THREE.GLTFExporter().parse(modelGroup, (gltf) => {
                 const blob = new Blob([gltf], { type: 'model/gltf-binary' });
                 const modelUrl = URL.createObjectURL(blob);
