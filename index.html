@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Floor Plan Tracer - Architect Edition</title>
+    <title>3D Floor Plan Tracer - Pro Architect</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
@@ -86,10 +86,10 @@
                 <canvas id="draw-canvas"></canvas>
             </div>
             <div id="instructions">
-                <b>Panduan:</b><br>
-                - <b>Pinch / Scroll</b>: Zoom In/Out<br>
-                - <b>2 Jari / Klik Kanan</b>: Geser (Pan)<br>
-                - Kursor otomatis menempel ke tembok terdekat
+                <b>Cara Menggambar:</b><br>
+                - <b>Tahan & Geser</b>: Tarik garis tembok<br>
+                - <b>Lepas</b>: Memutuskan garis (selesai)<br>
+                - <b>Pinch / 2 Jari</b>: Zoom & Geser layar
             </div>
         </div>
         <div id="right-panel"></div>
@@ -114,8 +114,12 @@
         // === UNDO / REDO LOGIC ===
         function saveState() {
             undoStack.push({ lines: JSON.parse(JSON.stringify(lines)), openings: JSON.parse(JSON.stringify(openings)) });
-            redoStack = []; 
-            document.getElementById('undoBtn').disabled = false; document.getElementById('redoBtn').disabled = true;
+            redoStack = []; updateButtons();
+        }
+
+        function updateButtons() {
+            document.getElementById('undoBtn').disabled = undoStack.length === 0;
+            document.getElementById('redoBtn').disabled = redoStack.length === 0;
         }
 
         function restoreState(isUndo) {
@@ -127,15 +131,13 @@
                 undoStack.push(current); const next = redoStack.pop();
                 lines = next.lines; openings = next.openings;
             }
-            document.getElementById('undoBtn').disabled = undoStack.length === 0;
-            document.getElementById('redoBtn').disabled = redoStack.length === 0;
-            selectedOpening = null; closeEditPanel(); draw2D(); update3D();
+            updateButtons(); selectedOpening = null; closeEditPanel(); draw2D(); update3D();
         }
 
         document.getElementById('undoBtn').onclick = () => restoreState(true);
         document.getElementById('redoBtn').onclick = () => restoreState(false);
 
-        // === ZOOM & PAN 2D LOGIC (Fixed for Mouse & Touch) ===
+        // === ZOOM & PAN 2D LOGIC ===
         let scale = 1;
         let panX = 0, panY = 0;
         let isPanning = false, startPanX = 0, startPanY = 0;
@@ -145,69 +147,52 @@
             workspace.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
         }
 
-        // Mouse Wheel Zoom
         leftPanel.addEventListener('wheel', (e) => {
             e.preventDefault();
             const newScale = Math.min(Math.max(0.05, scale + (e.deltaY * -0.001)), 10);
             const rect = leftPanel.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-            
-            panX = mouseX - ((mouseX - panX) * (newScale / scale));
-            panY = mouseY - ((mouseY - panY) * (newScale / scale));
+            const focusX = e.clientX - rect.left; const focusY = e.clientY - rect.top;
+            panX = focusX - ((focusX - panX) * (newScale / scale));
+            panY = focusY - ((focusY - panY) * (newScale / scale));
             scale = newScale; applyTransform();
         }, { passive: false });
 
-        // Mouse Panning
         leftPanel.addEventListener('mousedown', (e) => {
             if (e.button === 2 || e.button === 1) { 
                 isPanning = true; startPanX = e.clientX - panX; startPanY = e.clientY - panY;
                 leftPanel.style.cursor = 'grabbing';
             }
         });
-        window.addEventListener('mouseup', () => { isPanning = false; leftPanel.style.cursor = 'crosshair'; });
-        window.addEventListener('mousemove', (e) => {
-            if (isPanning) { panX = e.clientX - startPanX; panY = e.clientY - startPanY; applyTransform(); }
-        });
-        leftPanel.addEventListener('contextmenu', e => e.preventDefault());
 
-        // Multi-Touch Logic (Tablet Pinch & Pan)
         leftPanel.addEventListener('touchstart', (e) => {
             if (e.touches.length === 2) {
-                isPanning = true;
+                e.preventDefault(); isPanning = true;
                 touchStartDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
                 initialScale = scale;
                 const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
                 const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-                startPanX = midX - panX;
-                startPanY = midY - panY;
+                startPanX = midX - panX; startPanY = midY - panY;
             }
         }, { passive: false });
 
         leftPanel.addEventListener('touchmove', (e) => {
             if (e.touches.length === 2) {
-                e.preventDefault(); // Prevent scrolling page
+                e.preventDefault();
                 const currentDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-                const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-                const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-                
-                // Pinch Zoom
+                const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2; const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
                 const zoomFactor = currentDist / touchStartDist;
                 const newScale = Math.min(Math.max(0.05, initialScale * zoomFactor), 10);
-                
                 const rect = leftPanel.getBoundingClientRect();
-                const focusX = midX - rect.left;
-                const focusY = midY - rect.top;
-                
+                const focusX = midX - rect.left; const focusY = midY - rect.top;
                 panX = focusX - ((focusX - (midX - startPanX)) * (newScale / scale));
                 panY = focusY - ((focusY - (midY - startPanY)) * (newScale / scale));
                 scale = newScale; applyTransform();
             }
         }, { passive: false });
 
-        leftPanel.addEventListener('touchend', () => { isPanning = false; });
+        leftPanel.addEventListener('contextmenu', e => e.preventDefault());
 
-        // === UI EDITOR & INTERAKSI KANVAS ===
+        // === LOGIC MENGGAMBAR: DRAG & DROP ===
         let isDrawing = false, currentLine = null;
         const SNAP_RADIUS = 20;
 
@@ -233,66 +218,36 @@
             };
         }
 
-        // ==========================================
-        // PERBAIKAN FITUR: SNAP KE TEMBOK
-        // ==========================================
         function getSnapped(x, y) {
-            let snapX = x, snapY = y;
-            let minDist = SNAP_RADIUS / scale;
-            let snapped = false;
-
-            // Prioritas 1: Snap ke Ujung Garis (Endpoint)
+            let snapX = x, snapY = y, minDist = SNAP_RADIUS / scale;
+            // Snap Endpoint
             for (let l of lines) {
-                if (Math.hypot(l.start.x - x, l.start.y - y) < minDist) { return { x: l.start.x, y: l.start.y }; }
-                if (Math.hypot(l.end.x - x, l.end.y - y) < minDist) { return { x: l.end.x, y: l.end.y }; }
+                if (Math.hypot(l.start.x - x, l.start.y - y) < minDist) return { x: l.start.x, y: l.start.y };
+                if (Math.hypot(l.end.x - x, l.end.y - y) < minDist) return { x: l.end.x, y: l.end.y };
             }
-
-            // Prioritas 2: Snap menempel ke Badan Garis Tembok
+            // Snap Dinding Terdekat
             for (let l of lines) {
                 const l2 = Math.pow(l.end.x - l.start.x, 2) + Math.pow(l.end.y - l.start.y, 2);
                 if (l2 === 0) continue;
-                // Hitung proyeksi titik terdekat dari kursor ke garis
                 let t = Math.max(0, Math.min(1, ((x - l.start.x) * (l.end.x - l.start.x) + (y - l.start.y) * (l.end.y - l.start.y)) / l2));
-                const projX = l.start.x + t * (l.end.x - l.start.x);
-                const projY = l.start.y + t * (l.end.y - l.start.y);
-                const dist = Math.hypot(x - projX, y - projY);
-
-                if (dist < minDist) {
-                    minDist = dist; snapX = projX; snapY = projY;
-                }
+                const projX = l.start.x + t * (l.end.x - l.start.x); const projY = l.start.y + t * (l.end.y - l.start.y);
+                if (Math.hypot(x - projX, y - projY) < minDist) { snapX = projX; snapY = projY; }
             }
             return { x: snapX, y: snapY };
         }
 
-        function handlePointerDown(clientX, clientY, button) {
-            if (button !== 0 && button !== undefined) return; 
-            let { x, y } = getTrueCoords(clientX, clientY);
-            
+        function handleTapEvent(x, y) {
             if (mode === 'select') {
-                let clickedOp = null; let minDist = 20 / scale;
+                let clickedOp = null, minDist = 20 / scale;
                 openings.forEach(op => {
-                    let l = lines[op.lineIndex];
-                    if(l) {
-                        const cx = l.start.x + (l.end.x - l.start.x) * op.ratio;
-                        const cy = l.start.y + (l.end.y - l.start.y) * op.ratio;
-                        if (Math.hypot(cx - x, cy - y) < minDist) { clickedOp = op; minDist = Math.hypot(cx - x, cy - y); }
-                    }
+                    let l = lines[op.lineIndex]; if(!l) return;
+                    const cx = l.start.x + (l.end.x - l.start.x) * op.ratio; const cy = l.start.y + (l.end.y - l.start.y) * op.ratio;
+                    if (Math.hypot(cx - x, cy - y) < minDist) { clickedOp = op; minDist = Math.hypot(cx - x, cy - y); }
                 });
                 if (clickedOp) { selectedOpening = clickedOp; openEditPanel(selectedOpening); } 
                 else { selectedOpening = null; closeEditPanel(); }
                 draw2D();
-            } 
-            else if (mode === 'wall') {
-                let snap = getSnapped(x, y);
-                if (!isDrawing) {
-                    saveState(); isDrawing = true; currentLine = { start: snap, end: snap };
-                } else {
-                    currentLine.end = snap; lines.push({...currentLine});
-                    isDrawing = false; currentLine = null; update3D();
-                }
-                draw2D();
-            } 
-            else if (mode === 'door' || mode === 'window') {
+            } else if (mode === 'door' || mode === 'window') {
                 let nearest = findNearestLine(x, y);
                 if (nearest) {
                     saveState(); 
@@ -306,23 +261,71 @@
             }
         }
 
-        canvas.addEventListener('mousedown', (e) => handlePointerDown(e.clientX, e.clientY, e.button));
-        canvas.addEventListener('touchstart', (e) => {
-            if (e.touches.length === 1 && !isPanning) handlePointerDown(e.touches[0].clientX, e.touches[0].clientY, 0);
-        }, { passive: true });
+        function startDrawing(x, y) {
+            if (mode === 'wall') {
+                saveState(); isDrawing = true;
+                let snap = getSnapped(x, y);
+                currentLine = { start: snap, end: snap }; draw2D();
+            }
+        }
 
-        canvas.addEventListener('mousemove', (e) => {
+        function moveDrawing(x, y) {
             if (isDrawing && mode === 'wall') {
-                let { x, y } = getTrueCoords(e.clientX, e.clientY);
                 currentLine.end = getSnapped(x, y); draw2D();
+            }
+        }
+
+        function endDrawing() {
+            if (isDrawing && mode === 'wall') {
+                // Cegah garis berukuran 0 cm (klik tanpa ditarik)
+                const dist = Math.hypot(currentLine.end.x - currentLine.start.x, currentLine.end.y - currentLine.start.y);
+                if (dist > 5 / scale) { 
+                    lines.push({...currentLine});
+                } else {
+                    undoStack.pop(); updateButtons(); // Batal karena terlalu pendek
+                }
+                isDrawing = false; currentLine = null;
+                update3D(); draw2D();
+            }
+        }
+
+        // --- GLOBAL EVENT MOUSE ---
+        window.addEventListener('mouseup', () => { 
+            if(isPanning) { isPanning = false; leftPanel.style.cursor = 'crosshair'; }
+            endDrawing(); // Memastikan garis putus walau dilepas diluar kanvas
+        });
+        window.addEventListener('mousemove', (e) => {
+            if (isPanning) { panX = e.clientX - startPanX; panY = e.clientY - startPanY; applyTransform(); }
+            else if (isDrawing) { let {x, y} = getTrueCoords(e.clientX, e.clientY); moveDrawing(x, y); }
+        });
+
+        // --- GLOBAL EVENT TOUCH ---
+        window.addEventListener('touchend', (e) => { 
+            if(e.touches.length < 2) isPanning = false;
+            endDrawing(); // Memastikan garis putus saat jari diangkat
+        });
+        window.addEventListener('touchmove', (e) => {
+            if (isDrawing && e.touches.length === 1) {
+                let {x, y} = getTrueCoords(e.touches[0].clientX, e.touches[0].clientY); moveDrawing(x, y);
+            }
+        }, { passive: false });
+
+        // --- CANVAS BINDING ---
+        canvas.addEventListener('mousedown', (e) => {
+            if (e.button === 0 && !isPanning) {
+                let { x, y } = getTrueCoords(e.clientX, e.clientY);
+                handleTapEvent(x, y); startDrawing(x, y);
             }
         });
-        canvas.addEventListener('touchmove', (e) => {
-            if (isDrawing && mode === 'wall' && e.touches.length === 1) {
+
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1 && !isPanning) {
+                e.preventDefault(); // SUPER PENTING: Mencegah bug klik dobel dari browser tablet
                 let { x, y } = getTrueCoords(e.touches[0].clientX, e.touches[0].clientY);
-                currentLine.end = getSnapped(x, y); draw2D();
+                handleTapEvent(x, y); startDrawing(x, y);
             }
-        }, { passive: true });
+        }, { passive: false });
+
 
         function findNearestLine(px, py) {
             let minDist = 30 / scale; let result = null;
@@ -337,7 +340,7 @@
             return result;
         }
 
-        // === PANEL EDITOR MELAYANG ===
+        // === UI & RENDER ===
         const editPanel = document.getElementById('edit-panel');
         const editWidth = document.getElementById('editWidth');
         const editSwing = document.getElementById('editSwing');
@@ -345,31 +348,18 @@
         const valSwing = document.getElementById('valSwing');
 
         function openEditPanel(op) {
-            editPanel.style.display = 'block';
-            editWidth.value = op.width3D; valWidth.innerText = op.width3D;
-            if (op.type === 'door') {
-                document.getElementById('doorControls').style.display = 'block';
-                editSwing.value = op.swing; valSwing.innerText = op.swing;
-            } else { document.getElementById('doorControls').style.display = 'none'; }
+            editPanel.style.display = 'block'; editWidth.value = op.width3D; valWidth.innerText = op.width3D;
+            if (op.type === 'door') { document.getElementById('doorControls').style.display = 'block'; editSwing.value = op.swing; valSwing.innerText = op.swing; }
+            else { document.getElementById('doorControls').style.display = 'none'; }
         }
-
         function closeEditPanel() { editPanel.style.display = 'none'; selectedOpening = null; }
 
-        editWidth.addEventListener('input', (e) => {
-            if (selectedOpening) { selectedOpening.width3D = parseFloat(e.target.value); valWidth.innerText = selectedOpening.width3D; update3D(); draw2D(); }
-        });
+        editWidth.addEventListener('input', (e) => { if (selectedOpening) { selectedOpening.width3D = parseFloat(e.target.value); valWidth.innerText = selectedOpening.width3D; update3D(); draw2D(); }});
         editWidth.addEventListener('change', () => saveState());
-
-        editSwing.addEventListener('input', (e) => {
-            if (selectedOpening) { selectedOpening.swing = parseFloat(e.target.value); valSwing.innerText = selectedOpening.swing; update3D(); draw2D(); }
-        });
+        editSwing.addEventListener('input', (e) => { if (selectedOpening) { selectedOpening.swing = parseFloat(e.target.value); valSwing.innerText = selectedOpening.swing; update3D(); draw2D(); }});
         editSwing.addEventListener('change', () => saveState());
+        document.getElementById('delObjBtn').addEventListener('click', () => { if (selectedOpening) { saveState(); openings = openings.filter(o => o.id !== selectedOpening.id); closeEditPanel(); update3D(); draw2D(); }});
 
-        document.getElementById('delObjBtn').addEventListener('click', () => {
-            if (selectedOpening) { saveState(); openings = openings.filter(o => o.id !== selectedOpening.id); closeEditPanel(); update3D(); draw2D(); }
-        });
-
-        // === 2D RENDER ===
         function draw2D() {
             ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.lineCap = 'round';
             ctx.lineWidth = Math.max(4, canvas.width * 0.003); 
@@ -406,7 +396,6 @@
             });
         }
 
-        // === AUTO FIT IMAGE ===
         document.getElementById('upload').addEventListener('change', (e) => {
             const file = e.target.files[0]; if (!file) return;
             const reader = new FileReader();
@@ -419,7 +408,7 @@
                     panX = (panelWidth - (imgElement.width * scale)) / 2; panY = (panelHeight - (imgElement.height * scale)) / 2;
                     applyTransform();
                     scale3D = 20 / Math.max(canvas.width, canvas.height);
-                    lines = []; openings = []; undoStack = []; redoStack = []; closeEditPanel(); draw2D(); update3D();
+                    lines = []; openings = []; undoStack = []; redoStack = []; closeEditPanel(); updateButtons(); draw2D(); update3D();
                 }
             };
             reader.readAsDataURL(file);
@@ -461,17 +450,22 @@
             
             const center2DX = (minX + maxX) / 2; const center2DY = (minY + maxY) / 2;
             const heightWall = 3.0; const thickWall = 0.15; 
-            const matWall = new THREE.MeshLambertMaterial({ color: 0xf5f5f5 });
+            
+            // DoubleSide memastikan tembok selalu terlihat walaupun posisi tarikan garis terbalik
+            const matWall = new THREE.MeshLambertMaterial({ color: 0xf5f5f5, side: THREE.DoubleSide });
             const matDoor = new THREE.MeshLambertMaterial({ color: 0x5c4033 }); 
-            const matWindow = new THREE.MeshLambertMaterial({ color: 0x87CEEB, transparent: true, opacity: 0.5 }); 
+            const matWindow = new THREE.MeshLambertMaterial({ color: 0x87CEEB, transparent: true, opacity: 0.5, side: THREE.DoubleSide }); 
             const matFrame = new THREE.MeshLambertMaterial({ color: 0x333333 }); 
 
-            // 1. Gambar Tembok & Bukaan
             lines.forEach((line, index) => {
                 const dx = line.end.x - line.start.x; const dy = line.end.y - line.start.y;
-                const length = Math.sqrt(dx*dx + dy*dy) * scale3D; const angle = Math.atan2(dy, dx);
-                const midX = (line.start.x + line.end.x) / 2; const midY = (line.start.y + line.end.y) / 2;
+                const length = Math.sqrt(dx*dx + dy*dy) * scale3D; 
                 
+                // Mencegah Three.js error saat mencoba merender garis yg terlalu pendek
+                if (length < 0.05) return; 
+
+                const angle = Math.atan2(dy, dx);
+                const midX = (line.start.x + line.end.x) / 2; const midY = (line.start.y + line.end.y) / 2;
                 const posX = (midX - center2DX) * scale3D; const posZ = (midY - center2DY) * scale3D;
 
                 const wallObj = new THREE.Group(); const wallShape = new THREE.Shape();
@@ -483,7 +477,6 @@
                 ops.forEach(op => {
                     const opCenter = length * op.ratio; const opStart = opCenter - op.width3D/2; const opEnd = opCenter + op.width3D/2;
                     const hole = new THREE.Path();
-                    
                     if (op.type === 'door') {
                         hole.moveTo(opStart, op.elevation); hole.lineTo(opEnd, op.elevation); hole.lineTo(opEnd, op.elevation + op.height3D); hole.lineTo(opStart, op.elevation + op.height3D); hole.lineTo(opStart, op.elevation);
                         const leafGeom = new THREE.BoxGeometry(op.width3D, op.height3D, 0.04);
@@ -510,26 +503,17 @@
                 wallObj.position.set(posX, 0, posZ); wallObj.rotation.y = -angle; modelGroup.add(wallObj);
             });
 
-            // ==========================================
-            // PERBAIKAN FITUR: AUTO-CORNER FILLER
-            // ==========================================
-            // Kumpulkan semua titik unik ujung tembok dan pasang pilar agar sudut rapat
+            // Tiang Penutup Sudut
             const cornerGeom = new THREE.CylinderGeometry(thickWall/2, thickWall/2, heightWall, 16);
             let uniqueVertices = [];
-            
             lines.forEach(l => {
                 [l.start, l.end].forEach(pt => {
-                    if(!uniqueVertices.some(v => Math.hypot(v.x - pt.x, v.y - pt.y) < 1)) {
-                        uniqueVertices.push(pt);
-                    }
+                    if(!uniqueVertices.some(v => Math.hypot(v.x - pt.x, v.y - pt.y) < 1)) uniqueVertices.push(pt);
                 });
             });
-
             uniqueVertices.forEach(v => {
-                const posX = (v.x - center2DX) * scale3D;
-                const posZ = (v.y - center2DY) * scale3D;
                 const cornerMesh = new THREE.Mesh(cornerGeom, matWall);
-                cornerMesh.position.set(posX, heightWall / 2, posZ);
+                cornerMesh.position.set((v.x - center2DX) * scale3D, heightWall / 2, (v.y - center2DY) * scale3D);
                 modelGroup.add(cornerMesh);
             });
         }
