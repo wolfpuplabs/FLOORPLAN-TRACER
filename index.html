@@ -61,8 +61,8 @@
             background-color: #fff;
         }
         
-        input[type="number"] { width: 55px; text-align: center; }
-        input[type="file"] { padding: 5px; width: 170px; border: none; }
+        input[type="number"] { width: 60px; text-align: center; }
+        input[type="file"] { padding: 5px; width: 150px; border: none; }
         input[type="color"] { width: 36px; height: 36px; padding: 0; border: none; border-radius: 8px; cursor: pointer; }
         
         label { font-weight: 500; color: #333; display: flex; align-items: center; gap: 5px; }
@@ -145,7 +145,6 @@
 
     <div id="controls">
         <div class="control-group">
-            <label>Plan:</label>
             <input type="file" id="imageUpload" accept="image/*">
             <button id="btnUndo" disabled>↩️</button>
             <button id="btnRedo" disabled>↪️</button>
@@ -165,15 +164,22 @@
         </div>
 
         <div class="control-group">
+            <label>Unit:</label>
+            <select id="unitSelect">
+                <option value="mm">mm</option>
+                <option value="cm" selected>cm</option>
+                <option value="m">m</option>
+                <option value="inch">inch</option>
+            </select>
             <label>Tinggi:</label>
-            <input type="number" id="wallHeight" value="100">
+            <input type="number" id="wallHeight" value="300">
             <label>Tebal:</label>
-            <input type="number" id="wallThickness" value="8">
+            <input type="number" id="wallThickness" value="15">
         </div>
 
         <div class="control-group">
-            <label><input type="checkbox" id="showGrid2D" checked> Grid 2D</label>
-            <label><input type="checkbox" id="showGrid3D" checked> Grid 3D</label>
+            <label><input type="checkbox" id="showGrid2D" checked> 2D Grid</label>
+            <label><input type="checkbox" id="showGrid3D" checked> 3D Grid</label>
             <label>Tembok:</label>
             <input type="color" id="wallColor" value="#f0f0f0">
             <label>Lantai:</label>
@@ -259,15 +265,15 @@
         let startX, startY, currentX, currentY;
         let panX = 0, panY = 0, zoom = 1;
         
-        // Input States
         let isPanning = false;
         let rawMouseX = 0, rawMouseY = 0, worldMouseX = 0, worldMouseY = 0;
         let lastPinchDist = null, lastPanX = null, lastPanY = null;
-        let lastTapTime = 0; // Untuk mendeteksi double-tap
+        let lastTapTime = 0; 
 
         const SNAP_DIST = 15;
-        const DOOR_WIDTH = 40, DOOR_HEIGHT = 80; 
-        const WIN_WIDTH = 50, WIN_HEIGHT = 40, WIN_BOTTOM = 30;
+        // Pintu dan Jendela dalam satuan dasar logic 3D
+        const DOOR_WIDTH = 80, DOOR_HEIGHT = 200; 
+        const WIN_WIDTH = 100, WIN_HEIGHT = 100, WIN_BOTTOM = 80;
 
         function resizeCanvas() {
             canvas2d.width = panel2d.clientWidth;
@@ -305,6 +311,14 @@
             return { x, y };
         }
 
+        function getUnitMultiplier() {
+            const unit = document.getElementById('unitSelect').value;
+            if (unit === 'mm') return 0.1;
+            if (unit === 'm') return 100;
+            if (unit === 'inch') return 2.54;
+            return 1; // Default: cm 
+        }
+
         // --- DRAW 2D ---
         function drawCanvas() {
             ctx.clearRect(0, 0, canvas2d.width, canvas2d.height);
@@ -312,7 +326,6 @@
             ctx.translate(panX, panY);
             ctx.scale(zoom, zoom);
 
-            // Draw 2D Grid
             if (document.getElementById('showGrid2D').checked) {
                 const gridSize = 50; 
                 ctx.strokeStyle = '#cccccc';
@@ -339,7 +352,6 @@
                 ctx.globalAlpha = 1.0;
             }
 
-            // Draw Items (Furniture)
             items.forEach(item => {
                 ctx.fillStyle = 'rgba(0,0,0,0.5)';
                 ctx.fillRect(item.x - 15/zoom, item.y - 15/zoom, 30/zoom, 30/zoom);
@@ -348,14 +360,13 @@
                 ctx.fillText(item.type.substring(0,3).toUpperCase(), item.x - 12/zoom, item.y + 3/zoom);
             });
 
-            // FIXED LINE THICKNESS & TRANSPARENCY
-            const visualThickness = parseFloat(document.getElementById('wallThickness').value);
+            // Garis tipis untuk panduan tracing di 2D agar gambar asli tetap terlihat
+            const visualThickness = 4 / zoom; 
             ctx.lineCap = 'round';
             
-            // Draw Walls (Semi Transparent Dark)
             walls.forEach(wall => {
                 ctx.lineWidth = visualThickness;
-                ctx.strokeStyle = 'rgba(68, 68, 68, 0.6)'; // Transparan agar floorplan terlihat
+                ctx.strokeStyle = 'rgba(68, 68, 68, 0.6)'; 
                 ctx.beginPath(); ctx.moveTo(wall.x1, wall.y1); ctx.lineTo(wall.x2, wall.y2); ctx.stroke();
 
                 wall.doors.forEach(door => {
@@ -373,7 +384,6 @@
                 });
             });
 
-            // Preview Interaksi (Semi Transparent Blue)
             const mode = document.getElementById('drawMode').value;
             if (mode === 'wall') {
                 if (isDrawing) {
@@ -403,7 +413,6 @@
         // --- INPUT HANDLERS (Mouse & Touch) ---
         function handleInputDown(x, y, rightClick) {
             if (rightClick) {
-                // Klik kanan membatalkan drawing (End Line)
                 if (isDrawing) { isDrawing = false; drawCanvas(); return; }
                 isPanning = true; 
                 return;
@@ -413,7 +422,6 @@
             const world = toWorld(x, y);
             worldMouseX = world.x; worldMouseY = world.y;
 
-            // Deteksi Double Tap / Double Click untuk memutus garis
             const now = Date.now();
             const isDoubleTap = (now - lastTapTime < 300);
             lastTapTime = now;
@@ -422,7 +430,7 @@
             
             if (mode === 'wall') {
                 if (isDoubleTap && isDrawing) {
-                    isDrawing = false; // Memutus garis
+                    isDrawing = false; 
                     drawCanvas();
                     return;
                 }
@@ -430,7 +438,6 @@
                 let snapX = worldMouseX;
                 let snapY = worldMouseY;
 
-                // Ortho Snap (saat klik)
                 if (isDrawing) {
                     const snapTolerance = 20 / zoom;
                     if (Math.abs(snapX - startX) < snapTolerance) snapX = startX;
@@ -444,10 +451,9 @@
                     startX = snapped.x; startY = snapped.y;
                     currentX = startX; currentY = startY;
                 } else {
-                    // Simpan segmen garis dan lanjutkan titik berikutnya (Continuous)
                     saveState(); 
                     walls.push({ x1: startX, y1: startY, x2: snapped.x, y2: snapped.y, doors: [], windows: [] });
-                    startX = snapped.x; // Set titik awal baru ke titik akhir sebelumnya
+                    startX = snapped.x; 
                     startY = snapped.y;
                     currentX = startX; currentY = startY;
                     generate3D();
@@ -477,7 +483,6 @@
                 let snapX = worldMouseX;
                 let snapY = worldMouseY;
                 
-                // Axis/Ortho Snap (Menempel lurus sumbu X/Y)
                 const snapTolerance = 20 / zoom;
                 if (Math.abs(snapX - startX) < snapTolerance) snapX = startX;
                 if (Math.abs(snapY - startY) < snapTolerance) snapY = startY;
@@ -493,10 +498,9 @@
             if (rightClick) isPanning = false;
         }
 
-        // --- MOUSE EVENTS ---
+        // --- MOUSE & TOUCH EVENTS ---
         canvas2d.addEventListener('contextmenu', e => {
             e.preventDefault();
-            // Jika sedang gambar, klik kanan memutuskan garis
             if (isDrawing) { isDrawing = false; drawCanvas(); }
         });
         
@@ -523,7 +527,6 @@
             drawCanvas();
         });
 
-        // --- TOUCH EVENTS ---
         canvas2d.addEventListener('touchstart', (e) => {
             e.preventDefault(); 
             const rect = canvas2d.getBoundingClientRect();
@@ -613,6 +616,7 @@
             }
         });
         
+        document.getElementById('unitSelect').addEventListener('change', () => { drawCanvas(); generate3D(); });
         document.getElementById('wallHeight').addEventListener('input', generate3D);
         document.getElementById('wallThickness').addEventListener('input', () => { drawCanvas(); generate3D(); });
         document.getElementById('wallColor').addEventListener('input', generate3D);
@@ -625,7 +629,7 @@
         scene.background = new THREE.Color(0x333333); 
 
         const camera = new THREE.PerspectiveCamera(50, container3d.clientWidth / container3d.clientHeight, 1, 15000);
-        camera.position.set(0, 600, 600); 
+        camera.position.set(0, 800, 800); 
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(container3d.clientWidth, container3d.clientHeight);
@@ -664,11 +668,11 @@
         function createBed() {
             const group = new THREE.Group();
             const frameMat = new THREE.MeshStandardMaterial({ color: 0x5c4033 });
-            const frame = new THREE.Mesh(new THREE.BoxGeometry(80, 15, 100), frameMat);
-            frame.position.y = 7.5;
+            const frame = new THREE.Mesh(new THREE.BoxGeometry(160, 25, 200), frameMat);
+            frame.position.y = 12.5;
             const mattMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-            const matt = new THREE.Mesh(new THREE.BoxGeometry(75, 10, 95), mattMat);
-            matt.position.y = 20;
+            const matt = new THREE.Mesh(new THREE.BoxGeometry(150, 15, 190), mattMat);
+            matt.position.y = 32.5;
             group.add(frame); group.add(matt);
             return group;
         }
@@ -676,13 +680,13 @@
         function createTable() {
             const group = new THREE.Group();
             const woodMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b });
-            const top = new THREE.Mesh(new THREE.BoxGeometry(60, 3, 40), woodMat);
-            top.position.y = 40;
+            const top = new THREE.Mesh(new THREE.BoxGeometry(120, 5, 80), woodMat);
+            top.position.y = 75;
             group.add(top);
-            const legGeo = new THREE.CylinderGeometry(1.5, 1.5, 38);
-            [[-28,-18], [28,-18], [-28,18], [28,18]].forEach(p => {
+            const legGeo = new THREE.CylinderGeometry(3, 3, 72);
+            [[-55,-35], [55,-35], [-55,35], [55,35]].forEach(p => {
                 const leg = new THREE.Mesh(legGeo, woodMat);
-                leg.position.set(p[0], 19, p[1]);
+                leg.position.set(p[0], 36, p[1]);
                 group.add(leg);
             });
             return group;
@@ -691,15 +695,15 @@
         function createChair() {
             const group = new THREE.Group();
             const mat = new THREE.MeshStandardMaterial({ color: 0x444444 });
-            const seat = new THREE.Mesh(new THREE.BoxGeometry(20, 3, 20), mat);
-            seat.position.y = 25;
-            const back = new THREE.Mesh(new THREE.BoxGeometry(20, 25, 3), mat);
-            back.position.set(0, 39, -8.5);
+            const seat = new THREE.Mesh(new THREE.BoxGeometry(40, 5, 40), mat);
+            seat.position.y = 45;
+            const back = new THREE.Mesh(new THREE.BoxGeometry(40, 45, 5), mat);
+            back.position.set(0, 70, -17.5);
             group.add(seat); group.add(back);
-            const legGeo = new THREE.CylinderGeometry(1, 1, 23);
-            [[-8,-8], [8,-8], [-8,8], [8,8]].forEach(p => {
+            const legGeo = new THREE.CylinderGeometry(2, 2, 42);
+            [[-17,-17], [17,-17], [-17,17], [17,17]].forEach(p => {
                 const leg = new THREE.Mesh(legGeo, mat);
-                leg.position.set(p[0], 11.5, p[1]);
+                leg.position.set(p[0], 21, p[1]);
                 group.add(leg);
             });
             return group;
@@ -708,8 +712,8 @@
         function createStairs() {
             const group = new THREE.Group();
             const mat = new THREE.MeshStandardMaterial({ color: 0x999999 });
-            const stepCount = 12;
-            const stepHeight = 10, stepDepth = 12, width = 50;
+            const stepCount = 15;
+            const stepHeight = 20, stepDepth = 25, width = 100;
             for(let i=0; i<stepCount; i++) {
                 const step = new THREE.Mesh(new THREE.BoxGeometry(width, stepHeight, stepDepth), mat);
                 step.position.set(0, (i * stepHeight) + (stepHeight/2), i * stepDepth);
@@ -726,24 +730,31 @@
 
             floorMesh.material.color.set(document.getElementById('floorColor').value);
 
-            const height = parseFloat(document.getElementById('wallHeight').value) || 100;
-            const thickness = parseFloat(document.getElementById('wallThickness').value) || 8;
+            const mult = getUnitMultiplier();
+            const height = (parseFloat(document.getElementById('wallHeight').value) || 300) * mult;
+            const thickness = (parseFloat(document.getElementById('wallThickness').value) || 15) * mult;
             const wallColor = document.getElementById('wallColor').value;
             
             const wallMat = new THREE.MeshStandardMaterial({ color: wallColor, side: THREE.DoubleSide });
             const glassMat = new THREE.MeshStandardMaterial({ color: 0x88ccff, transparent: true, opacity: 0.5 });
 
-            // KALKULASI CENTER GAMBAR AGAR 3D BERADA DI 0,0,0
             let centerX = 0, centerY = 0;
             if (backgroundImage.src && backgroundImage.width > 0) {
                 centerX = backgroundImage.width / 2;
                 centerY = backgroundImage.height / 2;
             }
 
+            // Struktur Set untuk mendeteksi sudut/pojokan (Gap Fixer)
+            const uniquePoints = new Map();
+
             // Generate Walls
             walls.forEach(wall => {
                 const dx = wall.x2 - wall.x1, dy = wall.y2 - wall.y1;
                 const length = Math.hypot(dx, dy), angle = Math.atan2(dy, dx);
+
+                // Kumpulkan titik awal dan akhir garis untuk ditambal celahnya nanti
+                uniquePoints.set(`${wall.x1.toFixed(1)},${wall.y1.toFixed(1)}`, {x: wall.x1, y: wall.y1});
+                uniquePoints.set(`${wall.x2.toFixed(1)},${wall.y2.toFixed(1)}`, {x: wall.x2, y: wall.y2});
 
                 const shape = new THREE.Shape();
                 shape.moveTo(0, 0); shape.lineTo(length, 0); shape.lineTo(length, height); shape.lineTo(0, height); shape.lineTo(0, 0);
@@ -778,10 +789,22 @@
                 const mesh = new THREE.Mesh(geometry, wallMat);
                 mesh.castShadow = true; mesh.receiveShadow = true;
                 
-                // Posisikan dengan mengurangi centerX dan centerY
                 mesh.position.set(wall.x1 - centerX, 0, wall.y1 - centerY);
                 mesh.rotation.y = -angle;
                 mainGroup.add(mesh);
+            });
+
+            // GAP FIXER: Generate pilar bundar di setiap persimpangan/sudut tembok
+            const radius = thickness / 2;
+            const pillarGeo = new THREE.CylinderGeometry(radius, radius, height, 16);
+            
+            uniquePoints.forEach(pt => {
+                const pillar = new THREE.Mesh(pillarGeo, wallMat);
+                // Tinggi center pilar di height/2 agar presisi menempel rata tanah
+                pillar.position.set(pt.x - centerX, height / 2, pt.y - centerY);
+                pillar.castShadow = true;
+                pillar.receiveShadow = true;
+                mainGroup.add(pillar);
             });
 
             // Generate Items
@@ -793,7 +816,6 @@
                 else if(item.type === 'stairs') meshObj = createStairs();
 
                 if(meshObj) {
-                    // Posisikan dengan mengurangi centerX dan centerY
                     meshObj.position.set(item.x - centerX, 0, item.y - centerY);
                     meshObj.castShadow = true;
                     mainGroup.add(meshObj);
@@ -808,7 +830,6 @@
             renderer.render(scene, camera);
         }
         
-        // Handle Resize
         window.addEventListener('resize', () => {
             camera.aspect = container3d.clientWidth / container3d.clientHeight;
             camera.updateProjectionMatrix();
