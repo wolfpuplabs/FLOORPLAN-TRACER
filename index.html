@@ -27,6 +27,7 @@
             user-select: text;
         }
 
+        /* --- FIX LAYOUT RESPONSIVE --- */
         body { 
             margin: 0; 
             overflow: hidden; 
@@ -34,7 +35,7 @@
             background: #d4d4d8; 
             display: flex; 
             flex-direction: row; 
-            height: 100vh; 
+            height: 100dvh; /* dvh sangat penting agar tidak kepotong address bar di tablet/mobile */
             width: 100vw;
             touch-action: none; 
         }
@@ -47,7 +48,7 @@
             display: flex;
             flex-direction: column;
             transition: margin-left 0.4s cubic-bezier(0.25, 1, 0.5, 1), transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
-            z-index: 50;
+            z-index: 100;
             flex-shrink: 0;
             box-shadow: 2px 0 10px rgba(0,0,0,0.1);
             position: relative;
@@ -92,7 +93,6 @@
 
         .sidebar-header h3 { margin: 0; font-size: 16px; color: #18181b; }
 
-        /* Style Toggle Bahasa Tanpa Emoji */
         .lang-btn-group {
             display: flex;
             border: 1px solid #d4d4d8;
@@ -112,10 +112,7 @@
             width: auto;
         }
 
-        .lang-btn.active {
-            background: #2563eb;
-            color: #ffffff;
-        }
+        .lang-btn.active { background: #2563eb; color: #ffffff; }
 
         .sidebar-content { flex: 1; overflow-y: auto; }
         .sidebar-section { padding: 15px; border-bottom: 1px solid #e4e4e7; }
@@ -151,15 +148,15 @@
 
         /* --- MAIN AREA --- */
         #main-container { 
-            display: flex; flex: 1; overflow: hidden; flex-direction: row; position: relative;
+            display: flex; flex: 1; overflow: hidden; flex-direction: row; position: relative; height: 100%;
         }
 
         #workspace-container, #render-container {
-            flex: 1; min-width: 0; min-height: 0; 
+            flex: 1; min-width: 0; min-height: 0; height: 100%; position: relative;
         }
 
         #workspace-container { 
-            position: relative; background: #e4e4e7; overflow: hidden; 
+            background: #e4e4e7; overflow: hidden; 
             border-right: 2px solid #a1a1aa; touch-action: none; cursor: crosshair; 
             box-shadow: inset 0 0 20px rgba(0,0,0,0.05); 
         }
@@ -172,7 +169,7 @@
         #floorplan-img { display: none; max-width: none; pointer-events: none; }
         #draw-canvas { position: absolute; top: 0; left: 0; }
 
-        #render-container { position: relative; background: #18181b; }
+        #render-container { background: #18181b; }
 
         /* --- HELP / INFO MODAL --- */
         #helpBtnToggle {
@@ -210,18 +207,24 @@
         model-viewer { width: 90vw; height: 80vh; background-color: #111; border-radius: 8px; }
         #closeArBtn { position: absolute; top: 20px; right: 20px; padding: 10px 20px; background: #ef4444; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 14px; z-index: 1001; cursor:pointer;}
 
-        @media (max-width: 1024px) {
+        /* Penyesuaian Media Query untuk Tablet (iPad) & Smartphone */
+        @media (max-width: 1100px) {
             #main-container { flex-direction: column; }
             
             #sidebar { 
                 position: absolute; height: 100%; left: 0; top: 0; 
                 margin-left: 0; transform: translateX(0); 
-                box-shadow: 2px 0 15px rgba(0,0,0,0.4); 
+                box-shadow: 4px 0 15px rgba(0,0,0,0.4); 
             }
             #sidebar.collapsed { margin-left: 0; transform: translateX(-100%); }
 
-            #workspace-container { flex: 1; border-right: none; border-bottom: 2px solid #a1a1aa; width: 100%; }
-            #render-container { flex: 1; width: 100%; }
+            #workspace-container { 
+                flex: none; height: 50%; width: 100%; 
+                border-right: none; border-bottom: 2px solid #a1a1aa; 
+            }
+            #render-container { 
+                flex: none; height: 50%; width: 100%; 
+            }
         }
     </style>
 </head>
@@ -377,7 +380,7 @@
     </div>
 
     <script>
-        // === TRANSLATION LOGIC PERBAIKAN ===
+        // === TRANSLATION LOGIC ===
         let currentLang = 'id';
         const texts = {
             id: {
@@ -486,7 +489,7 @@
             }
         }
 
-        if (window.innerWidth <= 1024) {
+        if (window.innerWidth <= 1100) {
             sidebar.classList.add('collapsed');
             updateToggleIcon();
         }
@@ -501,14 +504,9 @@
             if (e.target === helpModal) helpModal.style.display = 'none';
         });
 
-        function triggerResizeUpdate() {
-            setTimeout(() => { window.dispatchEvent(new Event('resize')); draw2D(); }, 400);
-        }
-
         sidebarToggleBtn.addEventListener('click', () => {
             sidebar.classList.toggle('collapsed');
             updateToggleIcon();
-            triggerResizeUpdate();
         });
 
         // === STATE & DATA ===
@@ -532,19 +530,21 @@
         inputWallH.addEventListener('change', () => { saveState(); update3D(); });
         inputWallT.addEventListener('change', () => { saveState(); update3D(); draw2D(); });
 
-        // === INITIALIZE CANVAS (FREE DRAWING DEFAULT) ===
+        // === INITIALIZE CANVAS ===
         let scale = 1; let panX = 0, panY = 0; let isPanning = false, startPanX = 0, startPanY = 0;
         let touchStartDist = 0, initialScale = 1;
 
         function initDefaultCanvas() {
-            imgElement.src = ""; imgElement.style.display = "none";
+            imgElement.src = ""; 
+            imgElement.style.display = "none";
             isTracingMode = false;
             
+            // Kita tetap menggunakan kanvas besar agar leluasa menggambar
             canvas.width = 5000; 
             canvas.height = 5000;
             
             workspace.style.backgroundColor = "#ffffff";
-            workspace.style.boxShadow = "0 10px 30px rgba(0,0,0,0.15)";
+            workspace.style.boxShadow = "none";
             
             scale3D = 0.02;
 
@@ -561,6 +561,20 @@
 
         window.addEventListener('load', () => { initDefaultCanvas(); });
         function applyTransform() { workspace.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`; }
+
+        // === FIX AUTO-RESIZE THREE.JS ===
+        function resizeViewports() {
+            const renderRect = renderContainer.getBoundingClientRect();
+            if (renderRect.width > 0 && renderRect.height > 0) {
+                camera.aspect = renderRect.width / renderRect.height;
+                camera.updateProjectionMatrix();
+                renderer.setSize(renderRect.width, renderRect.height);
+            }
+        }
+        window.addEventListener('resize', resizeViewports);
+        const resizeObserver = new ResizeObserver(() => resizeViewports());
+        resizeObserver.observe(renderContainer);
+        resizeObserver.observe(workspaceContainer);
 
         // === UNDO / REDO ===
         function saveState() {
@@ -688,6 +702,7 @@
         }, { passive: false });
 
         // === TOOLS & DRAWING LOGIC ===
+        let isDrawing = false; let currentLine = null;
         function stopDrawing() { isDrawing = false; currentLine = null; draw2D(); }
 
         document.getElementById('modeSelect').onclick = (e) => setMode('select', e.target);
@@ -702,10 +717,9 @@
             if(btn) btn.classList.add('active');
             if (mode !== 'select') closeEditPanel();
             
-            if(window.innerWidth <= 1024 && mode !== 'select' && !sidebar.classList.contains('collapsed')){
+            if(window.innerWidth <= 1100 && mode !== 'select' && !sidebar.classList.contains('collapsed')){
                 sidebar.classList.add('collapsed');
                 updateToggleIcon();
-                triggerResizeUpdate();
             }
             draw2D();
         }
@@ -797,12 +811,12 @@
         document.getElementById('flipHingeBtn').addEventListener('click', () => { if (selectedItem && selectedItem.type === 'door') { saveState(); selectedItem.flipHinge = !selectedItem.flipHinge; update3D(); draw2D(); }});
         document.getElementById('delObjBtn').addEventListener('click', () => { if (selectedItem) { saveState(); if (selectedItem.lineIndex !== undefined) openings = openings.filter(o => o.id !== selectedItem.id); else freeObjects = freeObjects.filter(o => o.id !== selectedItem.id); closeEditPanel(); update3D(); draw2D(); }});
 
-        // === FUNGSI MENGGAMBAR GRID LANGSUNG KE CANVAS (DIJAMIN MUNCUL) ===
+        // === FUNGSI MENGGAMBAR GRID ===
         function drawCanvasGrid() {
             if (isTracingMode) return; 
             ctx.save();
             ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height); // Warnai alas kanvas menjadi putih bersih
+            ctx.fillRect(0, 0, canvas.width, canvas.height); 
             
             ctx.strokeStyle = '#d4d4d8';
             ctx.lineWidth = 1;
@@ -875,14 +889,12 @@
         // === 3D ENGINE ===
         const renderContainer = document.getElementById('render-container'); const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(45, renderContainer.clientWidth / renderContainer.clientHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true }); renderer.setSize(renderContainer.clientWidth, renderContainer.clientHeight); renderer.setClearColor(0x27272a); renderContainer.appendChild(renderer.domElement);
+        const renderer = new THREE.WebGLRenderer({ antialias: true }); 
+        renderer.setSize(renderContainer.clientWidth, renderContainer.clientHeight); 
+        renderer.setClearColor(0x27272a); renderContainer.appendChild(renderer.domElement);
         const controls = new THREE.OrbitControls(camera, renderer.domElement); scene.add(new THREE.AmbientLight(0xffffff, 0.8));
         const dirLight = new THREE.DirectionalLight(0xffffff, 0.6); dirLight.position.set(20, 40, 20); scene.add(dirLight); scene.add(new THREE.GridHelper(50, 50, 0x555555, 0x333333));
         const modelGroup = new THREE.Group(); scene.add(modelGroup); camera.position.set(0, 15, 20); 
-
-        window.addEventListener('resize', () => {
-            camera.aspect = renderContainer.clientWidth / renderContainer.clientHeight; camera.updateProjectionMatrix(); renderer.setSize(renderContainer.clientWidth, renderContainer.clientHeight);
-        });
 
         function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); } animate();
 
