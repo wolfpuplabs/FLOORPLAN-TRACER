@@ -35,45 +35,85 @@
             font-family: 'Segoe UI', Tahoma, Helvetica, sans-serif; 
             background: #f4f4f5; 
             display: flex; 
-            flex-direction: column; 
+            flex-direction: row; 
             height: 100vh; 
             touch-action: none; 
         }
-        
-        /* Top UI / Toolbar */
-        #top-ui {
+
+        /* --- SIDEBAR STYLE --- */
+        #sidebar {
+            width: 300px;
             background: #ffffff;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            z-index: 10;
+            border-right: 1px solid #d4d4d8;
             display: flex;
             flex-direction: column;
+            transition: margin-left 0.3s ease;
+            z-index: 20;
+            flex-shrink: 0;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
         }
 
-        .toolbar-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 8px 16px;
-            flex-wrap: wrap;
+        #sidebar.collapsed {
+            margin-left: -300px; /* Menyembunyikan sidebar ke kiri */
         }
 
-        .toolbar-row:not(:last-child) {
+        .sidebar-header {
+            padding: 15px;
             border-bottom: 1px solid #e4e4e7;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             background: #fafafa;
         }
 
-        .tool-group {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            background: #f4f4f5;
-            padding: 4px;
-            border-radius: 6px;
-            border: 1px solid #d4d4d8;
+        .sidebar-header h3 {
+            margin: 0;
+            font-size: 16px;
+            color: #18181b;
         }
 
+        #closeSidebarBtn {
+            background: transparent;
+            border: none;
+            font-size: 18px;
+            font-weight: bold;
+            color: #71717a;
+            cursor: pointer;
+            padding: 0 5px;
+        }
+
+        #closeSidebarBtn:hover { color: #ef4444; }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .sidebar-section {
+            padding: 15px;
+            border-bottom: 1px solid #e4e4e7;
+        }
+
+        .sidebar-section h4 { 
+            margin: 0 0 12px 0; 
+            color: #18181b; 
+            font-size: 13px; 
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #71717a;
+        }
+
+        .sidebar-section label { 
+            display: block; 
+            font-size: 12px; 
+            font-weight: 600; 
+            margin-bottom: 4px; 
+            color: #3f3f46; 
+        }
+
+        /* Form Controls */
         button, select, input[type="number"], input[type="file"]::file-selector-button { 
-            padding: 6px 12px; 
+            padding: 8px 12px; 
             cursor: pointer; 
             border: 1px solid #d4d4d8; 
             background: #ffffff; 
@@ -81,60 +121,56 @@
             font-size: 13px; 
             color: #3f3f46;
             transition: 0.15s; 
+            width: 100%;
         }
-
-        input[type="file"]::file-selector-button { background: #f4f4f5; }
-        input[type="number"] { cursor: text; background: #fff; width: 50px; }
-        button:hover, select:hover, input[type="file"]::file-selector-button:hover { background: #e4e4e7; }
+        
+        input[type="file"] { width: 100%; font-size: 12px; margin-bottom: 10px; }
+        input[type="file"]::file-selector-button { background: #f4f4f5; width: auto; margin-right: 10px; padding: 4px 8px;}
+        input[type="number"] { cursor: text; background: #fff; width: 100%; }
+        input[type="range"] { width: 100%; margin-bottom: 12px; accent-color: #2563eb; }
+        
+        button:hover, select:hover { background: #e4e4e7; }
         button:disabled { cursor: not-allowed; opacity: 0.4; }
         button.active { background: #2563eb; color: white; border-color: #1d4ed8; font-weight: 600; }
         
-        .btn-action { background: #f4f4f5; font-weight: 500; }
-        .btn-danger { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+        .btn-row { display: flex; gap: 8px; margin-bottom: 8px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+        
+        .btn-danger { background: #fee2e2; color: #dc2626; border-color: #fca5a5; font-weight: 600; }
         .btn-danger:hover { background: #fecaca; }
         .btn-primary { background: #10b981; color: white; border-color: #059669; font-weight: bold; }
         .btn-primary:hover { background: #059669; }
         .btn-purple { background: #8b5cf6; color: white; border-color: #7c3aed; font-weight: bold; }
         .btn-purple:hover { background: #7c3aed; }
-        
-        .spacer { flex-grow: 1; }
-        .divider { width: 1px; height: 24px; background-color: #d4d4d8; margin: 0 4px; }
-        
-        /* Layout Utama 3 Kolom */
+        .edit-btn-secondary { background: #e4e4e7; color: #18181b; width: 100%; border: none; font-weight: 600; margin-bottom: 10px; }
+        .edit-btn-secondary:hover { background: #d4d4d8; }
+
+        #emptySelectionMsg { font-size: 12px; color: #71717a; text-align: center; padding: 15px 0; font-style: italic; }
+
+        /* --- MAIN AREA --- */
         #main-container { 
             display: flex; 
             flex: 1; 
             overflow: hidden; 
             flex-direction: row; 
+            position: relative;
         }
 
-        /* Sidebar Kiri (Properties) */
-        #sidebar {
-            width: 260px;
+        #openSidebarBtn {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 15;
             background: #ffffff;
-            border-right: 1px solid #d4d4d8;
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
-            box-shadow: 2px 0 5px rgba(0,0,0,0.03);
-            z-index: 5;
+            border: 1px solid #d4d4d8;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: none; /* Hide by default */
         }
-
-        .sidebar-section {
-            padding: 16px;
-            border-bottom: 1px solid #e4e4e7;
-        }
-
-        .sidebar-section h4 { margin: 0 0 12px 0; color: #18181b; font-size: 14px; }
-        .sidebar-section label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #3f3f46; }
-        .sidebar-section input[type="range"] { width: 100%; margin-bottom: 12px; accent-color: #2563eb; }
-        
-        #emptySelectionMsg { font-size: 13px; color: #71717a; text-align: center; padding: 20px 0; font-style: italic; }
-        
-        .edit-btn-danger { background: #ef4444; color: white; width: 100%; border: none; padding: 8px; border-radius: 4px; font-weight: bold; margin-top: 10px; }
-        .edit-btn-danger:hover { background: #dc2626; }
-        .edit-btn-secondary { background: #e4e4e7; color: #18181b; width: 100%; border: none; padding: 8px; border-radius: 4px; font-weight: 600; margin-bottom: 10px; }
-        .edit-btn-secondary:hover { background: #d4d4d8; }
+        #openSidebarBtn:hover { background: #f4f4f5; }
 
         /* Workspace Tengah (2D) */
         #workspace-container { 
@@ -148,11 +184,17 @@
         }
 
         #workspace { transform-origin: 0 0; position: relative; }
-        #floorplan-img { display: none; max-width: none; pointer-events: none; } /* Default sembunyi */
+        #floorplan-img { display: none; max-width: none; pointer-events: none; }
         #draw-canvas { position: absolute; top: 0; left: 0; }
 
         /* Render Kanan (3D) */
         #render-container { flex: 1; position: relative; background: #18181b; }
+
+        #instructions { 
+            position: absolute; bottom: 15px; left: 15px; background: rgba(0,0,0,0.7); 
+            color: white; padding: 10px 15px; border-radius: 6px; font-size: 11px; 
+            pointer-events: none; z-index: 20; line-height: 1.5; border: 1px solid rgba(255,255,255,0.2); 
+        }
 
         /* Modal AR */
         #ar-modal {
@@ -160,90 +202,93 @@
             background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; flex-direction: column;
         }
         model-viewer { width: 90vw; height: 80vh; background-color: #111; border-radius: 8px; }
-        #closeArBtn {
-            position: absolute; top: 20px; right: 20px; padding: 10px 20px; background: #ef4444; color: white;
-            border: none; border-radius: 6px; font-weight: bold; font-size: 14px; z-index: 1001;
-        }
+        #closeArBtn { position: absolute; top: 20px; right: 20px; padding: 10px 20px; background: #ef4444; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 14px; z-index: 1001; }
 
         /* Responsive Layout */
         @media (max-width: 900px) {
             #main-container { flex-direction: column; }
-            #sidebar { width: 100%; border-right: none; border-bottom: 2px solid #a1a1aa; max-height: 25vh; flex: none; }
-            #workspace-container { flex: 1; min-height: 35vh; border-right: none; border-bottom: 2px solid #a1a1aa; }
-            #render-container { flex: 1; min-height: 35vh; }
+            #sidebar { 
+                position: absolute; 
+                height: 100%; 
+                left: 0; 
+                top: 0; 
+                box-shadow: 2px 0 15px rgba(0,0,0,0.3); 
+            }
+            #workspace-container { flex: 1; min-height: 40vh; border-right: none; border-bottom: 2px solid #a1a1aa; }
+            #render-container { flex: 1; min-height: 40vh; }
         }
     </style>
 </head>
 <body>
 
-    <div id="top-ui">
-        <!-- Baris 1: Sistem & File -->
-        <div class="toolbar-row">
-            <label style="font-size:12px; font-weight:bold; margin-right:4px;">Upload Trace:</label>
-            <input type="file" id="upload" accept="image/*" style="max-width: 200px;">
-            
-            <div class="divider"></div>
-            
-            <div class="tool-group">
-                <button id="undoBtn" class="btn-action" disabled>Undo</button>
-                <button id="redoBtn" class="btn-action" disabled>Redo</button>
+    <!-- SIDEBAR KIRI -->
+    <div id="sidebar">
+        <div class="sidebar-header">
+            <h3>BIM Architect</h3>
+            <button id="closeSidebarBtn" title="Sembunyikan Tools">✕</button>
+        </div>
+        
+        <div class="sidebar-content">
+            <!-- Section 1: Sistem -->
+            <div class="sidebar-section">
+                <h4>File & Sistem</h4>
+                <label>Upload Trace (Jiplak):</label>
+                <input type="file" id="upload" accept="image/*">
+                
+                <div class="btn-row">
+                    <button id="undoBtn" disabled>Undo</button>
+                    <button id="redoBtn" disabled>Redo</button>
+                </div>
                 <button id="clearBtn" class="btn-danger">Reset Kanvas</button>
             </div>
 
-            <div class="spacer"></div>
-            
-            <button id="arBtn" class="btn-purple">View AR</button>
-            <button id="exportBtn" class="btn-primary">Export GLB</button>
-        </div>
-
-        <!-- Baris 2: Alat Gambar & Objek -->
-        <div class="toolbar-row">
-            <div class="tool-group">
-                <button id="modeSelect">Pilih / Edit</button>
-            </div>
-            
-            <div class="tool-group">
-                <button id="modeWall" class="active">Gambar Tembok</button>
-                <button id="modeDoor">Pintu</button>
-                <button id="modeWindow">Jendela</button>
-                <button id="modeStairs">Tangga</button>
-            </div>
-            
-            <select id="furnitureSelect">
-                <option value="">+ Tambah Mebel...</option>
-                <optgroup label="Ruang Utama">
-                    <option value="bed">Kasur</option>
-                    <option value="sofa">Sofa</option>
-                    <option value="table">Meja</option>
-                    <option value="chair">Kursi</option>
-                </optgroup>
-                <optgroup label="Dapur">
-                    <option value="kitchen_set">Kitchen Set</option>
-                    <option value="stove">Kompor</option>
-                    <option value="fridge">Kulkas</option>
-                </optgroup>
-                <optgroup label="Kamar Mandi">
-                    <option value="toilet">Kloset / Toilet</option>
-                    <option value="shower">Shower</option>
-                    <option value="bathtub">Bathtub</option>
-                </optgroup>
-            </select>
-            
-            <div class="divider"></div>
-            
-            <div class="tool-group" style="background: transparent; border: none;">
-                <label style="font-size:12px; font-weight:600;">Tinggi(m): <input type="number" id="valWallH" value="3.0" step="0.1"></label>
-                <label style="font-size:12px; font-weight:600; margin-left: 5px;">Tebal(m): <input type="number" id="valWallT" value="0.15" step="0.05"></label>
-            </div>
-        </div>
-    </div>
-
-    <div id="main-container">
-        <!-- SIDEBAR PROPERTIES -->
-        <div id="sidebar">
+            <!-- Section 2: Alat Gambar -->
             <div class="sidebar-section">
-                <h4>Editor Objek</h4>
-                <div id="emptySelectionMsg">Pilih objek di kanvas untuk melihat propertinya.</div>
+                <h4>Alat Gambar & Bangunan</h4>
+                <div class="grid-2">
+                    <button id="modeSelect">Pilih / Edit</button>
+                    <button id="modeWall" class="active">Tembok</button>
+                    <button id="modeDoor">Pintu</button>
+                    <button id="modeWindow">Jendela</button>
+                    <button id="modeStairs" style="grid-column: span 2;">Tangga</button>
+                </div>
+                
+                <select id="furnitureSelect" style="margin-bottom: 12px;">
+                    <option value="">+ Tambah Mebel / Objek...</option>
+                    <optgroup label="Ruang Utama">
+                        <option value="bed">Kasur</option>
+                        <option value="sofa">Sofa</option>
+                        <option value="table">Meja</option>
+                        <option value="chair">Kursi</option>
+                    </optgroup>
+                    <optgroup label="Dapur">
+                        <option value="kitchen_set">Kitchen Set</option>
+                        <option value="stove">Kompor</option>
+                        <option value="fridge">Kulkas</option>
+                    </optgroup>
+                    <optgroup label="Kamar Mandi">
+                        <option value="toilet">Kloset / Toilet</option>
+                        <option value="shower">Shower</option>
+                        <option value="bathtub">Bathtub</option>
+                    </optgroup>
+                </select>
+
+                <div class="grid-2" style="margin-bottom: 0;">
+                    <div>
+                        <label>Tinggi Tembok (m)</label>
+                        <input type="number" id="valWallH" value="3.0" step="0.1">
+                    </div>
+                    <div>
+                        <label>Tebal Tembok (m)</label>
+                        <input type="number" id="valWallT" value="0.15" step="0.05">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: Editor Objek -->
+            <div class="sidebar-section">
+                <h4>Properti Objek</h4>
+                <div id="emptySelectionMsg">Pilih objek di kanvas (Mode Pilih/Edit) untuk mengatur properti.</div>
                 
                 <div id="edit-panel-content" style="display: none;">
                     <div id="wallObjectControls">
@@ -276,25 +321,38 @@
                         </div>
                     </div>
 
-                    <button id="delObjBtn" class="edit-btn-danger">Hapus Objek</button>
+                    <button id="delObjBtn" class="btn-danger" style="margin-top: 5px;">Hapus Objek</button>
                 </div>
             </div>
 
-            <div class="sidebar-section">
-                <h4>Panduan Kontrol</h4>
-                <p style="font-size: 12px; color: #52525b; line-height: 1.6; margin: 0;">
-                    <b>Tembok:</b> Tap 1x titik awal, tap posisi lain, tap 2x (atau ESC) untuk akhiri.<br>
-                    <b>Navigasi 2D:</b> Scroll untuk Zoom, Klik Kanan/Tap 2 Jari untuk Geser (Pan).<br>
-                    <b>Edit:</b> Gunakan mode "Pilih/Edit", tekan dan geser objek untuk memindahkannya.
-                </p>
+            <!-- Section 4: Render & AR -->
+            <div class="sidebar-section" style="border-bottom: none;">
+                <h4>Output</h4>
+                <button id="arBtn" class="btn-purple" style="margin-bottom: 8px;">View di AR (Mobile)</button>
+                <button id="exportBtn" class="btn-primary">Export GLB (3D Model)</button>
             </div>
         </div>
+    </div>
+
+    <!-- AREA KERJA UTAMA -->
+    <div id="main-container">
+        
+        <!-- Tombol Tampilkan Sidebar (Muncul saat sidebar di hide) -->
+        <button id="openSidebarBtn">☰ Tools</button>
 
         <!-- KANVAS 2D -->
         <div id="workspace-container">
             <div id="workspace">
                 <img id="floorplan-img" src="">
                 <canvas id="draw-canvas"></canvas>
+            </div>
+            
+            <!-- Tooltip Panduan (Pojok Kiri Bawah Kanvas) -->
+            <div id="instructions">
+                <b>Panduan Singkat:</b><br>
+                - <b>Tembok:</b> Tap 1x titik awal, tap posisi lain. Tap 2x (atau ESC) untuk akhiri.<br>
+                - <b>Navigasi 2D:</b> Scroll untuk Zoom, Klik Kanan/Tap 2 Jari untuk Geser (Pan).<br>
+                - <b>Edit:</b> Gunakan mode "Pilih/Edit", tekan dan geser objek.
             </div>
         </div>
         
@@ -313,6 +371,31 @@
     </div>
 
     <script>
+        // === UI SIDEBAR TOGGLE LOGIC ===
+        const sidebar = document.getElementById('sidebar');
+        const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+        const openSidebarBtn = document.getElementById('openSidebarBtn');
+
+        function triggerResizeUpdate() {
+            // Beri waktu animasi CSS selesai, lalu paksa render ulang layout & aspect ratio 3D
+            setTimeout(() => {
+                window.dispatchEvent(new Event('resize'));
+                draw2D();
+            }, 310);
+        }
+
+        closeSidebarBtn.addEventListener('click', () => {
+            sidebar.classList.add('collapsed');
+            openSidebarBtn.style.display = 'block';
+            triggerResizeUpdate();
+        });
+
+        openSidebarBtn.addEventListener('click', () => {
+            sidebar.classList.remove('collapsed');
+            openSidebarBtn.style.display = 'none';
+            triggerResizeUpdate();
+        });
+
         // === STATE & DATA ===
         let lines = []; 
         let openings = []; 
@@ -344,14 +427,14 @@
         function initDefaultCanvas() {
             imgElement.src = "";
             imgElement.style.display = "none";
-            // Set area kanvas bebas yang luas
+            // Area luas untuk drafting
             canvas.width = 2500;
             canvas.height = 2500;
             
             const panelWidth = workspaceContainer.clientWidth; 
             const panelHeight = workspaceContainer.clientHeight;
             
-            scale = 0.5; // Zoom out sedikit
+            scale = 0.5; // Default zoom
             panX = (panelWidth - (canvas.width * scale)) / 2;
             panY = (panelHeight - (canvas.height * scale)) / 2;
             
@@ -362,7 +445,7 @@
 
         window.addEventListener('load', () => {
             initDefaultCanvas();
-            setTimeout(initDefaultCanvas, 100); // Pastikan ukuran layout stabil
+            setTimeout(initDefaultCanvas, 100); 
         });
 
         function applyTransform() { workspace.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`; }
@@ -425,7 +508,6 @@
         
         workspaceContainer.addEventListener('contextmenu', e => e.preventDefault());
 
-        // Multi-Touch Pan/Zoom
         workspaceContainer.addEventListener('touchstart', (e) => {
             if (e.touches.length === 2) {
                 isPanning = true;
@@ -468,7 +550,7 @@
 
         function setMode(newMode, btn) {
             stopDrawing(); mode = newMode;
-            document.querySelectorAll('#top-ui button.active').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#sidebar button.active').forEach(b => b.classList.remove('active'));
             if(btn) btn.classList.add('active');
             if (mode !== 'select') closeEditPanel();
             draw2D();
@@ -586,7 +668,7 @@
             return result;
         }
 
-        // === PANEL EDITOR SIDEBAR ===
+        // === PANEL EDITOR (DI SIDEBAR) ===
         const emptySelectionMsg = document.getElementById('emptySelectionMsg');
         const editPanelContent = document.getElementById('edit-panel-content');
         const wallObjectControls = document.getElementById('wallObjectControls');
@@ -620,6 +702,11 @@
                     editSteps.value = item.steps || 14; document.getElementById('valSteps').innerText = item.steps || 14;
                     editStairW.value = item.width3D || 1.0; document.getElementById('valStairW').innerText = item.width3D || 1.0;
                 } else { stairsControls.style.display = 'none'; }
+            }
+
+            // Scroll sidebar ke bawah agar opsi edit terlihat jika layar sempit
+            if(window.innerWidth > 900) {
+                sidebar.querySelector('.sidebar-content').scrollTo({ top: sidebar.scrollHeight, behavior: 'smooth' });
             }
         }
 
@@ -660,7 +747,7 @@
 
         function draw2D() {
             ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.lineCap = 'round';
-            drawGrid(); // Tambahkan visual papan gambar
+            drawGrid(); 
             
             const globalThick2D = parseFloat(inputWallT.value) / scale3D;
             ctx.lineWidth = Math.max(2, globalThick2D); 
