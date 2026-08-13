@@ -86,10 +86,10 @@
                 <canvas id="draw-canvas"></canvas>
             </div>
             <div id="instructions">
-                <b>Panduan Tablet/Mouse:</b><br>
+                <b>Panduan:</b><br>
                 - <b>Pinch / Scroll</b>: Zoom In/Out<br>
                 - <b>2 Jari / Klik Kanan</b>: Geser (Pan)<br>
-                - <b>Pilih/Edit</b>: Klik objek untuk merubah ukuran
+                - Kursor otomatis menempel ke tembok terdekat
             </div>
         </div>
         <div id="right-panel"></div>
@@ -145,7 +145,7 @@
             workspace.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
         }
 
-        // Mouse Wheel Zoom Fix (passive: false)
+        // Mouse Wheel Zoom
         leftPanel.addEventListener('wheel', (e) => {
             e.preventDefault();
             const newScale = Math.min(Math.max(0.05, scale + (e.deltaY * -0.001)), 10);
@@ -233,8 +233,39 @@
             };
         }
 
+        // ==========================================
+        // PERBAIKAN FITUR: SNAP KE TEMBOK
+        // ==========================================
+        function getSnapped(x, y) {
+            let snapX = x, snapY = y;
+            let minDist = SNAP_RADIUS / scale;
+            let snapped = false;
+
+            // Prioritas 1: Snap ke Ujung Garis (Endpoint)
+            for (let l of lines) {
+                if (Math.hypot(l.start.x - x, l.start.y - y) < minDist) { return { x: l.start.x, y: l.start.y }; }
+                if (Math.hypot(l.end.x - x, l.end.y - y) < minDist) { return { x: l.end.x, y: l.end.y }; }
+            }
+
+            // Prioritas 2: Snap menempel ke Badan Garis Tembok
+            for (let l of lines) {
+                const l2 = Math.pow(l.end.x - l.start.x, 2) + Math.pow(l.end.y - l.start.y, 2);
+                if (l2 === 0) continue;
+                // Hitung proyeksi titik terdekat dari kursor ke garis
+                let t = Math.max(0, Math.min(1, ((x - l.start.x) * (l.end.x - l.start.x) + (y - l.start.y) * (l.end.y - l.start.y)) / l2));
+                const projX = l.start.x + t * (l.end.x - l.start.x);
+                const projY = l.start.y + t * (l.end.y - l.start.y);
+                const dist = Math.hypot(x - projX, y - projY);
+
+                if (dist < minDist) {
+                    minDist = dist; snapX = projX; snapY = projY;
+                }
+            }
+            return { x: snapX, y: snapY };
+        }
+
         function handlePointerDown(clientX, clientY, button) {
-            if (button !== 0 && button !== undefined) return; // Only Left Click or Single Touch
+            if (button !== 0 && button !== undefined) return; 
             let { x, y } = getTrueCoords(clientX, clientY);
             
             if (mode === 'select') {
@@ -247,7 +278,6 @@
                         if (Math.hypot(cx - x, cy - y) < minDist) { clickedOp = op; minDist = Math.hypot(cx - x, cy - y); }
                     }
                 });
-
                 if (clickedOp) { selectedOpening = clickedOp; openEditPanel(selectedOpening); } 
                 else { selectedOpening = null; closeEditPanel(); }
                 draw2D();
@@ -293,14 +323,6 @@
                 currentLine.end = getSnapped(x, y); draw2D();
             }
         }, { passive: true });
-
-        function getSnapped(x, y) {
-            for (let l of lines) {
-                if (Math.hypot(l.start.x - x, l.start.y - y) < SNAP_RADIUS / scale) return { x: l.start.x, y: l.start.y };
-                if (Math.hypot(l.end.x - x, l.end.y - y) < SNAP_RADIUS / scale) return { x: l.end.x, y: l.end.y };
-            }
-            return { x, y };
-        }
 
         function findNearestLine(px, py) {
             let minDist = 30 / scale; let result = null;
@@ -444,6 +466,7 @@
             const matWindow = new THREE.MeshLambertMaterial({ color: 0x87CEEB, transparent: true, opacity: 0.5 }); 
             const matFrame = new THREE.MeshLambertMaterial({ color: 0x333333 }); 
 
+            // 1. Gambar Tembok & Bukaan
             lines.forEach((line, index) => {
                 const dx = line.end.x - line.start.x; const dy = line.end.y - line.start.y;
                 const length = Math.sqrt(dx*dx + dy*dy) * scale3D; const angle = Math.atan2(dy, dx);
@@ -485,6 +508,29 @@
                 const wallMesh = new THREE.Mesh(new THREE.ExtrudeGeometry(wallShape, extrudeSettings), matWall);
                 wallMesh.position.set(-length/2, 0, -thickWall/2); wallObj.add(wallMesh);
                 wallObj.position.set(posX, 0, posZ); wallObj.rotation.y = -angle; modelGroup.add(wallObj);
+            });
+
+            // ==========================================
+            // PERBAIKAN FITUR: AUTO-CORNER FILLER
+            // ==========================================
+            // Kumpulkan semua titik unik ujung tembok dan pasang pilar agar sudut rapat
+            const cornerGeom = new THREE.CylinderGeometry(thickWall/2, thickWall/2, heightWall, 16);
+            let uniqueVertices = [];
+            
+            lines.forEach(l => {
+                [l.start, l.end].forEach(pt => {
+                    if(!uniqueVertices.some(v => Math.hypot(v.x - pt.x, v.y - pt.y) < 1)) {
+                        uniqueVertices.push(pt);
+                    }
+                });
+            });
+
+            uniqueVertices.forEach(v => {
+                const posX = (v.x - center2DX) * scale3D;
+                const posZ = (v.y - center2DY) * scale3D;
+                const cornerMesh = new THREE.Mesh(cornerGeom, matWall);
+                cornerMesh.position.set(posX, heightWall / 2, posZ);
+                modelGroup.add(cornerMesh);
             });
         }
 
