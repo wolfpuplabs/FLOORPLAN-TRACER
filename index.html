@@ -27,6 +27,7 @@
             user-select: text;
         }
 
+        /* --- FIX LAYOUT RESPONSIVE --- */
         body { 
             margin: 0; 
             overflow: hidden; 
@@ -53,26 +54,64 @@
             position: relative;
         }
 
-        #sidebar.collapsed { margin-left: -300px; }
+        #sidebar.collapsed {
+            margin-left: -300px;
+        }
 
         #sidebarToggleBtn {
-            position: absolute; top: 20px; right: -32px; width: 32px; height: 50px;
-            background: #ffffff; border: 1px solid #c8c8cc; border-left: none; 
-            border-radius: 0 8px 8px 0; cursor: pointer; z-index: 60;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 14px; font-weight: bold; color: #3f3f46;
-            box-shadow: 4px 0 6px rgba(0,0,0,0.05); transition: 0.2s;
+            position: absolute;
+            top: 20px;
+            right: -32px;
+            width: 32px;
+            height: 50px;
+            background: #ffffff;
+            border: 1px solid #c8c8cc;
+            border-left: none; 
+            border-radius: 0 8px 8px 0;
+            cursor: pointer;
+            z-index: 60;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: #3f3f46;
+            box-shadow: 4px 0 6px rgba(0,0,0,0.05);
+            transition: 0.2s;
         }
+        
         #sidebarToggleBtn:hover { background: #f4f4f5; color: #2563eb; }
 
         .sidebar-header {
-            padding: 15px; border-bottom: 1px solid #e4e4e7;
-            display: flex; justify-content: space-between; align-items: center; background: #fafafa;
+            padding: 15px;
+            border-bottom: 1px solid #e4e4e7;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fafafa;
         }
+
         .sidebar-header h3 { margin: 0; font-size: 16px; color: #18181b; }
 
-        .lang-btn-group { display: flex; border: 1px solid #d4d4d8; border-radius: 6px; overflow: hidden; background: #e4e4e7; }
-        .lang-btn { padding: 4px 8px; font-size: 11px; font-weight: bold; border: none; background: transparent; color: #71717a; cursor: pointer; width: auto; }
+        .lang-btn-group {
+            display: flex;
+            border: 1px solid #d4d4d8;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #e4e4e7;
+        }
+
+        .lang-btn {
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: bold;
+            border: none;
+            background: transparent;
+            color: #71717a;
+            cursor: pointer;
+            width: auto;
+        }
+
         .lang-btn.active { background: #2563eb; color: #ffffff; }
 
         .sidebar-content { flex: 1; overflow-y: auto; }
@@ -232,7 +271,6 @@
                 
                 <div id="edit-panel-content" style="display: none;">
                     
-                    <!-- NEW: WALL LINE CONTROLS -->
                     <div id="wallLineControls" style="display: none;">
                         <label style="margin-bottom:0; color:#2563eb;"><span id="txtLblWallLen">Panjang Tembok:</span> <span id="valWallLen">0</span> m</label>
                     </div>
@@ -406,6 +444,7 @@
         let isSnappingEnabled = true;
 
         let selectedItem = null; let isDraggingObject = false; let isDraggingCanvas = false;
+        let isPinchZooming = false;
         let undoStack = []; let redoStack = [];
 
         const workspaceContainer = document.getElementById('workspace-container');
@@ -430,8 +469,7 @@
         inputWallH.addEventListener('change', () => { saveState(); update3D(); });
         inputWallT.addEventListener('change', () => { saveState(); update3D(); draw2D(); });
 
-        let scale = 1; let panX = 0, panY = 0; let isPanning = false, startPanX = 0, startPanY = 0;
-        let touchStartDist = 0, initialScale = 1;
+        let scale = 1; let panX = 0, panY = 0; let startPanX = 0, startPanY = 0;
 
         function initDefaultCanvas() {
             imgElement.src = ""; imgElement.style.display = "none"; isTracingMode = false;
@@ -469,19 +507,92 @@
         document.getElementById('undoBtn').onclick = () => restoreState(true);
         document.getElementById('redoBtn').onclick = () => restoreState(false);
 
-        // === PAN, ZOOM & SELECTION ===
+        // === PAN, ZOOM & SELECTION (PERBAIKAN TOTAL) ===
+        
+        // 1. Mouse Wheel Zoom (Multiplicative & Smooth)
         workspaceContainer.addEventListener('wheel', (e) => {
-            e.preventDefault(); const newScale = Math.min(Math.max(0.05, scale + (e.deltaY * -0.001)), 10);
-            const rect = workspaceContainer.getBoundingClientRect(); const mouseX = e.clientX - rect.left; const mouseY = e.clientY - rect.top;
-            panX = mouseX - ((mouseX - panX) * (newScale / scale)); panY = mouseY - ((mouseY - panY) * (newScale / scale));
-            scale = newScale; applyTransform();
+            e.preventDefault(); 
+            const zoomFactor = Math.exp(e.deltaY * -0.002);
+            const newScale = Math.min(Math.max(0.05, scale * zoomFactor), 10);
+            
+            const rect = workspaceContainer.getBoundingClientRect(); 
+            const mouseX = e.clientX - rect.left; 
+            const mouseY = e.clientY - rect.top;
+            
+            panX = mouseX - ((mouseX - panX) * (newScale / scale)); 
+            panY = mouseY - ((mouseY - panY) * (newScale / scale));
+            scale = newScale; 
+            applyTransform();
         }, { passive: false });
 
+        // 2. Pinch-to-Zoom & 2-Finger Pan (Touch)
+        let lastMidX = 0, lastMidY = 0, lastDist = 0;
+
+        workspaceContainer.addEventListener('touchstart', (e) => {
+            if (e.touches.length >= 2) {
+                isPinchZooming = true;
+                stopDrawing(); 
+                isDraggingObject = false; 
+                isDraggingCanvas = false; 
+
+                lastDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                lastMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                lastMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+            }
+        }, { passive: false });
+
+        workspaceContainer.addEventListener('touchmove', (e) => {
+            if (e.touches.length >= 2 && isPinchZooming) {
+                e.preventDefault(); 
+                const currentDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                const currentMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2; 
+                const currentMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+
+                // Hitung pergeseran pan (Delta)
+                panX += (currentMidX - lastMidX);
+                panY += (currentMidY - lastMidY);
+
+                // Hitung perbesaran (Scale)
+                if (lastDist > 0) {
+                    const zoomFactor = currentDist / lastDist;
+                    const newScale = Math.min(Math.max(0.05, scale * zoomFactor), 10);
+                    
+                    const rect = workspaceContainer.getBoundingClientRect();
+                    const focusX = currentMidX - rect.left; 
+                    const focusY = currentMidY - rect.top;
+                    
+                    panX = focusX - ((focusX - panX) * (newScale / scale));
+                    panY = focusY - ((focusY - panY) * (newScale / scale));
+                    
+                    scale = newScale;
+                }
+
+                lastMidX = currentMidX;
+                lastMidY = currentMidY;
+                lastDist = currentDist;
+                applyTransform();
+            }
+        }, { passive: false });
+
+        window.addEventListener('touchend', (e) => {
+            if (e.touches.length < 2) {
+                isPinchZooming = false;
+            }
+        });
+
+        // 3. Pointer events (Mouse Click & 1-Finger Touch)
         canvas.addEventListener('pointerdown', (e) => {
-            if (isPanning) return; 
+            if (isPinchZooming) return; // Abaikan jika sedang zoom 2 jari
             if (e.pointerType === 'touch' && !e.isPrimary) return; 
+            
+            // Pan dengan klik tengah / kanan mouse
             if (e.button === 2 || e.button === 1) { 
-                isPanning = true; startPanX = e.clientX - panX; startPanY = e.clientY - panY; workspaceContainer.style.cursor = 'grabbing'; stopDrawing(); return;
+                isDraggingCanvas = true; 
+                startPanX = e.clientX - panX; 
+                startPanY = e.clientY - panY; 
+                workspaceContainer.style.cursor = 'grabbing'; 
+                stopDrawing(); 
+                return;
             }
             if (e.button !== 0 && e.button !== undefined) return;
             
@@ -489,37 +600,31 @@
             
             if (mode === 'select') {
                 let clickedItem = null; let minDist = 30 / scale;
-                // 1. Cek Klik pada Pintu/Jendela
                 openings.forEach(op => {
                     let l = lines[op.lineIndex];
                     if(l) { const cx = l.start.x + (l.end.x - l.start.x) * op.ratio; const cy = l.start.y + (l.end.y - l.start.y) * op.ratio; if (Math.hypot(cx - x, cy - y) < minDist) { clickedItem = op; minDist = Math.hypot(cx - x, cy - y); } }
                 });
-                // 2. Cek Klik pada Mebel/Objek Lepas
                 freeObjects.forEach(obj => { if (Math.hypot(obj.x - x, obj.y - y) < minDist) { clickedItem = obj; minDist = Math.hypot(obj.x - x, obj.y - y); } });
 
-                // 3. Cek Klik pada Tembok (NEW)
                 if (!clickedItem) {
-                    let wallHit = findNearestLine(x, y, 15 / scale); // Toleransi klik lebih ketat untuk tembok
-                    if (wallHit) {
-                        clickedItem = { isWall: true, index: wallHit.index, ...lines[wallHit.index] };
-                    }
+                    let wallHit = findNearestLine(x, y, 15 / scale); 
+                    if (wallHit) { clickedItem = { isWall: true, index: wallHit.index, ...lines[wallHit.index] }; }
                 }
 
                 if (clickedItem) { 
-                    selectedItem = clickedItem; 
-                    openEditPanel(selectedItem); 
-                    
-                    // Setup dragging
+                    selectedItem = clickedItem; openEditPanel(selectedItem); 
                     isDraggingObject = true;
                     if (selectedItem.isWall) {
-                        saveState(); // Record state sebelum drag tembok
+                        saveState(); 
                         selectedItem.dragStartX = x; selectedItem.dragStartY = y;
                         selectedItem.origStart = { ...lines[selectedItem.index].start };
                         selectedItem.origEnd = { ...lines[selectedItem.index].end };
                     }
                 } else { 
-                    selectedItem = null; closeEditPanel(); isDraggingCanvas = true;
-                    startPanX = e.clientX - panX; startPanY = e.clientY - panY; workspaceContainer.style.cursor = 'grabbing';
+                    selectedItem = null; closeEditPanel(); 
+                    isDraggingCanvas = true; // 1-finger pan on select mode
+                    startPanX = e.clientX - panX; startPanY = e.clientY - panY; 
+                    workspaceContainer.style.cursor = 'grabbing';
                 } 
                 draw2D();
             } 
@@ -542,7 +647,9 @@
         });
 
         window.addEventListener('pointermove', (e) => { 
-            if (isPanning || isDraggingCanvas) { 
+            if (isPinchZooming) return; // Prevent conflict with 2-finger touchmove
+
+            if (isDraggingCanvas) { 
                 panX = e.clientX - startPanX; panY = e.clientY - startPanY; applyTransform(); 
             }
             else {
@@ -552,7 +659,6 @@
                 }
                 else if (isDraggingObject && selectedItem) { 
                     if (selectedItem.isWall) {
-                        // Logic Geser Tembok (Drag Wall)
                         let dx = x - selectedItem.dragStartX;
                         let dy = y - selectedItem.dragStartY;
                         
@@ -567,7 +673,6 @@
                         draw2D(); update3D();
                     }
                     else if (selectedItem.lineIndex === undefined) { 
-                        // Drag Mebel
                         let snapPos = getSnapped(x, y);
                         selectedItem.x = snapPos.x; selectedItem.y = snapPos.y; 
                         draw2D(); update3D(); 
@@ -577,33 +682,10 @@
         });
 
         window.addEventListener('pointerup', () => { 
-            isPanning = false; 
             if (isDraggingCanvas) { isDraggingCanvas = false; workspaceContainer.style.cursor = 'crosshair'; }
-            if (isDraggingObject) { isDraggingObject = false; if(!selectedItem?.isWall) saveState(); } // Untuk tembok sudah disave di pointerdown
+            if (isDraggingObject) { isDraggingObject = false; if(!selectedItem?.isWall) saveState(); } 
             workspaceContainer.style.cursor = 'crosshair'; 
         });
-        
-        workspaceContainer.addEventListener('contextmenu', e => e.preventDefault());
-
-        workspaceContainer.addEventListener('touchstart', (e) => {
-            if (e.touches.length >= 2) {
-                isPanning = true; stopDrawing(); isDraggingObject = false; 
-                touchStartDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-                initialScale = scale; const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2; const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-                startPanX = midX - panX; startPanY = midY - panY;
-            }
-        }, { passive: false });
-
-        workspaceContainer.addEventListener('touchmove', (e) => {
-            if (e.touches.length === 2) {
-                e.preventDefault(); const currentDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-                const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2; const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-                const newScale = Math.min(Math.max(0.05, initialScale * (currentDist / touchStartDist)), 10);
-                const rect = workspaceContainer.getBoundingClientRect(); const focusX = midX - rect.left; const focusY = midY - rect.top;
-                panX = focusX - ((focusX - (midX - startPanX)) * (newScale / scale)); panY = focusY - ((focusY - (midY - startPanY)) * (newScale / scale));
-                scale = newScale; applyTransform();
-            }
-        }, { passive: false });
 
         // === TOOLS & DRAWING LOGIC ===
         function stopDrawing() { if (isDrawing && currentLine) draw2D(); isDrawing = false; currentLine = null; draw2D(); }
@@ -676,7 +758,6 @@
         function openEditPanel(item) {
             emptySelectionMsg.style.display = 'none'; editPanelContent.style.display = 'block';
             
-            // Logic UI Edit Tembok Terpilih (NEW)
             if (item.isWall) {
                 wallLineControls.style.display = 'block';
                 wallObjectControls.style.display = 'none'; freeObjectControls.style.display = 'none';
@@ -723,26 +804,16 @@
 
         document.getElementById('flipHingeBtn').addEventListener('click', () => { if (selectedItem && selectedItem.type === 'door') { saveState(); selectedItem.flipHinge = !selectedItem.flipHinge; update3D(); draw2D(); }});
         
-        // HAPUS OBJEK / TEMBOK SECARA INDIVIDUAL
         document.getElementById('delObjBtn').addEventListener('click', () => { 
             if (selectedItem) { 
                 saveState(); 
-                
                 if (selectedItem.isWall) {
-                    const idx = selectedItem.index;
-                    lines.splice(idx, 1);
-                    // Hapus pintu/jendela yang nempel di tembok yang dihapus
+                    const idx = selectedItem.index; lines.splice(idx, 1);
                     openings = openings.filter(o => o.lineIndex !== idx);
-                    // Sesuaikan index untuk tembok lainnya biar pintu/jendelanya gak nyasar
                     openings.forEach(o => { if (o.lineIndex > idx) o.lineIndex--; });
                 }
-                else if (selectedItem.lineIndex !== undefined) {
-                    openings = openings.filter(o => o.id !== selectedItem.id); 
-                }
-                else {
-                    freeObjects = freeObjects.filter(o => o.id !== selectedItem.id); 
-                }
-                
+                else if (selectedItem.lineIndex !== undefined) { openings = openings.filter(o => o.id !== selectedItem.id); }
+                else { freeObjects = freeObjects.filter(o => o.id !== selectedItem.id); }
                 closeEditPanel(); update3D(); draw2D(); 
             }
         });
@@ -767,19 +838,14 @@
             
             lines.forEach((l, idx) => { 
                 ctx.beginPath(); ctx.moveTo(l.start.x, l.start.y); ctx.lineTo(l.end.x, l.end.y); 
-                
-                // Efek visual spesial (cahaya) untuk tembok yang diklik / dipilih
                 if (selectedItem && selectedItem.isWall && selectedItem.index === idx) {
-                    ctx.strokeStyle = '#2563eb';
-                    ctx.shadowColor = '#2563eb'; 
-                    ctx.shadowBlur = 15;
+                    ctx.strokeStyle = '#2563eb'; ctx.shadowColor = '#2563eb'; ctx.shadowBlur = 15;
                 } else {
-                    ctx.strokeStyle = 'rgba(37, 99, 235, 0.45)';
-                    ctx.shadowBlur = 0;
+                    ctx.strokeStyle = 'rgba(37, 99, 235, 0.45)'; ctx.shadowBlur = 0;
                 }
                 ctx.stroke(); 
             });
-            ctx.shadowBlur = 0; // reset shadow biar ga merembet ke objek lain
+            ctx.shadowBlur = 0; 
 
             if (isDrawing && currentLine) { ctx.strokeStyle = 'rgba(239, 68, 68, 0.65)'; ctx.beginPath(); ctx.moveTo(currentLine.start.x, currentLine.start.y); ctx.lineTo(currentLine.end.x, currentLine.end.y); ctx.stroke(); }
 
