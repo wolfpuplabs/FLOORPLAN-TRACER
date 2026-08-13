@@ -3,114 +3,232 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Floor Plan Tracer - BIM Architect + Full Furniture & AR</title>
+    <title>3D Floor Plan Tracer - BIM Architect</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
-    
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
     
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f0f0; display: flex; flex-direction: column; height: 100vh; touch-action: none; }
+        /* CSS Reset untuk Touch Behavior */
+        * {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+
+        /* Kecualikan input agar masih bisa diketik */
+        input[type="number"], input[type="text"], select {
+            -webkit-user-select: text;
+            user-select: text;
+        }
+
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            font-family: 'Segoe UI', Tahoma, Helvetica, sans-serif; 
+            background: #f4f4f5; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
+            touch-action: none; 
+        }
         
-        #toolbar { background: #fff; padding: 10px 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 10; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-        button, select, input[type="number"] { padding: 6px 10px; cursor: pointer; border: 1px solid #ccc; background: #eee; border-radius: 4px; font-size: 13px; transition: 0.2s; }
-        input[type="number"] { cursor: text; background: #fff; }
-        button:hover { background: #ddd; }
-        button:disabled { cursor: not-allowed; opacity: 0.5; }
-        button.active { background: #2196F3; color: white; border-color: #0b7dda; font-weight: bold; }
+        /* Redesign UI/UX Layout */
+        #top-ui {
+            background: #ffffff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .toolbar-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 16px;
+            flex-wrap: wrap;
+        }
+
+        .toolbar-row:not(:last-child) {
+            border-bottom: 1px solid #e4e4e7;
+            background: #fafafa;
+        }
+
+        .tool-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #f4f4f5;
+            padding: 4px;
+            border-radius: 6px;
+            border: 1px solid #d4d4d8;
+        }
+
+        button, select, input[type="number"], input[type="file"]::file-selector-button { 
+            padding: 6px 12px; 
+            cursor: pointer; 
+            border: 1px solid #d4d4d8; 
+            background: #ffffff; 
+            border-radius: 4px; 
+            font-size: 13px; 
+            color: #3f3f46;
+            transition: 0.15s; 
+        }
+
+        input[type="file"]::file-selector-button {
+            background: #f4f4f5;
+        }
+
+        input[type="number"] { 
+            cursor: text; 
+            background: #fff; 
+            width: 50px;
+        }
+
+        button:hover, select:hover, input[type="file"]::file-selector-button:hover { 
+            background: #e4e4e7; 
+        }
+
+        button:disabled { 
+            cursor: not-allowed; 
+            opacity: 0.4; 
+        }
+
+        button.active { 
+            background: #2563eb; 
+            color: white; 
+            border-color: #1d4ed8; 
+            font-weight: 600; 
+        }
+        
+        .btn-action { background: #f4f4f5; font-weight: 500; }
+        .btn-danger { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+        .btn-danger:hover { background: #fecaca; }
+        .btn-primary { background: #10b981; color: white; border-color: #059669; font-weight: bold; }
+        .btn-primary:hover { background: #059669; }
+        .btn-purple { background: #8b5cf6; color: white; border-color: #7c3aed; font-weight: bold; }
+        .btn-purple:hover { background: #7c3aed; }
         
         .spacer { flex-grow: 1; }
+        .divider { width: 1px; height: 24px; background-color: #d4d4d8; margin: 0 4px; }
         
         #main-container { display: flex; flex: 1; overflow: hidden; }
-        #left-panel { flex: 1; position: relative; background: #ccc; overflow: hidden; border-right: 2px solid #999; touch-action: none; cursor: crosshair; }
-        #right-panel { flex: 1; position: relative; background: #222; }
+        #left-panel { flex: 1; position: relative; background: #e4e4e7; overflow: hidden; border-right: 2px solid #a1a1aa; touch-action: none; cursor: crosshair; }
+        #right-panel { flex: 1; position: relative; background: #18181b; }
 
         #workspace { transform-origin: 0 0; position: relative; }
-        #floorplan-img { display: block; max-width: none; pointer-events: none; user-select: none; }
+        #floorplan-img { display: block; max-width: none; pointer-events: none; }
         #draw-canvas { position: absolute; top: 0; left: 0; }
 
-        #instructions { position: absolute; bottom: 15px; left: 15px; background: rgba(0,0,0,0.75); color: white; padding: 10px 15px; border-radius: 8px; font-size: 12px; pointer-events: none; z-index: 20; line-height: 1.5; }
+        #instructions { 
+            position: absolute; bottom: 15px; left: 15px; background: rgba(0,0,0,0.7); 
+            color: white; padding: 10px 15px; border-radius: 6px; font-size: 12px; 
+            pointer-events: none; z-index: 20; line-height: 1.5; border: 1px solid rgba(255,255,255,0.2); 
+        }
 
         #edit-panel {
-            display: none; position: absolute; top: 70px; right: 20px; background: white; 
-            padding: 15px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); 
-            z-index: 100; width: 240px; border: 1px solid #ccc; max-height: 80vh; overflow-y: auto;
+            display: none; position: absolute; top: 15px; right: 15px; background: white; 
+            padding: 15px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); 
+            z-index: 100; width: 240px; border: 1px solid #d4d4d8; max-height: 80vh; overflow-y: auto;
         }
-        #edit-panel label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 3px; }
-        #edit-panel input[type="range"] { width: 100%; margin-bottom: 10px; }
+        
+        #edit-panel h4 { margin: 0 0 12px 0; border-bottom: 1px solid #e4e4e7; padding-bottom: 8px; color: #18181b; }
+        #edit-panel label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #3f3f46; }
+        #edit-panel input[type="range"] { width: 100%; margin-bottom: 12px; accent-color: #2563eb; }
+        .edit-btn-danger { background: #ef4444; color: white; width: 100%; border: none; padding: 8px; border-radius: 4px; font-weight: bold; margin-top: 10px; }
+        .edit-btn-danger:hover { background: #dc2626; }
 
-        /* Modal WebAR View */
         #ar-modal {
             display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center; flex-direction: column;
+            background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; flex-direction: column;
         }
-        model-viewer {
-            width: 90vw; height: 80vh; background-color: #111; border-radius: 12px;
-        }
+        model-viewer { width: 90vw; height: 80vh; background-color: #111; border-radius: 8px; }
+        
         #closeArBtn {
-            position: absolute; top: 20px; right: 25px; padding: 10px 20px; background: #f44336; color: white;
-            border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer;
+            position: absolute; top: 20px; right: 20px; padding: 10px 20px; background: #ef4444; color: white;
+            border: none; border-radius: 6px; font-weight: bold; font-size: 14px; z-index: 1001;
         }
 
-        @media (max-width: 800px) {
+        @media (max-width: 900px) {
             #main-container { flex-direction: column; }
-            #left-panel, #right-panel { flex: none; height: 50%; }
-            #toolbar { justify-content: center; }
-            #edit-panel { top: auto; bottom: 20px; right: 20px; }
+            #left-panel, #right-panel { flex: none; height: 50%; border-right: none; border-bottom: 2px solid #a1a1aa; }
+            #edit-panel { top: auto; bottom: 15px; right: 15px; }
         }
     </style>
 </head>
 <body>
 
-    <div id="toolbar">
-        <input type="file" id="upload" accept="image/*" style="max-width: 160px;">
-        <div style="border-left: 1px solid #ccc; height: 20px;"></div>
-        
-        <button id="modeSelect">👆 Pilih/Edit</button>
-        <button id="modeWall" class="active">Gambar Tembok</button>
-        <button id="modeDoor">🚪 Pintu</button>
-        <button id="modeWindow">🪟 Jendela</button>
-        <button id="modeStairs">🪜 Tangga</button>
-        
-        <select id="furnitureSelect">
-            <option value="">+ Tambah Mebel...</option>
-            <optgroup label="Ruang Utama">
-                <option value="bed">🛏️ Kasur</option>
-                <option value="sofa">🛋️ Sofa</option>
-                <option value="table">🪵 Meja</option>
-                <option value="chair">🪑 Kursi</option>
-            </optgroup>
-            <optgroup label="Dapur (Kitchen)">
-                <option value="kitchen_set">🍳 Kitchen Set</option>
-                <option value="stove">🔥 Kompor</option>
-                <option value="fridge">🧊 Kulkas</option>
-            </optgroup>
-            <optgroup label="Kamar Mandi (Bath)">
-                <option value="toilet">🚽 Kloset / Toilet</option>
-                <option value="shower">🚿 Shower</option>
-                <option value="bathtub">🛁 Bathtub</option>
-            </optgroup>
-        </select>
-        
-        <div style="border-left: 1px solid #ccc; height: 20px;"></div>
-        
-        <label style="font-size:11px; font-weight:bold;">Tinggi(m): <input type="number" id="valWallH" value="3.0" step="0.1" style="width:40px; padding:3px;"></label>
-        <label style="font-size:11px; font-weight:bold;">Tebal(m): <input type="number" id="valWallT" value="0.15" step="0.05" style="width:40px; padding:3px;"></label>
+    <div id="top-ui">
+        <!-- Baris 1: Sistem & File -->
+        <div class="toolbar-row">
+            <input type="file" id="upload" accept="image/*" style="max-width: 200px;">
+            
+            <div class="divider"></div>
+            
+            <div class="tool-group">
+                <button id="undoBtn" class="btn-action" disabled>Undo</button>
+                <button id="redoBtn" class="btn-action" disabled>Redo</button>
+                <button id="clearBtn" class="btn-danger">Hapus Semua</button>
+            </div>
 
-        <div style="border-left: 1px solid #ccc; height: 20px;"></div>
-        <button id="undoBtn" disabled>Undo</button>
-        <button id="redoBtn" disabled>Redo</button>
-        <button id="clearBtn">Hapus Semua</button>
-        
-        <div class="spacer"></div>
-        <button id="arBtn" style="background: #9C27B0; color: white; border: none;">📱 AR View</button>
-        <button id="exportBtn" style="background: #4CAF50; color: white; border: none;">Export GLB</button>
+            <div class="spacer"></div>
+            
+            <button id="arBtn" class="btn-purple">View AR</button>
+            <button id="exportBtn" class="btn-primary">Export GLB</button>
+        </div>
+
+        <!-- Baris 2: Alat Gambar & Objek -->
+        <div class="toolbar-row">
+            <div class="tool-group">
+                <button id="modeSelect">Pilih / Edit</button>
+            </div>
+            
+            <div class="tool-group">
+                <button id="modeWall" class="active">Gambar Tembok</button>
+                <button id="modeDoor">Pintu</button>
+                <button id="modeWindow">Jendela</button>
+                <button id="modeStairs">Tangga</button>
+            </div>
+            
+            <select id="furnitureSelect">
+                <option value="">+ Tambah Mebel...</option>
+                <optgroup label="Ruang Utama">
+                    <option value="bed">Kasur</option>
+                    <option value="sofa">Sofa</option>
+                    <option value="table">Meja</option>
+                    <option value="chair">Kursi</option>
+                </optgroup>
+                <optgroup label="Dapur">
+                    <option value="kitchen_set">Kitchen Set</option>
+                    <option value="stove">Kompor</option>
+                    <option value="fridge">Kulkas</option>
+                </optgroup>
+                <optgroup label="Kamar Mandi">
+                    <option value="toilet">Kloset / Toilet</option>
+                    <option value="shower">Shower</option>
+                    <option value="bathtub">Bathtub</option>
+                </optgroup>
+            </select>
+            
+            <div class="divider"></div>
+            
+            <div class="tool-group" style="background: transparent; border: none;">
+                <label style="font-size:12px; font-weight:600;">Tinggi(m): <input type="number" id="valWallH" value="3.0" step="0.1"></label>
+                <label style="font-size:12px; font-weight:600; margin-left: 5px;">Tebal(m): <input type="number" id="valWallT" value="0.15" step="0.05"></label>
+            </div>
+        </div>
     </div>
 
     <div id="edit-panel">
-        <h4 id="editTitle" style="margin: 0 0 10px 0; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Parameter Objek</h4>
+        <h4 id="editTitle">Parameter Objek</h4>
         
         <div id="wallObjectControls">
             <label>Posisi Tembok: <span id="valPos">50</span>%</label>
@@ -122,7 +240,7 @@
             <div id="doorControls">
                 <label>Rotasi (Swing): <span id="valSwing">45</span>°</label>
                 <input type="range" id="editSwing" min="-180" max="180" step="5" value="45">
-                <button id="flipHingeBtn" style="width: 100%; margin-bottom: 10px; background: #e0e0e0;">🔄 Balik Engsel</button>
+                <button id="flipHingeBtn" style="width: 100%; margin-bottom: 10px; background: #e4e4e7; font-weight: 500;">Balik Engsel</button>
             </div>
         </div>
 
@@ -142,14 +260,14 @@
             </div>
         </div>
 
-        <button id="delObjBtn" style="background: #f44336; color: white; width: 100%; border: none; padding: 8px; border-radius: 4px; margin-top: 10px;">🗑️ Hapus Objek</button>
+        <button id="delObjBtn" class="edit-btn-danger">Hapus Objek</button>
     </div>
 
     <div id="ar-modal">
-        <button id="closeArBtn">✕ Tutup</button>
-        <model-viewer id="arViewer" ar ar-modes="webxr scene-viewer quick-look" camera-controls touch-action="pan-y" shadow-intensity="1" alt="Denah Rumah 3D WebAR">
-            <button slot="ar-button" style="background-color: white; border-radius: 4px; border: none; position: absolute; top: 16px; right: 16px; padding: 12px; font-weight: bold; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
-                👋 Lihat di Ruangan Nyata (AR)
+        <button id="closeArBtn">Tutup AR</button>
+        <model-viewer id="arViewer" ar ar-modes="webxr scene-viewer quick-look" camera-controls touch-action="pan-y" shadow-intensity="1" alt="Denah 3D AR">
+            <button slot="ar-button" style="background-color: white; border-radius: 4px; border: none; position: absolute; top: 16px; left: 16px; padding: 12px; font-weight: bold; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+                Lihat di Ruangan Nyata (AR)
             </button>
         </model-viewer>
     </div>
@@ -161,10 +279,10 @@
                 <canvas id="draw-canvas"></canvas>
             </div>
             <div id="instructions">
-                <b>Cara Menggambar Tembok:</b><br>
-                1. Tap/Klik 1x untuk menentukan <b>Titik Awal</b>.<br>
-                2. Tap/Klik di titik lain untuk memasang tembok.<br>
-                3. <b>Putus Tembok</b>: Tap 2x di titik sama / Klik Kanan / Tekan ESC / Ganti Mode.
+                <b>Mode Tembok:</b><br>
+                1. Tap/Klik 1x untuk titik awal.<br>
+                2. Tap/Klik di titik lain untuk menyambung.<br>
+                3. Tap 2x di posisi yang sama (Atau ESC/Klik Kanan) untuk memutus garis.
             </div>
         </div>
         <div id="right-panel"></div>
@@ -174,12 +292,12 @@
         // === STATE & DATA ===
         let lines = []; 
         let openings = []; 
-        let freeObjects = []; // Tangga & Furniture
+        let freeObjects = [];
         let mode = 'wall'; 
         let scale3D = 0.02; 
         
         let selectedItem = null;
-        let isDraggingObject = false; // Flag untuk Tap & Drag
+        let isDraggingObject = false; 
         let undoStack = []; let redoStack = [];
 
         const workspace = document.getElementById('workspace');
@@ -315,7 +433,7 @@
         function setMode(newMode, btn) {
             stopDrawing();
             mode = newMode;
-            document.querySelectorAll('#toolbar button.active').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#top-ui button.active').forEach(b => b.classList.remove('active'));
             if(btn) btn.classList.add('active');
             if (mode !== 'select') closeEditPanel();
             draw2D();
@@ -348,7 +466,6 @@
         }
 
         function handlePointerDown(clientX, clientY, button) {
-            // Klik Kanan: Batalkan/Putus Drawing
             if (button === 2) {
                 stopDrawing();
                 return; 
@@ -390,19 +507,16 @@
                 if (!isDrawing) {
                     saveState(); 
                     isDrawing = true; 
-                    // Set Start Point & End Point sama di awal Tap
                     currentLine = { start: snap, end: snap };
                 } else {
                     const dist = Math.hypot(snap.x - currentLine.start.x, snap.y - currentLine.start.y);
                     
-                    // Jika titik kedua berada sangat dekat dengan titik awal (Double Tap/Click), putus tembok
                     if (dist < 10 / scale) {
                         stopDrawing();
                     } else {
                         currentLine.end = snap;
                         lines.push({...currentLine});
                         update3D();
-                        // Sambung tembok baru dari titik snap terakhir
                         currentLine = { start: snap, end: snap };
                     }
                 }
@@ -420,15 +534,11 @@
                     update3D(); draw2D();
                 }
             }
-            else { // Tangga / Furniture
+            else { 
                 saveState();
                 freeObjects.push({
-                    id: Date.now(),
-                    type: mode,
-                    x: x, y: y,
-                    rotation: 0,
-                    scaleVal: 1.0,
-                    steps: 14,
+                    id: Date.now(), type: mode, x: x, y: y,
+                    rotation: 0, scaleVal: 1.0, steps: 14,
                     width3D: mode === 'stairs' ? 1.0 : 1.0
                 });
                 furnitureSelect.value = "";
@@ -442,7 +552,6 @@
             handlePointerDown(e.clientX, e.clientY, e.button);
         });
 
-        // LOGIKA DRAGGING KURSOR / TAP & MOVE
         function handlePointerMove(clientX, clientY) {
             let { x, y } = getTrueCoords(clientX, clientY);
             if (isDrawing && mode === 'wall' && currentLine) {
@@ -473,7 +582,7 @@
             return result;
         }
 
-        // === PANEL EDITOR MELAYANG ===
+        // === PANEL EDITOR ===
         const editPanel = document.getElementById('edit-panel');
         const wallObjectControls = document.getElementById('wallObjectControls');
         const freeObjectControls = document.getElementById('freeObjectControls');
@@ -490,7 +599,7 @@
         function openEditPanel(item) {
             editPanel.style.display = 'block';
             
-            if (item.lineIndex !== undefined) { // Pintu / Jendela
+            if (item.lineIndex !== undefined) { 
                 wallObjectControls.style.display = 'block';
                 freeObjectControls.style.display = 'none';
                 
@@ -500,7 +609,7 @@
                     document.getElementById('doorControls').style.display = 'block';
                     editSwing.value = item.swing; document.getElementById('valSwing').innerText = item.swing;
                 } else { document.getElementById('doorControls').style.display = 'none'; }
-            } else { // Tangga / Mebel
+            } else { 
                 wallObjectControls.style.display = 'none';
                 freeObjectControls.style.display = 'block';
                 
@@ -519,53 +628,19 @@
 
         function closeEditPanel() { editPanel.style.display = 'none'; selectedItem = null; }
 
-        editPos.addEventListener('input', (e) => {
-            if (selectedItem && selectedItem.lineIndex !== undefined) { 
-                selectedItem.ratio = parseFloat(e.target.value) / 100; document.getElementById('valPos').innerText = e.target.value; update3D(); draw2D(); 
-            }
-        });
+        editPos.addEventListener('input', (e) => { if (selectedItem && selectedItem.lineIndex !== undefined) { selectedItem.ratio = parseFloat(e.target.value) / 100; document.getElementById('valPos').innerText = e.target.value; update3D(); draw2D(); } });
         editPos.addEventListener('change', () => saveState());
-
-        editWidth.addEventListener('input', (e) => {
-            if (selectedItem && selectedItem.lineIndex !== undefined) { 
-                selectedItem.width3D = parseFloat(e.target.value); document.getElementById('valWidth').innerText = selectedItem.width3D; update3D(); draw2D(); 
-            }
-        });
+        editWidth.addEventListener('input', (e) => { if (selectedItem && selectedItem.lineIndex !== undefined) { selectedItem.width3D = parseFloat(e.target.value); document.getElementById('valWidth').innerText = selectedItem.width3D; update3D(); draw2D(); } });
         editWidth.addEventListener('change', () => saveState());
-
-        editSwing.addEventListener('input', (e) => {
-            if (selectedItem && selectedItem.type === 'door') { 
-                selectedItem.swing = parseFloat(e.target.value); document.getElementById('valSwing').innerText = selectedItem.swing; update3D(); draw2D(); 
-            }
-        });
+        editSwing.addEventListener('input', (e) => { if (selectedItem && selectedItem.type === 'door') { selectedItem.swing = parseFloat(e.target.value); document.getElementById('valSwing').innerText = selectedItem.swing; update3D(); draw2D(); } });
         editSwing.addEventListener('change', () => saveState());
-
-        editRot.addEventListener('input', (e) => {
-            if (selectedItem && selectedItem.lineIndex === undefined) { 
-                selectedItem.rotation = parseInt(e.target.value); document.getElementById('valRot').innerText = selectedItem.rotation; update3D(); draw2D(); 
-            }
-        });
+        editRot.addEventListener('input', (e) => { if (selectedItem && selectedItem.lineIndex === undefined) { selectedItem.rotation = parseInt(e.target.value); document.getElementById('valRot').innerText = selectedItem.rotation; update3D(); draw2D(); } });
         editRot.addEventListener('change', () => saveState());
-
-        editScale.addEventListener('input', (e) => {
-            if (selectedItem && selectedItem.lineIndex === undefined) { 
-                selectedItem.scaleVal = parseFloat(e.target.value); document.getElementById('valScale').innerText = selectedItem.scaleVal; update3D(); draw2D(); 
-            }
-        });
+        editScale.addEventListener('input', (e) => { if (selectedItem && selectedItem.lineIndex === undefined) { selectedItem.scaleVal = parseFloat(e.target.value); document.getElementById('valScale').innerText = selectedItem.scaleVal; update3D(); draw2D(); } });
         editScale.addEventListener('change', () => saveState());
-
-        editSteps.addEventListener('input', (e) => {
-            if (selectedItem && selectedItem.type === 'stairs') { 
-                selectedItem.steps = parseInt(e.target.value); document.getElementById('valSteps').innerText = selectedItem.steps; update3D(); draw2D(); 
-            }
-        });
+        editSteps.addEventListener('input', (e) => { if (selectedItem && selectedItem.type === 'stairs') { selectedItem.steps = parseInt(e.target.value); document.getElementById('valSteps').innerText = selectedItem.steps; update3D(); draw2D(); } });
         editSteps.addEventListener('change', () => saveState());
-
-        editStairW.addEventListener('input', (e) => {
-            if (selectedItem && selectedItem.type === 'stairs') { 
-                selectedItem.width3D = parseFloat(e.target.value); document.getElementById('valStairW').innerText = selectedItem.width3D; update3D(); draw2D(); 
-            }
-        });
+        editStairW.addEventListener('input', (e) => { if (selectedItem && selectedItem.type === 'stairs') { selectedItem.width3D = parseFloat(e.target.value); document.getElementById('valStairW').innerText = selectedItem.width3D; update3D(); draw2D(); } });
         editStairW.addEventListener('change', () => saveState());
 
         document.getElementById('flipHingeBtn').addEventListener('click', () => {
@@ -589,13 +664,11 @@
             const globalThick2D = parseFloat(inputWallT.value) / scale3D;
             ctx.lineWidth = Math.max(2, globalThick2D); 
             
-            // Gambar Garis Tembok Permanen
-            ctx.strokeStyle = 'rgba(33, 150, 243, 0.45)';
+            ctx.strokeStyle = 'rgba(37, 99, 235, 0.45)';
             lines.forEach(l => { ctx.beginPath(); ctx.moveTo(l.start.x, l.start.y); ctx.lineTo(l.end.x, l.end.y); ctx.stroke(); });
 
-            // Gambar Garis Tembok Pratinjau (Rubber Band) - Hanya jika isDrawing = true
             if (isDrawing && currentLine) { 
-                ctx.strokeStyle = 'rgba(244, 67, 54, 0.65)'; 
+                ctx.strokeStyle = 'rgba(239, 68, 68, 0.65)'; 
                 ctx.beginPath(); ctx.moveTo(currentLine.start.x, currentLine.start.y); ctx.lineTo(currentLine.end.x, currentLine.end.y); ctx.stroke(); 
             }
 
@@ -609,7 +682,7 @@
                 if (op.flipHinge) { ctx.scale(-1, 1); }
 
                 if (op === selectedItem) {
-                    ctx.shadowColor = '#2196F3'; ctx.shadowBlur = 15; ctx.fillStyle = 'rgba(33, 150, 243, 0.4)';
+                    ctx.shadowColor = '#2563eb'; ctx.shadowBlur = 15; ctx.fillStyle = 'rgba(37, 99, 235, 0.4)';
                     ctx.fillRect(-opWidth2D/2, -ctx.lineWidth, opWidth2D, ctx.lineWidth*2);
                 }
 
@@ -622,14 +695,13 @@
                     ctx.beginPath(); ctx.arc(-opWidth2D/2, 0, opWidth2D, swingDir < 0 ? -Math.PI/2 : 0, swingDir < 0 ? 0 : Math.PI/2);
                     ctx.strokeStyle = 'rgba(139, 69, 19, 0.6)'; ctx.stroke();
                 } else {
-                    ctx.fillStyle = 'rgba(135, 206, 235, 0.8)'; const th = ctx.lineWidth * 1.5;
-                    ctx.fillRect(-opWidth2D/2, -th/2, opWidth2D, th); ctx.strokeStyle = '#555';
+                    ctx.fillStyle = 'rgba(14, 165, 233, 0.8)'; const th = ctx.lineWidth * 1.5;
+                    ctx.fillRect(-opWidth2D/2, -th/2, opWidth2D, th); ctx.strokeStyle = '#333';
                     ctx.lineWidth = 1; ctx.strokeRect(-opWidth2D/2, -th/2, opWidth2D, th);
                 }
                 ctx.restore();
             });
 
-            // Draw Free Objects (Tangga & Mebel)
             freeObjects.forEach(obj => {
                 ctx.save();
                 ctx.translate(obj.x, obj.y);
@@ -637,15 +709,15 @@
                 const s = obj.scaleVal || 1.0;
 
                 if (obj === selectedItem) {
-                    ctx.shadowColor = '#2196F3'; ctx.shadowBlur = 15;
+                    ctx.shadowColor = '#2563eb'; ctx.shadowBlur = 15;
                 }
 
                 if (obj.type === 'stairs') {
                     const w = ((obj.width3D || 1.0) / scale3D) * s;
                     const h = (1.5 / scale3D) * s;
-                    ctx.fillStyle = 'rgba(200, 200, 200, 0.8)';
+                    ctx.fillStyle = 'rgba(212, 212, 216, 0.8)';
                     ctx.fillRect(-w/2, -h/2, w, h);
-                    ctx.strokeStyle = '#333'; ctx.lineWidth = 1.5;
+                    ctx.strokeStyle = '#3f3f46'; ctx.lineWidth = 1.5;
                     ctx.strokeRect(-w/2, -h/2, w, h);
                     const steps = obj.steps || 14;
                     for(let i=1; i<steps; i++) {
@@ -654,14 +726,13 @@
                     }
                 } else {
                     const size = (30 / scale) * s;
-                    ctx.fillStyle = ['bed','sofa','table','chair'].includes(obj.type) ? '#FF9800' : 
-                                    (['kitchen_set','stove','fridge'].includes(obj.type) ? '#E91E63' : '#00BCD4');
+                    ctx.fillStyle = ['bed','sofa','table','chair'].includes(obj.type) ? '#f59e0b' : 
+                                    (['kitchen_set','stove','fridge'].includes(obj.type) ? '#ec4899' : '#06b6d4');
                     ctx.fillRect(-size/2, -size/2, size, size);
-                    ctx.strokeStyle = '#222'; ctx.lineWidth = 1;
+                    ctx.strokeStyle = '#27272a'; ctx.lineWidth = 1;
                     ctx.strokeRect(-size/2, -size/2, size, size);
                     
-                    // Simbol Teks Singkat 2D
-                    ctx.fillStyle = '#fff'; ctx.font = `${Math.max(10, size*0.4)}px sans-serif`;
+                    ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.max(10, size*0.4)}px sans-serif`;
                     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
                     const labels = { bed:'BED', sofa:'SOFA', table:'TBL', chair:'CHR', kitchen_set:'KIT', stove:'STV', fridge:'FRG', toilet:'WC', shower:'SHW', bathtub:'BAT' };
                     ctx.fillText(labels[obj.type] || 'OBJ', 0, 0);
@@ -696,11 +767,11 @@
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         
         renderer.setSize(rightPanel.clientWidth, rightPanel.clientHeight);
-        renderer.setClearColor(0x2d2d2d); rightPanel.appendChild(renderer.domElement);
+        renderer.setClearColor(0x27272a); rightPanel.appendChild(renderer.domElement);
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         
-        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8); dirLight.position.set(20, 40, 20); scene.add(dirLight);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.6); dirLight.position.set(20, 40, 20); scene.add(dirLight);
         scene.add(new THREE.GridHelper(50, 50, 0x555555, 0x333333));
         
         const modelGroup = new THREE.Group(); scene.add(modelGroup);
@@ -713,24 +784,8 @@
 
         function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); } animate();
 
-        function findClosedLoops() {
-            if (lines.length < 3) return [];
-            let nodes = [];
-            const getIndex = (p) => {
-                let idx = nodes.findIndex(n => Math.hypot(n.x - p.x, n.y - p.y) < 3);
-                if (idx === -1) { nodes.push({ x: p.x, y: p.y }); return nodes.length - 1; }
-                return idx;
-            };
-            lines.forEach(l => { getIndex(l.start); getIndex(l.end); });
-            if (nodes.length < 3) return [];
-            let centerX = nodes.reduce((sum, n) => sum + n.x, 0) / nodes.length;
-            let centerY = nodes.reduce((sum, n) => sum + n.y, 0) / nodes.length;
-            nodes.sort((a, b) => Math.atan2(a.y - centerY, a.x - centerX) - Math.atan2(b.y - centerY, b.x - centerX));
-            return nodes;
-        }
-
         // ==============================================================
-        // MODEL GENERATOR LENGKAP (TANGGA, MEBEL, KITCHEN & BATHROOM)
+        // MODEL GENERATOR LENGKAP
         // ==============================================================
         function createStairsMesh(stepsCount, stairWidth, totalHeight) {
             const stairsGroup = new THREE.Group();
@@ -770,9 +825,7 @@
             } else if (type === 'chair') {
                 const seat = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.04, 0.45), matWood); seat.position.y = 0.45; group.add(seat);
                 const back = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.45, 0.04), matWood); back.position.set(0, 0.68, -0.2); group.add(back);
-            } 
-            // KITCHEN
-            else if (type === 'kitchen_set') {
+            } else if (type === 'kitchen_set') {
                 const counter = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.85, 0.6), matWood); counter.position.y = 0.425; group.add(counter);
                 const sink = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.02, 0.4), matMetal); sink.position.set(-0.5, 0.86, 0); group.add(sink);
             } else if (type === 'stove') {
@@ -781,9 +834,7 @@
             } else if (type === 'fridge') {
                 const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.8, 0.7), matMetal); body.position.y = 0.9; group.add(body);
                 const handle = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.4, 0.04), matWhite); handle.position.set(0.35, 1.1, 0.37); group.add(handle);
-            }
-            // BATHROOM
-            else if (type === 'toilet') {
+            } else if (type === 'toilet') {
                 const base = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.6), matWhite); base.position.y = 0.2; group.add(base);
                 const tank = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.5, 0.25), matWhite); tank.position.set(0, 0.65, -0.2); group.add(tank);
             } else if (type === 'shower') {
@@ -816,35 +867,22 @@
             const center2DX = (minX === Infinity) ? 0 : (minX + maxX) / 2; 
             const center2DY = (minY === Infinity) ? 0 : (minY + maxY) / 2;
             
-            const matWall = new THREE.MeshLambertMaterial({ color: 0xdedede });
+            const matWall = new THREE.MeshLambertMaterial({ color: 0xefefef });
             const matDoor = new THREE.MeshLambertMaterial({ color: 0x5c4033 }); 
             const matWindow = new THREE.MeshLambertMaterial({ color: 0x87CEEB, transparent: true, opacity: 0.5 }); 
-            const matFrame = new THREE.MeshLambertMaterial({ color: 0x333333 }); 
-            const matFloor = new THREE.MeshLambertMaterial({ color: 0xd6d6d6, side: THREE.DoubleSide });
+            const matFrame = new THREE.MeshLambertMaterial({ color: 0x3f3f46 }); 
+            const matFloor = new THREE.MeshLambertMaterial({ color: 0xd4d4d8, side: THREE.DoubleSide });
 
-            // 1. LANTAI 3D
-            const floorVertices = findClosedLoops();
-            if (floorVertices.length >= 3) {
-                const floorShape = new THREE.Shape();
-                let area = 0;
-                for (let i = 0; i < floorVertices.length; i++) {
-                    let j = (i + 1) % floorVertices.length;
-                    area += floorVertices[i].x * floorVertices[j].y - floorVertices[j].x * floorVertices[i].y;
-                }
-                if (area < 0) floorVertices.reverse();
-
-                floorVertices.forEach((v, idx) => {
-                    const fx = (v.x - center2DX) * scale3D;
-                    const fz = (v.y - center2DY) * scale3D;
-                    if (idx === 0) floorShape.moveTo(fx, -fz);
-                    else floorShape.lineTo(fx, -fz);
-                });
+            // 1. LANTAI 3D (Solusi Bounding Box Pad agar tidak ada glitch segitiga)
+            if (minX !== Infinity) {
+                const floorPadding = 1.0; // 1 meter ekstra
+                const floorW = (maxX - minX) * scale3D + floorPadding;
+                const floorH = (maxY - minY) * scale3D + floorPadding;
                 
-                const floorGeom = new THREE.ShapeGeometry(floorShape);
-                floorGeom.computeVertexNormals();
+                const floorGeom = new THREE.PlaneGeometry(floorW, floorH);
                 const floorMesh = new THREE.Mesh(floorGeom, matFloor);
                 floorMesh.rotation.x = -Math.PI / 2;
-                floorMesh.position.y = 0.001;
+                floorMesh.position.set(0, 0.001, 0); // Posisikan persis di center scene
                 modelGroup.add(floorMesh);
             }
 
@@ -914,7 +952,7 @@
                 cornerMesh.position.set(posX, heightWall / 2, posZ); modelGroup.add(cornerMesh);
             });
 
-            // 4. TANGGA & FULL MEBEL 3D (DENGAN SKALA)
+            // 4. TANGGA & FULL MEBEL 3D
             freeObjects.forEach(obj => {
                 const posX = (obj.x - center2DX) * scale3D;
                 const posZ = (obj.y - center2DY) * scale3D;
@@ -928,8 +966,6 @@
 
                 meshGroup.position.set(posX, 0, posZ);
                 meshGroup.rotation.y = THREE.MathUtils.degToRad(obj.rotation || 0);
-                
-                // Terapkan Skala Individual
                 const s = obj.scaleVal || 1.0;
                 meshGroup.scale.set(s, s, s);
 
