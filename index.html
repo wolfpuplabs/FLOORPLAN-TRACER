@@ -22,10 +22,9 @@
             height: 100vh;
             background-color: var(--bg-color);
             overflow: hidden;
-            touch-action: none; /* Mencegah zoom tidak sengaja di browser mobile/tablet */
+            touch-action: none;
         }
         
-        /* UI Controls - Tablet Friendly */
         #controls {
             padding: 12px 20px;
             background-color: var(--panel-bg);
@@ -53,7 +52,6 @@
         }
         .control-group:last-child { border-right: none; }
         
-        /* Memperbesar input dan tombol agar mudah di-tap */
         input[type="number"], select, button, input[type="file"] {
             height: 38px;
             border-radius: 8px;
@@ -86,7 +84,6 @@
         button.danger { background-color: var(--danger); }
         button:disabled { background-color: #cccccc; cursor: not-allowed; opacity: 0.5; }
         
-        /* Responsive Workspace */
         #workspace {
             display: flex;
             flex-direction: row;
@@ -122,7 +119,6 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
 
-        /* Mode Portrait / Layar Kecil */
         @media (max-width: 900px) {
             #workspace { flex-direction: column; }
             .panel, #canvas3d-container {
@@ -171,8 +167,9 @@
         <div class="control-group">
             <label>Unit:</label>
             <select id="unitSelect">
-                <option value="cm">cm</option>
                 <option value="mm">mm</option>
+                <option value="cm" selected>cm</option>
+                <option value="m">m</option>
                 <option value="inch">inch</option>
             </select>
             <label>Tinggi:</label>
@@ -271,7 +268,7 @@
         let rawMouseX = 0, rawMouseY = 0, worldMouseX = 0, worldMouseY = 0;
 
         const SNAP_DIST = 15;
-        const DOOR_WIDTH = 80, DOOR_HEIGHT = 200; // base unit
+        const DOOR_WIDTH = 80, DOOR_HEIGHT = 200; // Base: CM
         const WIN_WIDTH = 100, WIN_HEIGHT = 100, WIN_BOTTOM = 80;
 
         function resizeCanvas() {
@@ -313,8 +310,9 @@
         function getUnitMultiplier() {
             const unit = document.getElementById('unitSelect').value;
             if (unit === 'mm') return 0.1;
+            if (unit === 'm') return 100;
             if (unit === 'inch') return 2.54;
-            return 1; // cm 
+            return 1; // Default: cm 
         }
 
         // --- DRAW 2D ---
@@ -389,12 +387,12 @@
             if (mode === 'wall') {
                 if (isDrawing) {
                     ctx.lineWidth = baseThickness;
-                    ctx.strokeStyle = 'rgba(0, 122, 255, 0.7)'; // iOS Blue
+                    ctx.strokeStyle = 'rgba(0, 122, 255, 0.7)'; 
                     ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(currentX, currentY); ctx.stroke();
                 }
                 const snapped = getSnapPoint(worldMouseX, worldMouseY);
                 if (snapped.x !== worldMouseX || snapped.y !== worldMouseY) {
-                    ctx.fillStyle = 'rgba(52, 199, 89, 0.8)'; // iOS Green
+                    ctx.fillStyle = 'rgba(52, 199, 89, 0.8)'; 
                     ctx.beginPath(); ctx.arc(snapped.x, snapped.y, 10/zoom, 0, Math.PI*2); ctx.fill();
                 }
             } else if (mode === 'door' || mode === 'window') {
@@ -404,7 +402,7 @@
                     ctx.beginPath(); ctx.arc(snap.point.x, snap.point.y, 12/zoom, 0, Math.PI*2); ctx.fill();
                 }
             } else {
-                ctx.fillStyle = 'rgba(255, 59, 48, 0.6)'; // iOS Red
+                ctx.fillStyle = 'rgba(255, 59, 48, 0.6)'; 
                 ctx.fillRect(worldMouseX - 20, worldMouseY - 20, 40, 40);
             }
 
@@ -482,8 +480,17 @@
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     backgroundImage.onload = () => {
-                        panX = (canvas2d.width - backgroundImage.width)/2;
-                        panY = (canvas2d.height - backgroundImage.height)/2;
+                        // Logika Auto-Fit Gambar
+                        const scaleX = canvas2d.width / backgroundImage.width;
+                        const scaleY = canvas2d.height / backgroundImage.height;
+                        // Ambil skala terkecil lalu kalikan 0.85 agar ada jarak sisa (margin)
+                        const fitScale = Math.min(scaleX, scaleY) * 0.85;
+                        
+                        zoom = fitScale;
+                        // Menengahkan posisi gambar yang sudah diskalakan
+                        panX = (canvas2d.width - (backgroundImage.width * zoom)) / 2;
+                        panY = (canvas2d.height - (backgroundImage.height * zoom)) / 2;
+                        
                         drawCanvas();
                     };
                     backgroundImage.src = event.target.result;
@@ -506,13 +513,11 @@
         document.getElementById('floorColor').addEventListener('input', generate3D);
         
         document.getElementById('showGrid2D').addEventListener('change', drawCanvas);
-        // Event listener untuk 3D grid ada di bagian Scene 3D
-
 
         // --- 3D SCENE ---
         const container3d = document.getElementById('canvas3d-container');
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x333333); // Background 3D sedikit lebih gelap agar elegan
+        scene.background = new THREE.Color(0x333333); 
 
         const camera = new THREE.PerspectiveCamera(50, container3d.clientWidth / container3d.clientHeight, 1, 15000);
         camera.position.set(0, 800, 800); 
@@ -525,14 +530,12 @@
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
 
-        // Pencahayaan
         scene.add(new THREE.AmbientLight(0xffffff, 0.6));
         const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
         dirLight.position.set(200, 600, 200);
         dirLight.castShadow = true;
         scene.add(dirLight);
 
-        // Lantai Dasar
         const floorGeo = new THREE.PlaneGeometry(8000, 8000);
         const floorMat = new THREE.MeshStandardMaterial({ color: document.getElementById('floorColor').value });
         const floorMesh = new THREE.Mesh(floorGeo, floorMat);
@@ -540,12 +543,11 @@
         floorMesh.receiveShadow = true;
         scene.add(floorMesh);
 
-        // --- GRID 3D ---
-        const gridHelper3D = new THREE.GridHelper(8000, 160, 0x888888, 0x555555); // 8000 ukuran, 160 divisi (kotak 50x50)
-        gridHelper3D.position.y = 1; // Naikkan sedikit agar tidak bentrok (z-fighting) dengan lantai
+        // GRID 3D 
+        const gridHelper3D = new THREE.GridHelper(8000, 160, 0x888888, 0x555555); 
+        gridHelper3D.position.y = 1; 
         scene.add(gridHelper3D);
 
-        // Binding toggle Grid 3D
         document.getElementById('showGrid3D').addEventListener('change', (e) => {
             gridHelper3D.visible = e.target.checked;
         });
