@@ -92,7 +92,7 @@
 
         .sidebar-header h3 { margin: 0; font-size: 16px; color: #18181b; }
 
-        /* Style Toggle Bahasa */
+        /* Style Toggle Bahasa Tanpa Emoji */
         .lang-btn-group {
             display: flex;
             border: 1px solid #d4d4d8;
@@ -102,7 +102,7 @@
         }
 
         .lang-btn {
-            padding: 4px 10px;
+            padding: 4px 8px;
             font-size: 11px;
             font-weight: bold;
             border: none;
@@ -233,8 +233,8 @@
         <div class="sidebar-header">
             <h3 id="txtTitle">BIM Architect</h3>
             <div class="lang-btn-group">
-                <button class="lang-btn active" id="btnLangID" onclick="setLanguage('id')">ID</button>
-                <button class="lang-btn" id="btnLangEN" onclick="setLanguage('en')">EN</button>
+                <button class="lang-btn active" id="btnLangID">ID</button>
+                <button class="lang-btn" id="btnLangEN">EN</button>
             </div>
         </div>
         
@@ -350,7 +350,6 @@
             
             <button id="helpBtnToggle" title="Panduan">?</button>
 
-            <!-- Popup/Modal Bantuan -->
             <div id="helpModal">
                 <div class="help-content">
                     <button class="close-help" id="closeHelpBtn">&times;</button>
@@ -378,7 +377,7 @@
     </div>
 
     <script>
-        // === TRANSLATION LOGIC (GLOBAL & DIRECT FUNCTION) ===
+        // === TRANSLATION LOGIC PERBAIKAN ===
         let currentLang = 'id';
         const texts = {
             id: {
@@ -415,12 +414,12 @@
             }
         };
 
-        window.setLanguage = function(lang) {
+        function setLanguage(lang) {
             currentLang = lang;
             const t = texts[currentLang];
             
-            document.getElementById('btnLangID').className = 'lang-btn' + (lang === 'id' ? ' active' : '');
-            document.getElementById('btnLangEN').className = 'lang-btn' + (lang === 'en' ? ' active' : '');
+            document.getElementById('btnLangID').classList.toggle('active', lang === 'id');
+            document.getElementById('btnLangEN').classList.toggle('active', lang === 'en');
 
             document.getElementById('txtTitle').innerText = t.title;
             document.getElementById('txtSec1').innerText = t.sec1;
@@ -470,7 +469,10 @@
             document.getElementById('txtGuide1').innerHTML = t.g1;
             document.getElementById('txtGuide2').innerHTML = t.g2;
             document.getElementById('txtGuide3').innerHTML = t.g3;
-        };
+        }
+
+        document.getElementById('btnLangID').addEventListener('click', () => setLanguage('id'));
+        document.getElementById('btnLangEN').addEventListener('click', () => setLanguage('en'));
 
         // === UI SIDEBAR TOGGLE & GUIDE TOGGLE ===
         const sidebar = document.getElementById('sidebar');
@@ -530,15 +532,14 @@
         inputWallH.addEventListener('change', () => { saveState(); update3D(); });
         inputWallT.addEventListener('change', () => { saveState(); update3D(); draw2D(); });
 
-        // === INITIALIZE CANVAS (INSTANT ACTIVE) ===
-        let scale = 0.8; let panX = 0, panY = 0; let isPanning = false, startPanX = 0, startPanY = 0;
+        // === INITIALIZE CANVAS (FREE DRAWING DEFAULT) ===
+        let scale = 1; let panX = 0, panY = 0; let isPanning = false, startPanX = 0, startPanY = 0;
         let touchStartDist = 0, initialScale = 1;
 
         function initDefaultCanvas() {
             imgElement.src = ""; imgElement.style.display = "none";
             isTracingMode = false;
             
-            // Set Ukuran Fixed Langsung (Tanpa timeout)
             canvas.width = 5000; 
             canvas.height = 5000;
             
@@ -547,16 +548,18 @@
             
             scale3D = 0.02;
 
-            const panelWidth = workspaceContainer.clientWidth || (window.innerWidth / 2); 
-            const panelHeight = workspaceContainer.clientHeight || window.innerHeight;
-            
-            panX = (panelWidth - (canvas.width * scale)) / 2;
-            panY = (panelHeight - (canvas.height * scale)) / 2;
-            
-            applyTransform(); 
-            draw2D();
+            setTimeout(() => {
+                const panelWidth = workspaceContainer.clientWidth; 
+                const panelHeight = workspaceContainer.clientHeight;
+                scale = 0.8; 
+                panX = (panelWidth - (canvas.width * scale)) / 2;
+                panY = (panelHeight - (canvas.height * scale)) / 2;
+                applyTransform(); 
+                draw2D();
+            }, 50);
         }
 
+        window.addEventListener('load', () => { initDefaultCanvas(); });
         function applyTransform() { workspace.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`; }
 
         // === UNDO / REDO ===
@@ -794,16 +797,16 @@
         document.getElementById('flipHingeBtn').addEventListener('click', () => { if (selectedItem && selectedItem.type === 'door') { saveState(); selectedItem.flipHinge = !selectedItem.flipHinge; update3D(); draw2D(); }});
         document.getElementById('delObjBtn').addEventListener('click', () => { if (selectedItem) { saveState(); if (selectedItem.lineIndex !== undefined) openings = openings.filter(o => o.id !== selectedItem.id); else freeObjects = freeObjects.filter(o => o.id !== selectedItem.id); closeEditPanel(); update3D(); draw2D(); }});
 
-        // === FUNGSI MENGGAMBAR GRID KE CANVAS ===
+        // === FUNGSI MENGGAMBAR GRID LANGSUNG KE CANVAS (DIJAMIN MUNCUL) ===
         function drawCanvasGrid() {
             if (isTracingMode) return; 
             ctx.save();
             ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillRect(0, 0, canvas.width, canvas.height); // Warnai alas kanvas menjadi putih bersih
             
-            ctx.strokeStyle = '#e4e4e7';
+            ctx.strokeStyle = '#d4d4d8';
             ctx.lineWidth = 1;
-            const gridSize = 50; 
+            const gridSize = 50; // 1 Kotak = 50px (Skala 1 Meter)
             
             for (let x = 0; x <= canvas.width; x += gridSize) {
                 ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
@@ -931,12 +934,6 @@
         document.getElementById('arBtn').addEventListener('click', () => { if (lines.length === 0 && freeObjects.length === 0) return alert(currentLang==='id'?"Buat denah terlebih dahulu sebelum melihat dalam AR!":"Create a floorplan first before viewing in AR!"); new THREE.GLTFExporter().parse(modelGroup, (gltf) => { document.getElementById('arViewer').src = URL.createObjectURL(new Blob([gltf], { type: 'model/gltf-binary' })); arModal.style.display = 'flex'; }, { binary: true }); });
         document.getElementById('closeArBtn').addEventListener('click', () => arModal.style.display = 'none');
         document.getElementById('exportBtn').onclick = () => { new THREE.GLTFExporter().parse(modelGroup, (gltf) => { const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([gltf], { type: 'application/octet-stream' })); link.download = 'denah_3d_architect.glb'; link.click(); }, { binary: true }); };
-
-        // INITIALIZE ON LOAD
-        window.addEventListener('DOMContentLoaded', () => {
-            initDefaultCanvas();
-            setLanguage('id');
-        });
     </script>
 </body>
 </html>
