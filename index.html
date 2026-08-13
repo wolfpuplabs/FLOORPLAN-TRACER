@@ -39,9 +39,9 @@
             touch-action: none; 
         }
 
-        /* --- SIDEBAR STYLE (DIUBAH MENJADI 160px) --- */
+        /* --- SIDEBAR STYLE (160px) --- */
         #sidebar {
-            width: 160px; /* Lebar dibuat setengahnya */
+            width: 160px;
             background: #ffffff;
             border-right: 1px solid #c8c8cc;
             display: flex;
@@ -54,67 +54,32 @@
         }
 
         #sidebar.collapsed {
-            margin-left: -160px; /* Menyesuaikan lebar yang baru */
+            margin-left: -160px; 
         }
 
         #sidebarToggleBtn {
-            position: absolute;
-            top: 20px;
-            right: -32px;
-            width: 32px;
-            height: 50px;
-            background: #ffffff;
-            border: 1px solid #c8c8cc;
-            border-left: none; 
-            border-radius: 0 8px 8px 0;
-            cursor: pointer;
-            z-index: 60;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            font-weight: bold;
-            color: #3f3f46;
-            box-shadow: 4px 0 6px rgba(0,0,0,0.05);
-            transition: 0.2s;
+            position: absolute; top: 20px; right: -32px; width: 32px; height: 50px;
+            background: #ffffff; border: 1px solid #c8c8cc; border-left: none; 
+            border-radius: 0 8px 8px 0; cursor: pointer; z-index: 60;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; font-weight: bold; color: #3f3f46;
+            box-shadow: 4px 0 6px rgba(0,0,0,0.05); transition: 0.2s;
         }
-        
         #sidebarToggleBtn:hover { background: #f4f4f5; color: #2563eb; }
 
-        /* Header dibuat menumpuk ke bawah agar muat */
         .sidebar-header {
-            padding: 12px 10px;
-            border-bottom: 1px solid #e4e4e7;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            align-items: flex-start;
-            background: #fafafa;
+            padding: 12px 10px; border-bottom: 1px solid #e4e4e7;
+            display: flex; flex-direction: column; gap: 8px; align-items: flex-start; background: #fafafa;
         }
 
         .sidebar-header h3 { margin: 0; font-size: 14px; color: #18181b; line-height: 1.2; }
 
         .lang-btn-group {
-            display: flex;
-            width: 100%;
-            border: 1px solid #d4d4d8;
-            border-radius: 6px;
-            overflow: hidden;
-            background: #e4e4e7;
+            display: flex; width: 100%; border: 1px solid #d4d4d8; border-radius: 6px; overflow: hidden; background: #e4e4e7;
         }
-
         .lang-btn {
-            flex: 1;
-            padding: 4px 0;
-            font-size: 10px;
-            font-weight: bold;
-            border: none;
-            background: transparent;
-            color: #71717a;
-            cursor: pointer;
-            text-align: center;
+            flex: 1; padding: 4px 0; font-size: 10px; font-weight: bold; border: none; background: transparent; color: #71717a; cursor: pointer; text-align: center;
         }
-
         .lang-btn.active { background: #2563eb; color: #ffffff; }
 
         .sidebar-content { flex: 1; overflow-y: auto; }
@@ -122,7 +87,6 @@
         .sidebar-section h4 { margin: 0 0 10px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #71717a; font-weight: 700; }
         .sidebar-section label { display: block; font-size: 11px; font-weight: 600; margin-bottom: 4px; color: #3f3f46; }
 
-        /* Tombol & Input dikecilkan */
         button, select, input[type="number"], input[type="file"]::file-selector-button { 
             padding: 6px 8px; cursor: pointer; border: 1px solid #d4d4d8; background: #ffffff; 
             border-radius: 4px; font-size: 11px; color: #3f3f46; transition: 0.15s; width: 100%;
@@ -136,11 +100,22 @@
         button:disabled { cursor: not-allowed; opacity: 0.4; }
         button.active { background: #2563eb; color: white; border-color: #1d4ed8; font-weight: 600; }
         
+        /* STYLE KHUSUS TOMBOL ALAT GAMBAR (ICONS) */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+        .tool-btn {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 6px; height: 55px; padding: 6px; line-height: 1;
+        }
+        .tool-btn svg { width: 20px; height: 20px; stroke-width: 1.8; }
+        .tool-btn span { font-size: 10px; font-weight: 600; }
+        .tool-btn-wide {
+            display: flex; flex-direction: row; align-items: center; justify-content: center;
+            gap: 8px; height: 36px; grid-column: span 2;
+        }
+        .tool-btn-wide svg { width: 16px; height: 16px; stroke-width: 2; }
+        .tool-btn-wide span { font-size: 11px; font-weight: 600; }
+
         .btn-row { display: flex; gap: 6px; margin-bottom: 8px; }
-        
-        /* Grid 2 kolom diubah menjadi 1 kolom agar text muat sempurna */
-        .grid-2 { display: grid; grid-template-columns: 1fr; gap: 6px; margin-bottom: 8px; }
-        
         .btn-danger { background: #fee2e2; color: #dc2626; border-color: #fca5a5; font-weight: 600; }
         .btn-danger:hover { background: #fecaca; }
         .btn-primary { background: #10b981; color: white; border-color: #059669; font-weight: bold; }
@@ -226,16 +201,33 @@
 
             <div class="sidebar-section">
                 <h4 id="txtSec2">Alat Gambar</h4>
+                
+                <!-- GRID ICON BARU -->
                 <div class="grid-2">
-                    <button id="modeSelect">Pilih / Edit</button>
-                    <button id="modeWall" class="active">Tembok</button>
-                    <button id="modeDoor">Pintu</button>
-                    <button id="modeWindow">Jendela</button>
-                    <button id="modeStairs">Tangga</button>
+                    <button id="modeSelect" class="tool-btn">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path><path d="M13 13l6 6"></path></svg>
+                        <span id="txtModeSelect">Pilih / Edit</span>
+                    </button>
+                    <button id="modeWall" class="tool-btn active">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"></path><path d="M4 8h16"></path><path d="M4 16h16"></path><path d="M10 4v4"></path><path d="M14 8v8"></path><path d="M8 16v4"></path><path d="M16 16v4"></path></svg>
+                        <span id="txtModeWall">Tembok</span>
+                    </button>
+                    <button id="modeDoor" class="tool-btn">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16"></path><path d="M14 12v.01"></path></svg>
+                        <span id="txtModeDoor">Pintu</span>
+                    </button>
+                    <button id="modeWindow" class="tool-btn">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><path d="M3 12h18"></path><path d="M12 3v18"></path></svg>
+                        <span id="txtModeWindow">Jendela</span>
+                    </button>
+                    <button id="modeStairs" class="tool-btn-wide">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h5v-5h5v-5h5V6"></path></svg>
+                        <span id="txtModeStairs">Tangga</span>
+                    </button>
                 </div>
                 
-                <select id="furnitureSelect" style="margin-bottom: 12px;">
-                    <option value="" id="txtOptDefault">+ Tambah Mebel...</option>
+                <select id="furnitureSelect" style="margin-bottom: 12px; margin-top: 4px;">
+                    <option value="" id="txtOptDefault">+ Mebel...</option>
                     <optgroup label="Ruang Utama" id="optGrp1">
                         <option value="bed" id="optBed">Kasur</option>
                         <option value="sofa" id="optSofa">Sofa</option>
@@ -259,11 +251,11 @@
                     <span id="txtBtnSnap">Snap (Magnet)</span>
                 </button>
 
-                <div>
-                    <label id="txtLblWallH">Tinggi Tembok (m)</label>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <label id="txtLblWallH" style="margin:0;">Tinggi Tembok (m)</label>
                     <input type="number" id="valWallH" value="3.0" step="0.1">
                     
-                    <label id="txtLblWallT" style="margin-top: 4px;">Tebal Tembok (m)</label>
+                    <label id="txtLblWallT" style="margin-top: 4px; margin-bottom:0;">Tebal Tembok (m)</label>
                     <input type="number" id="valWallT" value="0.15" step="0.05">
                 </div>
             </div>
@@ -398,9 +390,14 @@
             document.getElementById('txtSec2').innerText = t.sec2; document.getElementById('txtSec3').innerText = t.sec3;
             document.getElementById('txtSec4').innerText = t.sec4; document.getElementById('txtLblUpload').innerText = t.lblUpload;
             document.getElementById('undoBtn').innerText = t.undo; document.getElementById('redoBtn').innerText = t.redo;
-            document.getElementById('clearBtn').innerText = t.clear; document.getElementById('modeSelect').innerText = t.sel;
-            document.getElementById('modeWall').innerText = t.wall; document.getElementById('modeDoor').innerText = t.door;
-            document.getElementById('modeWindow').innerText = t.win; document.getElementById('modeStairs').innerText = t.stairs;
+            document.getElementById('clearBtn').innerText = t.clear; 
+            
+            document.getElementById('txtModeSelect').innerText = t.sel;
+            document.getElementById('txtModeWall').innerText = t.wall; 
+            document.getElementById('txtModeDoor').innerText = t.door;
+            document.getElementById('txtModeWindow').innerText = t.win; 
+            document.getElementById('txtModeStairs').innerText = t.stairs;
+            
             document.getElementById('txtOptDefault').innerText = t.optDef; document.getElementById('optGrp1').label = t.grp1;
             document.getElementById('optGrp2').label = t.grp2; document.getElementById('optGrp3').label = t.grp3;
             document.getElementById('txtBtnSnap').innerText = t.snapBtn; document.getElementById('txtLblWallLen').innerText = t.lblWallLen;
@@ -637,16 +634,16 @@
 
         // === TOOLS & DRAWING LOGIC ===
         function stopDrawing() { if (isDrawing && currentLine) draw2D(); isDrawing = false; currentLine = null; draw2D(); }
-        document.getElementById('modeSelect').onclick = (e) => setMode('select', e.target);
-        document.getElementById('modeWall').onclick = (e) => setMode('wall', e.target);
-        document.getElementById('modeDoor').onclick = (e) => setMode('door', e.target);
-        document.getElementById('modeWindow').onclick = (e) => setMode('window', e.target);
-        document.getElementById('modeStairs').onclick = (e) => setMode('stairs', e.target);
+        document.getElementById('modeSelect').onclick = (e) => setMode('select', e.currentTarget);
+        document.getElementById('modeWall').onclick = (e) => setMode('wall', e.currentTarget);
+        document.getElementById('modeDoor').onclick = (e) => setMode('door', e.currentTarget);
+        document.getElementById('modeWindow').onclick = (e) => setMode('window', e.currentTarget);
+        document.getElementById('modeStairs').onclick = (e) => setMode('stairs', e.currentTarget);
         furnitureSelect.addEventListener('change', (e) => { if(e.target.value) setMode(e.target.value, null); });
 
         function setMode(newMode, btn) {
             stopDrawing(); mode = newMode; 
-            document.querySelectorAll('#sidebar .grid-2 > button').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#sidebar .tool-btn, #sidebar .tool-btn-wide').forEach(b => b.classList.remove('active'));
             if(btn) btn.classList.add('active');
             if (mode !== 'select') closeEditPanel();
             if(window.innerWidth <= 1100 && mode !== 'select' && !sidebar.classList.contains('collapsed')){ sidebar.classList.add('collapsed'); updateToggleIcon(); }
