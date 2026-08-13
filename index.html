@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Floor Plan Tracer - Ultimate (Undo/Redo)</title>
-    <!-- Load Three.js & Addons dari CDN -->
+    <title>3D Floor Plan Tracer - Ultimate (Fixed Sync)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
@@ -22,12 +21,12 @@
         
         #main-container { display: flex; flex: 1; overflow: hidden; }
         
-        #left-panel { flex: 1; position: relative; background: #ccc; overflow: hidden; border-right: 2px solid #999; touch-action: none; cursor: grab; }
-        #left-panel:active { cursor: grabbing; }
+        #left-panel { flex: 1; position: relative; background: #ccc; overflow: hidden; border-right: 2px solid #999; touch-action: none; cursor: crosshair; }
+        #left-panel:active { cursor: crosshair; }
         
         #right-panel { flex: 1; position: relative; background: #222; }
 
-        #workspace { transform-origin: 0 0; }
+        #workspace { transform-origin: 0 0; position: relative; }
         #floorplan-img { display: block; max-width: none; pointer-events: none; user-select: none; }
         #draw-canvas { position: absolute; top: 0; left: 0; }
 
@@ -47,13 +46,11 @@
         <input type="file" id="upload" accept="image/*" style="max-width: 200px;">
         <div style="border-left: 1px solid #ccc; height: 20px;"></div>
         
-        <!-- Mode Editor -->
         <button id="modeWall" class="active">Gambar Tembok</button>
         <button id="modeDoor">🚪 Pintu</button>
         <button id="modeWindow">🪟 Jendela</button>
         
         <div style="border-left: 1px solid #ccc; height: 20px;"></div>
-        <!-- Undo / Redo Buttons -->
         <button id="undoBtn" disabled>Undo</button>
         <button id="redoBtn" disabled>Redo</button>
         <button id="clearBtn">Hapus Semua</button>
@@ -63,7 +60,6 @@
     </div>
 
     <div id="main-container">
-        <!-- 2D View -->
         <div id="left-panel">
             <div id="workspace">
                 <img id="floorplan-img" src="">
@@ -76,7 +72,6 @@
                 - <b>Klik Tembok</b>: Taruh objek (Pintu/Jendela)
             </div>
         </div>
-        <!-- 3D View -->
         <div id="right-panel"></div>
     </div>
 
@@ -169,13 +164,17 @@
         });
 
         leftPanel.addEventListener('mousedown', (e) => {
-            if (e.button === 2 || e.button === 1) { 
+            if (e.button === 2 || e.button === 1) { // Kanan atau Tengah Mouse
                 isPanning = true;
                 startPanX = e.clientX - panX;
                 startPanY = e.clientY - panY;
+                leftPanel.style.cursor = 'grabbing';
             }
         });
-        window.addEventListener('mouseup', () => isPanning = false);
+        window.addEventListener('mouseup', () => {
+            isPanning = false;
+            leftPanel.style.cursor = 'crosshair';
+        });
         window.addEventListener('mousemove', (e) => {
             if (isPanning) {
                 panX = e.clientX - startPanX;
@@ -201,11 +200,18 @@
             isDrawing = false; currentLine = null; draw2D();
         }
 
+        // ==========================================
+        // FITUR YANG DIPERBAIKI (PERHITUNGAN KURSOR)
+        // ==========================================
         function getTrueCoords(e) {
             const rect = canvas.getBoundingClientRect();
+            // Menghitung rasio sebenarnya antara gambar canvas internal dengan ukuran visual di layar
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
             return {
-                x: (e.clientX - rect.left - panX) / scale,
-                y: (e.clientY - rect.top - panY) / scale
+                x: (e.clientX - rect.left) * scaleX,
+                y: (e.clientY - rect.top) * scaleY
             };
         }
 
@@ -218,13 +224,13 @@
         }
 
         canvas.addEventListener('mousedown', (e) => {
-            if (e.button !== 0) return; 
+            if (e.button !== 0) return; // Hanya jalankan jika yang ditekan Klik Kiri
             let { x, y } = getTrueCoords(e);
             
             if (mode === 'wall') {
                 let snap = getSnapped(x, y);
                 if (!isDrawing) {
-                    saveState(); // Save state sebelum mulai garis baru
+                    saveState(); 
                     isDrawing = true;
                     currentLine = { start: snap, end: snap };
                 } else {
@@ -236,7 +242,7 @@
             } else if (mode === 'door' || mode === 'window') {
                 let nearest = findNearestLine(x, y);
                 if (nearest) {
-                    saveState(); // Save state sebelum menaruh pintu/jendela
+                    saveState(); 
                     openings.push({
                         type: mode,
                         lineIndex: nearest.index,
@@ -452,7 +458,7 @@
         }
 
         document.getElementById('clearBtn').onclick = () => { 
-            saveState(); // Save state sebelum menghapus semua
+            saveState(); 
             lines = []; openings = []; draw2D(); update3D(); 
         };
         
