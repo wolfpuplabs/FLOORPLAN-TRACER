@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ArchiPlan 3D - Ultimate Web CAD (Fixed Gestures & Curves)</title>
+    <title>ArchiPlan 3D - Fixed Ortho Snap</title>
     <style>
         :root { --bg: #1e1e1e; --panel: #252526; --accent: #007acc; --text: #e0e0e0; --danger: #da3633; --success: #2ea043; }
         body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; overflow: hidden; touch-action: none; }
@@ -67,7 +67,7 @@
                 <button id="btn-clear-all" class="danger">Reset</button>
             </div>
 
-            <p class="hint" id="tool-hint"><strong>Desktop:</strong> Scroll untuk Zoom, Klik Kanan selesai.<br><strong>Tablet:</strong> 2 Jari Zoom+Pan, Double Tap selesai.</p>
+            <p class="hint" id="tool-hint"><strong>Desktop:</strong> Scroll Zoom, Klik Kanan Selesai.<br><strong>Tablet:</strong> 2 Jari Zoom+Pan, Double Tap Selesai.</p>
             <canvas id="floorplan" width="800" height="800"></canvas>
 
             <div id="props-panel">
@@ -97,7 +97,6 @@
         let bgImage = null; let walls = []; let currentPath = []; let objects = []; let historyStack = [];
         let currentTool = 'wall'; let hoverObject = null; let selectedObject = null;
 
-        // Camera & Gestures
         let camZoom = 1; let camPanX = 0; let camPanY = 0;
         let mouseWorldPos = {x:0, y:0}; let snappedPoint = null; 
         
@@ -105,22 +104,14 @@
         let isPinching = false; let initialPinchDist = 0; let initialZoom = 1; let lastMid = {x:0, y:0};
         let lastTapTime = 0;
 
-        // Curved Wall State
         let curveStep = 0; let curveStart = null; let curveEnd = null;
-
         const defSize = { door: 1.0, window: 1.5, stairs: 1.5, bed: 1.8, table: 1.2 };
 
         function saveState() { historyStack.push({ walls: JSON.parse(JSON.stringify(walls)), objects: JSON.parse(JSON.stringify(objects)) }); }
-        
-        function getCanvasPos(clientX, clientY) {
-            const rect = canvas.getBoundingClientRect();
-            return { x: (clientX - rect.left) * (canvas.width / rect.width), y: (clientY - rect.top) * (canvas.height / rect.height) };
-        }
-        function getWorldPos(canvasX, canvasY) {
-            return { x: (canvasX - canvas.width/2) / camZoom + canvas.width/2 - camPanX, y: (canvasY - canvas.height/2) / camZoom + canvas.height/2 - camPanY };
-        }
+        function getCanvasPos(clientX, clientY) { const rect = canvas.getBoundingClientRect(); return { x: (clientX - rect.left) * (canvas.width / rect.width), y: (clientY - rect.top) * (canvas.height / rect.height) }; }
+        function getWorldPos(canvasX, canvasY) { return { x: (canvasX - canvas.width/2) / camZoom + canvas.width/2 - camPanX, y: (canvasY - canvas.height/2) / camZoom + canvas.height/2 - camPanY }; }
 
-        // --- MATH & SNAPPING ---
+        // --- MATH & ADVANCED SNAPPING ---
         function getClosestPointOnLine(p, a, b) {
             const atob = { x: b.x - a.x, y: b.y - a.y }; const atop = { x: p.x - a.x, y: p.y - a.y };
             const lenSq = atob.x * atob.x + atob.y * atob.y; 
@@ -141,12 +132,32 @@
             return nearest;
         }
 
-        function applyOrthogonalSnap(lastPt, currentPt) {
-            if(!document.getElementById('toggle-snap').checked) return currentPt;
-            const dx = currentPt.x - lastPt.x; const dy = currentPt.y - lastPt.y;
-            if (Math.abs(dx) > Math.abs(dy) * 1.5) return { x: currentPt.x, y: lastPt.y };
-            if (Math.abs(dy) > Math.abs(dx) * 1.5) return { x: lastPt.x, y: currentPt.y };
-            return currentPt;
+        // PERBAIKAN: Resolve Snapping dengan Prioritas Ortho yang Benar
+        function getResolvedPos(rawPos, applyOrtho) {
+            let rawSnap = findWallSnap(rawPos);
+            let lastPt = currentPath.length > 0 ? currentPath[currentPath.length - 1] : null;
+            let orthoActive = document.getElementById('toggle-snap').checked && lastPt && applyOrtho;
+
+            let finalPos = { x: rawPos.x, y: rawPos.y };
+            
+            if (orthoActive) {
+                const dx = rawPos.x - lastPt.x;
+                const dy = rawPos.y - lastPt.y;
+                
+                if (Math.abs(dx) > Math.abs(dy)) { 
+                    // Terkunci Horizontal
+                    finalPos.y = lastPt.y; 
+                    if (rawSnap) finalPos.x = rawSnap.x; // Proyeksikan X ke tembok yang disnap
+                } else { 
+                    // Terkunci Vertikal
+                    finalPos.x = lastPt.x; 
+                    if (rawSnap) finalPos.y = rawSnap.y; // Proyeksikan Y ke tembok yang disnap
+                }
+            } else if (rawSnap) {
+                finalPos = { x: rawSnap.x, y: rawSnap.y };
+            }
+
+            return { pos: finalPos, hasSnap: !!rawSnap };
         }
 
         // --- RENDER 2D ---
@@ -154,26 +165,26 @@
             ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
             ctx.strokeStyle = isDraft ? 'rgba(0, 122, 204, 0.4)' : '#222'; 
             ctx.lineWidth = isDraft ? 6 : 10; ctx.stroke();
+            let dx = p2.x - p1.x; let dy = p2.y - p1.y; let distPx = Math.hypot(dx, dy);
+            if (distPx > PIXELS_PER_METER * 0.5) {
+                let distM = (distPx / PIXELS_PER_METER).toFixed(2); let midX = (p1.x + p2.x) / 2; let midY = (p1.y + p2.y) / 2; let angle = Math.atan2(dy, dx);
+                if (angle > Math.PI/2 || angle < -Math.PI/2) angle += Math.PI; 
+                ctx.save(); ctx.translate(midX, midY); ctx.rotate(angle);
+                let textW = ctx.measureText(distM + 'm').width; ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'; ctx.fillRect(-textW/2 - 4, -18, textW + 8, 18);
+                ctx.fillStyle = isDraft ? '#005999' : '#222'; ctx.font = 'bold 14px Segoe UI'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+                ctx.fillText(distM + 'm', 0, -2); ctx.restore();
+            }
         }
 
         function drawObject(obj, isPreview=false) {
-            ctx.save(); ctx.translate(obj.x, obj.y); ctx.rotate(obj.angle); 
-            ctx.globalAlpha = isPreview ? 0.6 : 1.0;
+            ctx.save(); ctx.translate(obj.x, obj.y); ctx.rotate(obj.angle); ctx.globalAlpha = isPreview ? 0.6 : 1.0;
             if (selectedObject === obj) { ctx.shadowColor = '#ff9800'; ctx.shadowBlur = 10; }
             let wPx = (obj.width || defSize[obj.type]) * PIXELS_PER_METER; let flip = obj.flip ? -1 : 1;
-
-            if (obj.type === 'door') {
-                ctx.fillStyle = '#8B4513'; ctx.fillRect(-wPx/2, -6, wPx, 12); ctx.beginPath(); ctx.arc(-wPx/2 * flip, -6 * flip, wPx, 0, Math.PI/2 * flip, flip<0); ctx.strokeStyle='#8B4513'; ctx.lineWidth=2; ctx.stroke();
-            } else if (obj.type === 'window') {
-                ctx.fillStyle = '#87CEFA'; ctx.fillRect(-wPx/2, -5, wPx, 10); ctx.strokeStyle = '#333'; ctx.lineWidth=2; ctx.strokeRect(-wPx/2, -5, wPx, 10);
-            } else if (obj.type === 'stairs') {
-                ctx.fillStyle = '#aaa'; ctx.fillRect(-wPx/2, -20, wPx, 40); ctx.strokeStyle='#333'; ctx.lineWidth=1;
-                for(let i=-20; i<=20; i+=8) { ctx.beginPath(); ctx.moveTo(-wPx/2, i); ctx.lineTo(wPx/2, i); ctx.stroke(); }
-            } else if (obj.type === 'bed') {
-                ctx.fillStyle = '#6c5ce7'; ctx.fillRect(-wPx/2, -wPx*0.7, wPx, wPx*1.4); ctx.fillStyle = '#a29bfe'; ctx.fillRect(-wPx/2+5, -wPx*0.7+5, wPx-10, 20);
-            } else if (obj.type === 'table') {
-                ctx.fillStyle = '#d63031'; ctx.beginPath(); ctx.arc(0, 0, wPx/2, 0, Math.PI*2); ctx.fill();
-            }
+            if (obj.type === 'door') { ctx.fillStyle = '#8B4513'; ctx.fillRect(-wPx/2, -6, wPx, 12); ctx.beginPath(); ctx.arc(-wPx/2 * flip, -6 * flip, wPx, 0, Math.PI/2 * flip, flip<0); ctx.strokeStyle='#8B4513'; ctx.lineWidth=2; ctx.stroke();
+            } else if (obj.type === 'window') { ctx.fillStyle = '#87CEFA'; ctx.fillRect(-wPx/2, -5, wPx, 10); ctx.strokeStyle = '#333'; ctx.lineWidth=2; ctx.strokeRect(-wPx/2, -5, wPx, 10);
+            } else if (obj.type === 'stairs') { ctx.fillStyle = '#aaa'; ctx.fillRect(-wPx/2, -20, wPx, 40); ctx.strokeStyle='#333'; ctx.lineWidth=1; for(let i=-20; i<=20; i+=8) { ctx.beginPath(); ctx.moveTo(-wPx/2, i); ctx.lineTo(wPx/2, i); ctx.stroke(); }
+            } else if (obj.type === 'bed') { ctx.fillStyle = '#6c5ce7'; ctx.fillRect(-wPx/2, -wPx*0.7, wPx, wPx*1.4); ctx.fillStyle = '#a29bfe'; ctx.fillRect(-wPx/2+5, -wPx*0.7+5, wPx-10, 20);
+            } else if (obj.type === 'table') { ctx.fillStyle = '#d63031'; ctx.beginPath(); ctx.arc(0, 0, wPx/2, 0, Math.PI*2); ctx.fill(); }
             ctx.restore();
         }
 
@@ -187,49 +198,46 @@
             
             if (currentTool === 'wall' && currentPath.length > 0) {
                 for (let i = 0; i < currentPath.length - 1; i++) drawDimension(currentPath[i], currentPath[i+1], true);
-                if (mouseWorldPos) {
-                    let finalTarget = snappedPoint ? snappedPoint : applyOrthogonalSnap(currentPath[currentPath.length-1], mouseWorldPos);
-                    drawDimension(currentPath[currentPath.length-1], finalTarget, true);
-                }
+                if (mouseWorldPos) drawDimension(currentPath[currentPath.length-1], snappedPoint ? snappedPoint : mouseWorldPos, true);
                 ctx.fillStyle = '#ff4500'; currentPath.forEach(pt => { ctx.beginPath(); ctx.arc(pt.x, pt.y, 6, 0, Math.PI * 2); ctx.fill(); });
             }
 
-            // Render Curve Draft
             if (currentTool === 'curve' && curveStart) {
                 ctx.strokeStyle = 'rgba(0, 122, 204, 0.4)'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(curveStart.x, curveStart.y);
-                if (curveStep === 1) { ctx.lineTo(mouseWorldPos.x, mouseWorldPos.y); }
-                else if (curveStep === 2) { ctx.quadraticCurveTo(mouseWorldPos.x, mouseWorldPos.y, curveEnd.x, curveEnd.y); }
-                ctx.stroke();
-                ctx.fillStyle = '#ff4500'; ctx.beginPath(); ctx.arc(curveStart.x, curveStart.y, 6, 0, Math.PI*2); ctx.fill();
+                if (curveStep === 1) { ctx.lineTo(mouseWorldPos.x, mouseWorldPos.y); } else if (curveStep === 2) { ctx.quadraticCurveTo(mouseWorldPos.x, mouseWorldPos.y, curveEnd.x, curveEnd.y); }
+                ctx.stroke(); ctx.fillStyle = '#ff4500'; ctx.beginPath(); ctx.arc(curveStart.x, curveStart.y, 6, 0, Math.PI*2); ctx.fill();
                 if(curveEnd) { ctx.beginPath(); ctx.arc(curveEnd.x, curveEnd.y, 6, 0, Math.PI*2); ctx.fill(); }
             }
 
             if (snappedPoint && (currentTool === 'wall' || currentTool === 'curve')) { ctx.beginPath(); ctx.arc(snappedPoint.x, snappedPoint.y, 10, 0, Math.PI*2); ctx.strokeStyle = '#2ea043'; ctx.lineWidth = 3; ctx.stroke(); }
-
-            objects.forEach(obj => drawObject(obj));
-            if (hoverObject && currentTool !== 'select') drawObject(hoverObject, true);
-
+            objects.forEach(obj => drawObject(obj)); if (hoverObject && currentTool !== 'select') drawObject(hoverObject, true);
             ctx.restore();
         }
 
-        // --- INPUT HANDLERS (Separated for perfection) ---
-        function handleInputDown(pos) {
+        // --- INPUT HANDLERS ---
+        function handleInputDown(rawPos) {
             if (currentTool === 'pan') return;
             
             if (currentTool === 'wall') {
-                let finalPos = snappedPoint ? {x: snappedPoint.x, y: snappedPoint.y} : (currentPath.length > 0 ? applyOrthogonalSnap(currentPath[currentPath.length-1], pos) : pos);
-                currentPath.push(finalPos); 
+                let res = getResolvedPos(rawPos, true);
+                // Cegah duplikat titik berdekatan
+                if (currentPath.length > 0) {
+                    let last = currentPath[currentPath.length-1];
+                    if (Math.hypot(last.x - res.pos.x, last.y - res.pos.y) < 1) return;
+                }
+                currentPath.push(res.pos); 
+                mouseWorldPos = res.pos;
+                snappedPoint = res.hasSnap ? res.pos : null;
             } 
             else if (currentTool === 'curve') {
-                let finalPos = snappedPoint ? {x: snappedPoint.x, y: snappedPoint.y} : pos;
-                if (curveStep === 0) { curveStart = finalPos; curveStep = 1; } 
-                else if (curveStep === 1) { curveEnd = finalPos; curveStep = 2; } 
+                let res = getResolvedPos(rawPos, false);
+                if (curveStep === 0) { curveStart = res.pos; curveStep = 1; } 
+                else if (curveStep === 1) { curveEnd = res.pos; curveStep = 2; } 
                 else if (curveStep === 2) {
-                    // Generate subdivided points for quadratic bezier
                     let pts = [];
                     for(let t=0; t<=1; t+=0.05) {
-                        let x = (1-t)*(1-t)*curveStart.x + 2*(1-t)*t*pos.x + t*t*curveEnd.x;
-                        let y = (1-t)*(1-t)*curveStart.y + 2*(1-t)*t*pos.y + t*t*curveEnd.y;
+                        let x = (1-t)*(1-t)*curveStart.x + 2*(1-t)*t*rawPos.x + t*t*curveEnd.x;
+                        let y = (1-t)*(1-t)*curveStart.y + 2*(1-t)*t*rawPos.y + t*t*curveEnd.y;
                         pts.push({x, y});
                     }
                     saveState(); walls.push(pts); curveStep = 0; curveStart = null; curveEnd = null; generate3D();
@@ -237,26 +245,29 @@
             }
             else if (currentTool === 'select') {
                 selectedObject = null;
-                for(let i=objects.length-1; i>=0; i--) { if(Math.hypot(objects[i].x - pos.x, objects[i].y - pos.y) < 30/camZoom) { selectedObject = objects[i]; break; } }
+                for(let i=objects.length-1; i>=0; i--) { if(Math.hypot(objects[i].x - rawPos.x, objects[i].y - rawPos.y) < 30/camZoom) { selectedObject = objects[i]; break; } }
                 updatePropsPanel();
             }
             else if (hoverObject) { saveState(); objects.push({...hoverObject}); hoverObject = null; generate3D(); }
             draw2D();
         }
 
-        function handleInputMove(pos) {
-            mouseWorldPos = pos;
+        function handleInputMove(rawPos) {
             if (['wall', 'curve'].includes(currentTool)) {
-                snappedPoint = findWallSnap(mouseWorldPos);
+                let res = getResolvedPos(rawPos, currentTool === 'wall');
+                mouseWorldPos = res.pos;
+                snappedPoint = res.hasSnap ? res.pos : null;
             } else if (['door', 'window'].includes(currentTool)) {
                 let nearest = null; let minDist = 30 / camZoom;
                 walls.forEach(path => { for(let i=0; i<path.length-1; i++) {
-                    let snap = getClosestPointOnLine(mouseWorldPos, path[i], path[i+1]);
-                    if(Math.hypot(snap.x - mouseWorldPos.x, snap.y - mouseWorldPos.y) < minDist) { minDist = Math.hypot(snap.x - mouseWorldPos.x, snap.y - mouseWorldPos.y); nearest = snap; }
+                    let snap = getClosestPointOnLine(rawPos, path[i], path[i+1]);
+                    if(Math.hypot(snap.x - rawPos.x, snap.y - rawPos.y) < minDist) { minDist = Math.hypot(snap.x - rawPos.x, snap.y - rawPos.y); nearest = snap; }
                 }});
                 hoverObject = nearest ? { ...nearest, type: currentTool, width: defSize[currentTool], flip: false } : null;
+                mouseWorldPos = rawPos;
             } else if (['stairs', 'bed', 'table'].includes(currentTool)) {
-                hoverObject = { type: currentTool, x: mouseWorldPos.x, y: mouseWorldPos.y, angle: 0, width: defSize[currentTool], flip: false };
+                hoverObject = { type: currentTool, x: rawPos.x, y: rawPos.y, angle: 0, width: defSize[currentTool], flip: false };
+                mouseWorldPos = rawPos;
             }
             draw2D();
         }
@@ -276,7 +287,7 @@
         canvas.addEventListener('mouseup', () => { isPanning = false; });
         canvas.addEventListener('wheel', (e) => { e.preventDefault(); camZoom = Math.max(0.2, Math.min(camZoom * (e.deltaY > 0 ? 0.9 : 1.1), 8)); draw2D(); });
         
-        function finishWall() { if (currentPath.length > 1) { currentPath.pop(); saveState(); walls.push([...currentPath]); } currentPath = []; draw2D(); generate3D(); }
+        function finishWall() { if (currentPath.length > 1) { saveState(); walls.push([...currentPath]); } currentPath = []; mouseWorldPos=null; draw2D(); generate3D(); }
         canvas.addEventListener('contextmenu', (e) => { e.preventDefault(); finishWall(); }); 
 
         // --- IPAD TOUCH EVENTS ---
@@ -285,16 +296,13 @@
             if (e.touches.length === 2) {
                 isPinching = true; initialZoom = camZoom;
                 let cp1 = getCanvasPos(e.touches[0].clientX, e.touches[0].clientY); let cp2 = getCanvasPos(e.touches[1].clientX, e.touches[1].clientY);
-                initialPinchDist = Math.hypot(cp1.x - cp2.x, cp1.y - cp2.y);
-                lastMid = { x: (cp1.x + cp2.x)/2, y: (cp1.y + cp2.y)/2 };
-                return;
+                initialPinchDist = Math.hypot(cp1.x - cp2.x, cp1.y - cp2.y); lastMid = { x: (cp1.x + cp2.x)/2, y: (cp1.y + cp2.y)/2 }; return;
             }
             if (e.touches.length === 1) {
                 let now = Date.now();
                 if (now - lastTapTime < 300 && currentTool === 'wall' && currentPath.length > 0) { finishWall(); lastTapTime = 0; return; }
                 lastTapTime = now;
-                let cp = getCanvasPos(e.touches[0].clientX, e.touches[0].clientY);
-                handleInputDown(getWorldPos(cp.x, cp.y));
+                let cp = getCanvasPos(e.touches[0].clientX, e.touches[0].clientY); handleInputDown(getWorldPos(cp.x, cp.y));
             }
         }, {passive: false});
 
@@ -303,22 +311,17 @@
             if (isPinching && e.touches.length === 2) {
                 let cp1 = getCanvasPos(e.touches[0].clientX, e.touches[0].clientY); let cp2 = getCanvasPos(e.touches[1].clientX, e.touches[1].clientY);
                 let dist = Math.hypot(cp1.x - cp2.x, cp1.y - cp2.y); let mid = { x: (cp1.x + cp2.x)/2, y: (cp1.y + cp2.y)/2 };
-                camZoom = Math.max(0.2, Math.min(initialZoom * (dist / initialPinchDist), 8));
-                camPanX += (mid.x - lastMid.x) / camZoom; camPanY += (mid.y - lastMid.y) / camZoom;
+                camZoom = Math.max(0.2, Math.min(initialZoom * (dist / initialPinchDist), 8)); camPanX += (mid.x - lastMid.x) / camZoom; camPanY += (mid.y - lastMid.y) / camZoom;
                 lastMid = mid; draw2D(); return;
             }
-            if (e.touches.length === 1 && !isPinching) {
-                let cp = getCanvasPos(e.touches[0].clientX, e.touches[0].clientY); handleInputMove(getWorldPos(cp.x, cp.y));
-            }
+            if (e.touches.length === 1 && !isPinching) { let cp = getCanvasPos(e.touches[0].clientX, e.touches[0].clientY); handleInputMove(getWorldPos(cp.x, cp.y)); }
         }, {passive: false});
         canvas.addEventListener('touchend', (e) => { if(e.touches.length<2) isPinching = false; }, {passive: false});
 
         // --- PROPERTIES PANEL & UI ---
         const propsPanel = document.getElementById('props-panel'); const propWidth = document.getElementById('prop-width'); const propWidthVal = document.getElementById('prop-width-val');
         function updatePropsPanel() {
-            if (selectedObject) {
-                propsPanel.style.display = 'block'; document.getElementById('prop-title').innerText = `Edit ${selectedObject.type.toUpperCase()}`;
-                propWidth.value = selectedObject.width || defSize[selectedObject.type]; propWidthVal.innerText = propWidth.value + 'm';
+            if (selectedObject) { propsPanel.style.display = 'block'; document.getElementById('prop-title').innerText = `Edit ${selectedObject.type.toUpperCase()}`; propWidth.value = selectedObject.width || defSize[selectedObject.type]; propWidthVal.innerText = propWidth.value + 'm';
             } else { propsPanel.style.display = 'none'; }
         }
         propWidth.addEventListener('input', (e) => { if(selectedObject) { selectedObject.width = parseFloat(e.target.value); propWidthVal.innerText = e.target.value + 'm'; draw2D(); generate3D(); } });
@@ -351,7 +354,7 @@
                 path.forEach(pt => { const m = new THREE.Mesh(new THREE.CylinderGeometry(T/2, T/2, H, 16), matWall); m.position.set((pt.x - canvas.width/2)*scale, H/2, (pt.y - canvas.height/2)*scale); buildingGroup.add(m); });
                 for (let i = 0; i < path.length - 1; i++) {
                     let dx = path[i+1].x - path[i].x; let dy = path[i+1].y - path[i].y; let L = Math.hypot(dx, dy) * scale;
-                    if (L < 0.05) continue; // Aman dari micro-segments dari tembok curve
+                    if (L < 0.05) continue; 
                     let shape = new THREE.Shape(); shape.moveTo(0, 0); shape.lineTo(L, 0); shape.lineTo(L, H); shape.lineTo(0, H); shape.lineTo(0, 0);
 
                     objects.forEach(obj => {
