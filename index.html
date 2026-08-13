@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Floor Plan Tracer - BIM Architect + Furniture & AR</title>
+    <title>3D Floor Plan Tracer - BIM Architect + Full Furniture & AR</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -75,11 +75,23 @@
         <button id="modeStairs">🪜 Tangga</button>
         
         <select id="furnitureSelect">
-            <option value="">+ Mebel...</option>
-            <option value="bed">🛏️ Kasur</option>
-            <option value="sofa">🛋️ Sofa</option>
-            <option value="table">🪵 Meja</option>
-            <option value="chair">🪑 Kursi</option>
+            <option value="">+ Tambah Mebel...</option>
+            <optgroup label="Ruang Utama">
+                <option value="bed">🛏️ Kasur</option>
+                <option value="sofa">🛋️ Sofa</option>
+                <option value="table">🪵 Meja</option>
+                <option value="chair">🪑 Kursi</option>
+            </optgroup>
+            <optgroup label="Dapur (Kitchen)">
+                <option value="kitchen_set">🍳 Kitchen Set</option>
+                <option value="stove">🔥 Kompor</option>
+                <option value="fridge">🧊 Kulkas</option>
+            </optgroup>
+            <optgroup label="Kamar Mandi (Bath)">
+                <option value="toilet">🚽 Kloset / Toilet</option>
+                <option value="shower">🚿 Shower</option>
+                <option value="bathtub">🛁 Bathtub</option>
+            </optgroup>
         </select>
         
         <div style="border-left: 1px solid #ccc; height: 20px;"></div>
@@ -118,6 +130,9 @@
             <label>Rotasi: <span id="valRot">0</span>°</label>
             <input type="range" id="editRot" min="0" max="360" step="5" value="0">
 
+            <label>Skala Ukuran: <span id="valScale">1.0</span>x</label>
+            <input type="range" id="editScale" min="0.5" max="3.0" step="0.1" value="1.0">
+
             <div id="stairsControls">
                 <label>Jumlah Anak Tangga: <span id="valSteps">14</span></label>
                 <input type="range" id="editSteps" min="5" max="25" step="1" value="14">
@@ -146,9 +161,9 @@
                 <canvas id="draw-canvas"></canvas>
             </div>
             <div id="instructions">
-                <b>Fitur Mebel & Tangga:</b><br>
-                - <b>Tangga/Mebel</b>: Pilih ikon di toolbar lalu klik posisi di lantai.<br>
-                - <b>Edit</b>: Gunakan mode [👆 Pilih/Edit] untuk memutar, merubah anak tangga, atau menggeser objek.
+                <b>Fitur Baru:</b><br>
+                - <b>Tap & Drag</b>: Tekan tahan mebel di mode [Pilih/Edit] lalu geser posisi.<br>
+                - <b>Scale & Dapur/Mandi</b>: Ubah skala ukuran mebel, kitchen set, kompor, kulkas, & toilet.
             </div>
         </div>
         <div id="right-panel"></div>
@@ -162,7 +177,8 @@
         let mode = 'wall'; 
         let scale3D = 0.02; 
         
-        let selectedItem = null; // Bisa opening atau freeObject
+        let selectedItem = null;
+        let isDraggingObject = false; // Flag untuk Tap & Drag
         let undoStack = []; let redoStack = [];
 
         const workspace = document.getElementById('workspace');
@@ -231,7 +247,11 @@
                 leftPanel.style.cursor = 'grabbing';
             }
         });
-        window.addEventListener('mouseup', () => { isPanning = false; leftPanel.style.cursor = 'crosshair'; });
+        window.addEventListener('mouseup', () => { 
+            isPanning = false; 
+            if (isDraggingObject) { isDraggingObject = false; saveState(); }
+            leftPanel.style.cursor = 'crosshair'; 
+        });
         window.addEventListener('mousemove', (e) => { if (isPanning) { panX = e.clientX - startPanX; panY = e.clientY - startPanY; applyTransform(); }});
         leftPanel.addEventListener('contextmenu', e => e.preventDefault());
 
@@ -258,7 +278,10 @@
                 scale = newScale; applyTransform();
             }
         }, { passive: false });
-        leftPanel.addEventListener('touchend', () => { isPanning = false; });
+        leftPanel.addEventListener('touchend', () => { 
+            isPanning = false; 
+            if (isDraggingObject) { isDraggingObject = false; saveState(); }
+        });
 
         // === UI EDITOR & INTERAKSI KANVAS ===
         let isDrawing = false, currentLine = null;
@@ -319,9 +342,8 @@
             let { x, y } = getTrueCoords(clientX, clientY);
             
             if (mode === 'select') {
-                let clickedItem = null; let minDist = 25 / scale;
+                let clickedItem = null; let minDist = 30 / scale;
                 
-                // Deteksi klik Pintu / Jendela
                 openings.forEach(op => {
                     let l = lines[op.lineIndex];
                     if(l) {
@@ -331,14 +353,19 @@
                     }
                 });
 
-                // Deteksi klik Tangga / Mebel
                 freeObjects.forEach(obj => {
                     if (Math.hypot(obj.x - x, obj.y - y) < minDist) {
                         clickedItem = obj; minDist = Math.hypot(obj.x - x, obj.y - y);
                     }
                 });
 
-                if (clickedItem) { selectedItem = clickedItem; openEditPanel(selectedItem); } 
+                if (clickedItem) { 
+                    selectedItem = clickedItem; 
+                    openEditPanel(selectedItem); 
+                    if (selectedItem.lineIndex === undefined) {
+                        isDraggingObject = true; // Aktifkan Tap & Drag jika objek mebel/tangga
+                    }
+                } 
                 else { selectedItem = null; closeEditPanel(); }
                 draw2D();
             } 
@@ -368,15 +395,16 @@
                     update3D(); draw2D();
                 }
             }
-            else if (mode === 'stairs' || ['bed', 'sofa', 'table', 'chair'].includes(mode)) {
+            else { // Tangga / Furniture Placement
                 saveState();
                 freeObjects.push({
                     id: Date.now(),
                     type: mode,
                     x: x, y: y,
                     rotation: 0,
-                    steps: 14, // Default tangga
-                    width3D: mode === 'stairs' ? 1.0 : (mode === 'bed' ? 1.6 : (mode === 'sofa' ? 1.8 : 1.0))
+                    scaleVal: 1.0,
+                    steps: 14,
+                    width3D: mode === 'stairs' ? 1.0 : 1.0
                 });
                 furnitureSelect.value = "";
                 setMode('select', document.getElementById('modeSelect'));
@@ -384,16 +412,27 @@
             }
         }
 
-        canvas.addEventListener('click', (e) => handlePointerDown(e.clientX, e.clientY, e.button));
-        canvas.addEventListener('mousemove', (e) => {
+        canvas.addEventListener('mousedown', (e) => handlePointerDown(e.clientX, e.clientY, e.button));
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1 && !isPanning) handlePointerDown(e.touches[0].clientX, e.touches[0].clientY, 0);
+        }, { passive: true });
+
+        // LOGIKA DRAGGING KURSOR / TAP & HOLD
+        function handlePointerMove(clientX, clientY) {
+            let { x, y } = getTrueCoords(clientX, clientY);
             if (isDrawing && mode === 'wall' && currentLine) {
-                let { x, y } = getTrueCoords(e.clientX, e.clientY); currentLine.end = getSnapped(x, y); draw2D();
+                currentLine.end = getSnapped(x, y); draw2D();
             }
-        });
+            else if (isDraggingObject && selectedItem && selectedItem.lineIndex === undefined) {
+                selectedItem.x = x;
+                selectedItem.y = y;
+                draw2D(); update3D();
+            }
+        }
+
+        canvas.addEventListener('mousemove', (e) => handlePointerMove(e.clientX, e.clientY));
         canvas.addEventListener('touchmove', (e) => {
-            if (isDrawing && mode === 'wall' && currentLine && e.touches.length === 1) {
-                let { x, y } = getTrueCoords(e.touches[0].clientX, e.touches[0].clientY); currentLine.end = getSnapped(x, y); draw2D();
-            }
+            if (e.touches.length === 1) handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
         }, { passive: true });
 
         function findNearestLine(px, py) {
@@ -419,6 +458,7 @@
         const editWidth = document.getElementById('editWidth');
         const editSwing = document.getElementById('editSwing');
         const editRot = document.getElementById('editRot');
+        const editScale = document.getElementById('editScale');
         const editSteps = document.getElementById('editSteps');
         const editStairW = document.getElementById('editStairW');
 
@@ -440,7 +480,8 @@
                 freeObjectControls.style.display = 'block';
                 
                 editRot.value = item.rotation || 0; document.getElementById('valRot').innerText = item.rotation || 0;
-                
+                editScale.value = item.scaleVal || 1.0; document.getElementById('valScale').innerText = item.scaleVal || 1.0;
+
                 if (item.type === 'stairs') {
                     stairsControls.style.display = 'block';
                     editSteps.value = item.steps || 14; document.getElementById('valSteps').innerText = item.steps || 14;
@@ -480,6 +521,13 @@
             }
         });
         editRot.addEventListener('change', () => saveState());
+
+        editScale.addEventListener('input', (e) => {
+            if (selectedItem && selectedItem.lineIndex === undefined) { 
+                selectedItem.scaleVal = parseFloat(e.target.value); document.getElementById('valScale').innerText = selectedItem.scaleVal; update3D(); draw2D(); 
+            }
+        });
+        editScale.addEventListener('change', () => saveState());
 
         editSteps.addEventListener('input', (e) => {
             if (selectedItem && selectedItem.type === 'stairs') { 
@@ -524,7 +572,6 @@
                 ctx.beginPath(); ctx.moveTo(currentLine.start.x, currentLine.start.y); ctx.lineTo(currentLine.end.x, currentLine.end.y); ctx.stroke(); 
             }
 
-            // Draw Openings
             openings.forEach(op => {
                 let l = lines[op.lineIndex]; if(!l) return;
                 const angle = Math.atan2(l.end.y - l.start.y, l.end.x - l.start.x);
@@ -555,36 +602,42 @@
                 ctx.restore();
             });
 
-            // Draw Free Objects (Tangga & Mebel)
+            // Draw Free Objects (Tangga & Mebel Baru)
             freeObjects.forEach(obj => {
                 ctx.save();
                 ctx.translate(obj.x, obj.y);
                 ctx.rotate((obj.rotation || 0) * Math.PI / 180);
+                const s = obj.scaleVal || 1.0;
 
                 if (obj === selectedItem) {
                     ctx.shadowColor = '#2196F3'; ctx.shadowBlur = 15;
                 }
 
                 if (obj.type === 'stairs') {
-                    const w = (obj.width3D || 1.0) / scale3D;
-                    const h = 1.5 / scale3D; // Panjang tangga 2D
+                    const w = ((obj.width3D || 1.0) / scale3D) * s;
+                    const h = (1.5 / scale3D) * s;
                     ctx.fillStyle = 'rgba(200, 200, 200, 0.8)';
                     ctx.fillRect(-w/2, -h/2, w, h);
                     ctx.strokeStyle = '#333'; ctx.lineWidth = 1.5;
                     ctx.strokeRect(-w/2, -h/2, w, h);
-                    // Anak tangga 2D
                     const steps = obj.steps || 14;
                     for(let i=1; i<steps; i++) {
                         let yStep = -h/2 + (h/steps)*i;
                         ctx.beginPath(); ctx.moveTo(-w/2, yStep); ctx.lineTo(w/2, yStep); ctx.stroke();
                     }
                 } else {
-                    // Mebel Icons / Boxes
-                    ctx.fillStyle = obj.type === 'bed' ? '#9C27B0' : (obj.type === 'sofa' ? '#FF9800' : '#4CAF50');
-                    const size = 30 / scale;
+                    const size = (30 / scale) * s;
+                    ctx.fillStyle = ['bed','sofa','table','chair'].includes(obj.type) ? '#FF9800' : 
+                                    (['kitchen_set','stove','fridge'].includes(obj.type) ? '#E91E63' : '#00BCD4');
                     ctx.fillRect(-size/2, -size/2, size, size);
                     ctx.strokeStyle = '#222'; ctx.lineWidth = 1;
                     ctx.strokeRect(-size/2, -size/2, size, size);
+                    
+                    // Simbol Teks Singkat 2D
+                    ctx.fillStyle = '#fff'; ctx.font = `${Math.max(10, size*0.4)}px sans-serif`;
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    const labels = { bed:'BED', sofa:'SOFA', table:'TBL', chair:'CHR', kitchen_set:'KIT', stove:'STV', fridge:'FRG', toilet:'WC', shower:'SHW', bathtub:'BAT' };
+                    ctx.fillText(labels[obj.type] || 'OBJ', 0, 0);
                 }
                 ctx.restore();
             });
@@ -649,14 +702,14 @@
             return nodes;
         }
 
-        // ==========================================
-        // PROSEDURAL MODEL GENERATOR (TANGGA & MEBEL)
-        // ==========================================
+        // ==============================================================
+        // MODEL GENERATOR LENGKAP (TANGGA, MEBEL, KITCHEN & BATHROOM)
+        // ==============================================================
         function createStairsMesh(stepsCount, stairWidth, totalHeight) {
             const stairsGroup = new THREE.Group();
-            const matStairs = new THREE.MeshLambertMaterial({ color: 0xd2b48c }); // Warna Kayu Terang
+            const matStairs = new THREE.MeshLambertMaterial({ color: 0xd2b48c });
             const stepHeight = totalHeight / stepsCount;
-            const stepDepth = 0.28; // Standard 28cm Aantrede
+            const stepDepth = 0.28;
 
             for (let i = 0; i < stepsCount; i++) {
                 const geom = new THREE.BoxGeometry(stairWidth, stepHeight, stepDepth * (stepsCount - i));
@@ -672,40 +725,46 @@
             const matWood = new THREE.MeshLambertMaterial({ color: 0x8b5a2b });
             const matFabric = new THREE.MeshLambertMaterial({ color: 0x34495e });
             const matWhite = new THREE.MeshLambertMaterial({ color: 0xecf0f1 });
+            const matMetal = new THREE.MeshLambertMaterial({ color: 0x7f8c8d });
+            const matGlass = new THREE.MeshLambertMaterial({ color: 0x87CEEB, transparent: true, opacity: 0.4 });
 
             if (type === 'bed') {
-                // Frame
-                const frame = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.3, 2.0), matWood);
-                frame.position.y = 0.15; group.add(frame);
-                // Matras
-                const mattress = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.25, 1.9), matWhite);
-                mattress.position.set(0, 0.4, 0); group.add(mattress);
-                // Bantal
-                const pillow = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.1, 0.4), matFabric);
-                pillow.position.set(0, 0.55, -0.7); group.add(pillow);
+                const frame = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.3, 2.0), matWood); frame.position.y = 0.15; group.add(frame);
+                const mattress = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.25, 1.9), matWhite); mattress.position.set(0, 0.4, 0); group.add(mattress);
+                const pillow = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.1, 0.4), matFabric); pillow.position.set(0, 0.55, -0.7); group.add(pillow);
             } else if (type === 'sofa') {
-                // Dudukan
-                const base = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.3, 0.8), matFabric);
-                base.position.y = 0.25; group.add(base);
-                // Sandaran Punggung
-                const back = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.6, 0.2), matFabric);
-                back.position.set(0, 0.6, -0.3); group.add(back);
+                const base = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.3, 0.8), matFabric); base.position.y = 0.25; group.add(base);
+                const back = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.6, 0.2), matFabric); back.position.set(0, 0.6, -0.3); group.add(back);
             } else if (type === 'table') {
-                // Papan Meja
-                const top = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.05, 0.8), matWood);
-                top.position.y = 0.75; group.add(top);
-                // Kaki
-                for(let x of [-0.5, 0.5]) {
-                    for(let z of [-0.3, 0.3]) {
-                        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.72, 0.06), matWood);
-                        leg.position.set(x, 0.36, z); group.add(leg);
-                    }
-                }
+                const top = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.05, 0.8), matWood); top.position.y = 0.75; group.add(top);
+                for(let x of [-0.5, 0.5]) { for(let z of [-0.3, 0.3]) {
+                    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.72, 0.06), matWood); leg.position.set(x, 0.36, z); group.add(leg);
+                }}
             } else if (type === 'chair') {
-                const seat = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.04, 0.45), matWood);
-                seat.position.y = 0.45; group.add(seat);
-                const back = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.45, 0.04), matWood);
-                back.position.set(0, 0.68, -0.2); group.add(back);
+                const seat = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.04, 0.45), matWood); seat.position.y = 0.45; group.add(seat);
+                const back = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.45, 0.04), matWood); back.position.set(0, 0.68, -0.2); group.add(back);
+            } 
+            // KITCHEN
+            else if (type === 'kitchen_set') {
+                const counter = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.85, 0.6), matWood); counter.position.y = 0.425; group.add(counter);
+                const sink = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.02, 0.4), matMetal); sink.position.set(-0.5, 0.86, 0); group.add(sink);
+            } else if (type === 'stove') {
+                const body = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.85, 0.6), matMetal); body.position.y = 0.425; group.add(body);
+                const burner = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.04, 16), new THREE.MeshLambertMaterial({color:0x111111})); burner.position.set(0, 0.87, 0); group.add(burner);
+            } else if (type === 'fridge') {
+                const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.8, 0.7), matMetal); body.position.y = 0.9; group.add(body);
+                const handle = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.4, 0.04), matWhite); handle.position.set(0.35, 1.1, 0.37); group.add(handle);
+            }
+            // BATHROOM
+            else if (type === 'toilet') {
+                const base = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.6), matWhite); base.position.y = 0.2; group.add(base);
+                const tank = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.5, 0.25), matWhite); tank.position.set(0, 0.65, -0.2); group.add(tank);
+            } else if (type === 'shower') {
+                const tray = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.1, 1.0), matWhite); tray.position.y = 0.05; group.add(tray);
+                const glass = new THREE.Mesh(new THREE.BoxGeometry(0.02, 2.0, 1.0), matGlass); glass.position.set(0.49, 1.0, 0); group.add(glass);
+                const head = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.02, 16), matMetal); head.position.set(0, 1.9, 0); group.add(head);
+            } else if (type === 'bathtub') {
+                const tub = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.55, 0.75), matWhite); tub.position.y = 0.275; group.add(tub);
             }
             return group;
         }
@@ -828,7 +887,7 @@
                 cornerMesh.position.set(posX, heightWall / 2, posZ); modelGroup.add(cornerMesh);
             });
 
-            // 4. GENERATE TANGGA & MEBEL 3D
+            // 4. TANGGA & FULL MEBEL 3D (DENGAN SKALA)
             freeObjects.forEach(obj => {
                 const posX = (obj.x - center2DX) * scale3D;
                 const posZ = (obj.y - center2DY) * scale3D;
@@ -842,6 +901,11 @@
 
                 meshGroup.position.set(posX, 0, posZ);
                 meshGroup.rotation.y = THREE.MathUtils.degToRad(obj.rotation || 0);
+                
+                // Terapkan Skala Individual
+                const s = obj.scaleVal || 1.0;
+                meshGroup.scale.set(s, s, s);
+
                 modelGroup.add(meshGroup);
             });
         }
