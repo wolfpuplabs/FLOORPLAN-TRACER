@@ -35,7 +35,7 @@
             background: #d4d4d8; 
             display: flex; 
             flex-direction: row; 
-            height: 100dvh; /* dvh sangat penting agar tidak kepotong address bar di tablet/mobile */
+            height: 100dvh; 
             width: 100vw;
             touch-action: none; 
         }
@@ -513,7 +513,7 @@
         let lines = []; let openings = []; let freeObjects = [];
         let mode = 'wall'; let scale3D = 0.02; 
         let isTracingMode = false;
-        let isDrawing = false; let currentLine = null; // Fix error isDrawing not defined
+        let isDrawing = false; let currentLine = null;
 
         let selectedItem = null; let isDraggingObject = false; let isDraggingCanvas = false;
         let undoStack = []; let redoStack = [];
@@ -523,7 +523,7 @@
         const canvas = document.getElementById('draw-canvas');
         const ctx = canvas.getContext('2d');
         const imgElement = document.getElementById('floorplan-img');
-        const renderContainer = document.getElementById('render-container'); // Dipindah ke atas agar tidak error observer
+        const renderContainer = document.getElementById('render-container');
         
         const inputWallH = document.getElementById('valWallH');
         const inputWallT = document.getElementById('valWallT');
@@ -541,7 +541,6 @@
             imgElement.style.display = "none";
             isTracingMode = false;
             
-            // Kanvas diset besar agar free-draw leluasa
             canvas.width = 5000; 
             canvas.height = 5000;
             
@@ -598,6 +597,10 @@
 
         canvas.addEventListener('pointerdown', (e) => {
             if (isPanning) return; 
+            
+            // --- TAMBAHAN FIX: Abaikan jari kedua agar tidak bikin garis ---
+            if (e.pointerType === 'touch' && !e.isPrimary) return; 
+            
             if (e.button === 2 || e.button === 1) { 
                 isPanning = true; startPanX = e.clientX - panX; startPanY = e.clientY - panY; 
                 workspaceContainer.style.cursor = 'grabbing';
@@ -670,8 +673,15 @@
         workspaceContainer.addEventListener('contextmenu', e => e.preventDefault());
 
         workspaceContainer.addEventListener('touchstart', (e) => {
-            if (e.touches.length === 2) {
-                isPanning = true; touchStartDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+            if (e.touches.length >= 2) {
+                isPanning = true; 
+                
+                // --- TAMBAHAN FIX ---
+                stopDrawing(); // Batalkan garis yang terlanjur terbuat oleh jari pertama
+                isDraggingObject = false; // Batalkan juga kalau lagi ga sengaja geser objek
+                // --------------------
+
+                touchStartDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
                 initialScale = scale; const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2; const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
                 startPanX = midX - panX; startPanY = midY - panY;
             }
@@ -690,7 +700,12 @@
         }, { passive: false });
 
         // === TOOLS & DRAWING LOGIC ===
-        function stopDrawing() { isDrawing = false; currentLine = null; draw2D(); }
+        function stopDrawing() { 
+            if (isDrawing && currentLine) {
+                draw2D(); // Re-render untuk menghilangkan garis yang nyangkut
+            }
+            isDrawing = false; currentLine = null; draw2D(); 
+        }
 
         document.getElementById('modeSelect').onclick = (e) => setMode('select', e.target);
         document.getElementById('modeWall').onclick = (e) => setMode('wall', e.target);
