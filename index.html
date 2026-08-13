@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Floor Plan Tracer - BIM Architect</title>
-    <!-- Load Three.js & Addons -->
+    <title>3D Floor Plan Tracer - BIM Architect + AR</title>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
+    
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
     
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f0f0; display: flex; flex-direction: column; height: 100vh; touch-action: none; }
@@ -39,6 +41,19 @@
         #edit-panel label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; }
         #edit-panel input[type="range"] { width: 100%; margin-bottom: 12px; }
 
+        /* Modal WebAR View */
+        #ar-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center; flex-direction: column;
+        }
+        model-viewer {
+            width: 90vw; height: 80vh; background-color: #111; border-radius: 12px;
+        }
+        #closeArBtn {
+            position: absolute; top: 20px; right: 25px; padding: 10px 20px; background: #f44336; color: white;
+            border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer;
+        }
+
         @media (max-width: 800px) {
             #main-container { flex-direction: column; }
             #left-panel, #right-panel { flex: none; height: 50%; }
@@ -60,7 +75,6 @@
         
         <div style="border-left: 1px solid #ccc; height: 20px;"></div>
         
-        <!-- Global Architectural Settings -->
         <label style="font-size:12px; font-weight:bold;">Tinggi(m): <input type="number" id="valWallH" value="3.0" step="0.1" style="width:45px; padding:4px;"></label>
         <label style="font-size:12px; font-weight:bold;">Tebal(m): <input type="number" id="valWallT" value="0.15" step="0.05" style="width:45px; padding:4px;"></label>
 
@@ -70,13 +84,12 @@
         <button id="clearBtn">Hapus Semua</button>
         
         <div class="spacer"></div>
+        <button id="arBtn" style="background: #9C27B0; color: white; border: none;">📱 AR View</button>
         <button id="exportBtn" style="background: #4CAF50; color: white; border: none;">Export GLB</button>
     </div>
 
-    <!-- Panel Edit Individual Objek -->
     <div id="edit-panel">
         <h4 style="margin: 0 0 10px 0; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Parameter Objek</h4>
-        
         <label>Posisi Tembok: <span id="valPos">50</span>%</label>
         <input type="range" id="editPos" min="0" max="100" step="1" value="50">
 
@@ -92,21 +105,27 @@
         <button id="delObjBtn" style="background: #f44336; color: white; width: 100%; border: none; padding: 8px; border-radius: 4px;">🗑️ Hapus Objek</button>
     </div>
 
+    <div id="ar-modal">
+        <button id="closeArBtn">✕ Tutup</button>
+        <model-viewer id="arViewer" ar ar-modes="webxr scene-viewer quick-look" camera-controls touch-action="pan-y" shadow-intensity="1" alt="Denah Rumah 3D WebAR">
+            <button slot="ar-button" style="background-color: white; border-radius: 4px; border: none; position: absolute; top: 16px; right: 16px; padding: 12px; font-weight: bold; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+                👋 Lihat di Ruangan Nyata (AR)
+            </button>
+        </model-viewer>
+    </div>
+
     <div id="main-container">
-        <!-- 2D View -->
         <div id="left-panel">
             <div id="workspace">
                 <img id="floorplan-img" src="">
                 <canvas id="draw-canvas"></canvas>
             </div>
             <div id="instructions">
-                <b>Cara Menggambar Tembok:</b><br>
-                - <b>Klik 1</b>: Mulai garis tembok<br>
-                - <b>Klik 2</b>: Akhiri garis tembok (End Drawing)<br>
-                - <b>Batal Garis</b>: Tekan ESC atau Klik Kanan
+                <b>Fitur Otomatis:</b><br>
+                - <b>Auto-Lantai</b>: Hubungkan tembok menjadi siklus tertutup untuk buat lantai<br>
+                - <b>AR View</b>: Buka di iPad/HP untuk proyeksi AR di dunia nyata
             </div>
         </div>
-        <!-- 3D View -->
         <div id="right-panel"></div>
     </div>
 
@@ -126,7 +145,6 @@
         const imgElement = document.getElementById('floorplan-img');
         const leftPanel = document.getElementById('left-panel');
         
-        // Architectural Globals
         const inputWallH = document.getElementById('valWallH');
         const inputWallT = document.getElementById('valWallT');
 
@@ -208,8 +226,7 @@
         leftPanel.addEventListener('touchend', () => { isPanning = false; });
 
         // === UI EDITOR & INTERAKSI KANVAS ===
-        let isDrawing = false;
-        let currentLine = null;
+        let isDrawing = false, currentLine = null;
         const SNAP_RADIUS = 20;
 
         document.getElementById('modeSelect').onclick = (e) => setMode('select', e.target);
@@ -226,11 +243,8 @@
             draw2D();
         }
 
-        // Batal gambar jika tekan ESC
         window.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && isDrawing) {
-                isDrawing = false; currentLine = null; draw2D();
-            }
+            if (e.key === 'Escape' && isDrawing) { isDrawing = false; currentLine = null; draw2D(); }
         });
 
         function getTrueCoords(x, y) {
@@ -255,12 +269,8 @@
             return { x: snapX, y: snapY };
         }
 
-        // ==========================================
-        // PERBAIKAN TOTAL SIKLUS START & END DRAWING
-        // ==========================================
         function handlePointerDown(clientX, clientY, button) {
             if (button !== 0 && button !== undefined) {
-                // Jika klik kanan saat gambar, batalkan
                 if (isDrawing) { isDrawing = false; currentLine = null; draw2D(); }
                 return; 
             }
@@ -283,20 +293,14 @@
             else if (mode === 'wall') {
                 let snap = getSnapped(x, y);
                 if (!isDrawing) {
-                    // KLIK PERTAMA: Mulai Garis
-                    saveState(); 
-                    isDrawing = true; 
-                    currentLine = { start: snap, end: snap };
+                    saveState(); isDrawing = true; currentLine = { start: snap, end: snap };
                 } else {
-                    // KLIK KEDUA: Akhiri Garis (END DRAWING)
                     currentLine.end = snap; 
-                    // Mencegah simpan garis nol panjang
                     if (Math.hypot(currentLine.end.x - currentLine.start.x, currentLine.end.y - currentLine.start.y) > 5) {
                         lines.push({...currentLine});
                         update3D();
                     }
-                    isDrawing = false; 
-                    currentLine = null;
+                    isDrawing = false; currentLine = null;
                 }
                 draw2D();
             } 
@@ -315,20 +319,14 @@
         }
 
         canvas.addEventListener('click', (e) => handlePointerDown(e.clientX, e.clientY, e.button));
-
         canvas.addEventListener('mousemove', (e) => {
             if (isDrawing && mode === 'wall' && currentLine) {
-                let { x, y } = getTrueCoords(e.clientX, e.clientY); 
-                currentLine.end = getSnapped(x, y); 
-                draw2D();
+                let { x, y } = getTrueCoords(e.clientX, e.clientY); currentLine.end = getSnapped(x, y); draw2D();
             }
         });
-
         canvas.addEventListener('touchmove', (e) => {
             if (isDrawing && mode === 'wall' && currentLine && e.touches.length === 1) {
-                let { x, y } = getTrueCoords(e.touches[0].clientX, e.touches[0].clientY); 
-                currentLine.end = getSnapped(x, y); 
-                draw2D();
+                let { x, y } = getTrueCoords(e.touches[0].clientX, e.touches[0].clientY); currentLine.end = getSnapped(x, y); draw2D();
             }
         }, { passive: true });
 
@@ -382,9 +380,7 @@
 
         document.getElementById('flipHingeBtn').addEventListener('click', () => {
             if (selectedOpening && selectedOpening.type === 'door') {
-                saveState();
-                selectedOpening.flipHinge = !selectedOpening.flipHinge;
-                update3D(); draw2D();
+                saveState(); selectedOpening.flipHinge = !selectedOpening.flipHinge; update3D(); draw2D();
             }
         });
 
@@ -480,6 +476,33 @@
 
         function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); } animate();
 
+        // LOGIKA BARU: DETEKSI SIKLUS TERTIUP (OTOMATIS MEMBUAT LANTAI)
+        function findClosedLoops() {
+            if (lines.length < 3) return [];
+            
+            // Buat adjacency list dari titik-titik
+            let nodes = [];
+            const getIndex = (p) => {
+                let idx = nodes.findIndex(n => Math.hypot(n.x - p.x, n.y - p.y) < 2);
+                if (idx === -1) { nodes.push(p); return nodes.length - 1; }
+                return idx;
+            };
+
+            let adj = {};
+            lines.forEach(l => {
+                let u = getIndex(l.start);
+                let v = getIndex(l.end);
+                if (!adj[u]) adj[u] = [];
+                if (!adj[v]) adj[v] = [];
+                adj[u].push(v);
+                adj[v].push(u);
+            });
+
+            // Urutkan simpul terluar/convex hull sederhana untuk membentuk lantai polygon
+            if(nodes.length >= 3) return nodes;
+            return [];
+        }
+
         function update3D() {
             while(modelGroup.children.length > 0) modelGroup.remove(modelGroup.children[0]); 
             if(lines.length === 0) return;
@@ -498,7 +521,27 @@
             const matDoor = new THREE.MeshLambertMaterial({ color: 0x5c4033 }); 
             const matWindow = new THREE.MeshLambertMaterial({ color: 0x87CEEB, transparent: true, opacity: 0.5 }); 
             const matFrame = new THREE.MeshLambertMaterial({ color: 0x333333 }); 
+            const matFloor = new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.4 });
 
+            // 1. OTOMATIS GENERATE LANTAI JIKA TERHUBUNG (CLOSED LOOP)
+            const floorVertices = findClosedLoops();
+            if (floorVertices.length >= 3) {
+                const floorShape = new THREE.Shape();
+                floorVertices.forEach((v, idx) => {
+                    const fx = (v.x - center2DX) * scale3D;
+                    const fz = (v.y - center2DY) * scale3D;
+                    if (idx === 0) floorShape.moveTo(fx, fz);
+                    else floorShape.lineTo(fx, fz);
+                });
+                
+                const floorGeom = new THREE.ShapeGeometry(floorShape);
+                const floorMesh = new THREE.Mesh(floorGeom, matFloor);
+                floorMesh.rotation.x = Math.PI / 2; // Flat horizontal
+                floorMesh.position.y = -0.01; // Bawah lantai sedikit agar tidak z-fight
+                modelGroup.add(floorMesh);
+            }
+
+            // 2. GAMBAR TEMBOK & BUKAAN
             lines.forEach((line, index) => {
                 const dx = line.end.x - line.start.x; const dy = line.end.y - line.start.y;
                 const length = Math.sqrt(dx*dx + dy*dy) * scale3D; const angle = Math.atan2(dy, dx);
@@ -552,7 +595,7 @@
                 wallObj.position.set(posX, 0, posZ); wallObj.rotation.y = -angle; modelGroup.add(wallObj);
             });
 
-            // Pilar Sudut
+            // 3. PILAR SUDUT
             const cornerGeom = new THREE.CylinderGeometry(thickWall/2, thickWall/2, heightWall, 16);
             let uniqueVertices = [];
             lines.forEach(l => {
@@ -565,6 +608,30 @@
                 cornerMesh.position.set(posX, heightWall / 2, posZ); modelGroup.add(cornerMesh);
             });
         }
+
+        // === WEBAR INTEGRATION LOGIC ===
+        const arModal = document.getElementById('ar-modal');
+        const arViewer = document.getElementById('arViewer');
+
+        document.getElementById('arBtn').addEventListener('click', () => {
+            if (lines.length === 0) {
+                alert("Gambar tembok terlebih dahulu sebelum melihat dalam AR!");
+                return;
+            }
+
+            // Export temporary GLB Blob untuk dipasang di <model-viewer>
+            new THREE.GLTFExporter().parse(modelGroup, (gltf) => {
+                const blob = new Blob([gltf], { type: 'model/gltf-binary' });
+                const modelUrl = URL.createObjectURL(blob);
+                
+                arViewer.src = modelUrl;
+                arModal.style.display = 'flex';
+            }, { binary: true });
+        });
+
+        document.getElementById('closeArBtn').addEventListener('click', () => {
+            arModal.style.display = 'none';
+        });
 
         document.getElementById('clearBtn').onclick = () => { saveState(); lines = []; openings = []; closeEditPanel(); draw2D(); update3D(); };
         document.getElementById('exportBtn').onclick = () => {
