@@ -22,7 +22,7 @@
             height: 100vh;
             background-color: var(--bg-color);
             overflow: hidden;
-            touch-action: none;
+            touch-action: none; /* Mencegah browser scroll saat drag di kanvas */
         }
         
         #controls {
@@ -174,7 +174,7 @@
             </select>
             <label>Tinggi:</label>
             <input type="number" id="wallHeight" value="300">
-            <label>Tebal:</label>
+            <label>Tebal 3D:</label>
             <input type="number" id="wallThickness" value="15">
         </div>
 
@@ -197,9 +197,9 @@
             <canvas id="canvas2d"></canvas>
             <div class="instructions">
                 <strong>Kontrol 2D (Tablet/Mouse):</strong><br>
-                - <b>Klik/Tap:</b> Taruh Item / Gambar Tembok<br>
-                - <b>Scroll / Pinch:</b> Zoom In/Out<br>
-                - <b>Klik Kanan & Geser:</b> Pindahkan Kanvas
+                - <b>Tap/Klik:</b> Taruh Item / Gambar Tembok<br>
+                - <b>Pinch (2 Jari) / Scroll:</b> Zoom In/Out<br>
+                - <b>Drag (2 Jari) / Klik Kanan:</b> Pindah Kanvas
             </div>
         </div>
         <div id="canvas3d-container"></div>
@@ -264,11 +264,15 @@
         let isDrawing = false;
         let startX, startY, currentX, currentY;
         let panX = 0, panY = 0, zoom = 1;
+        
+        // Input States
         let isPanning = false;
         let rawMouseX = 0, rawMouseY = 0, worldMouseX = 0, worldMouseY = 0;
+        let lastPinchDist = null, lastPanX = null, lastPanY = null;
 
         const SNAP_DIST = 15;
-        const DOOR_WIDTH = 80, DOOR_HEIGHT = 200; // Base: CM
+        // Constants for 3D logic
+        const DOOR_WIDTH = 80, DOOR_HEIGHT = 200; 
         const WIN_WIDTH = 100, WIN_HEIGHT = 100, WIN_BOTTOM = 80;
 
         function resizeCanvas() {
@@ -352,33 +356,34 @@
             // Draw Items (Furniture)
             items.forEach(item => {
                 ctx.fillStyle = 'rgba(0,0,0,0.6)';
-                ctx.fillRect(item.x - 20, item.y - 20, 40, 40);
+                ctx.fillRect(item.x - 15/zoom, item.y - 15/zoom, 30/zoom, 30/zoom);
                 ctx.fillStyle = 'white';
-                ctx.font = 'bold 12px sans-serif';
-                ctx.fillText(item.type.substring(0,3).toUpperCase(), item.x - 15, item.y + 4);
+                ctx.font = `bold ${10/zoom}px sans-serif`;
+                ctx.fillText(item.type.substring(0,3).toUpperCase(), item.x - 12/zoom, item.y + 3/zoom);
             });
 
-            const baseThickness = parseFloat(document.getElementById('wallThickness').value) * getUnitMultiplier();
+            // FIXED LINE THICKNESS (Tipis & nyaman untuk ditrace)
+            const visualThickness = 4 / zoom;
             ctx.lineCap = 'round';
             
             // Draw Walls
             walls.forEach(wall => {
-                ctx.lineWidth = baseThickness;
-                ctx.strokeStyle = '#444444';
+                ctx.lineWidth = visualThickness;
+                ctx.strokeStyle = '#333333';
                 ctx.beginPath(); ctx.moveTo(wall.x1, wall.y1); ctx.lineTo(wall.x2, wall.y2); ctx.stroke();
 
                 wall.doors.forEach(door => {
                     const posX = wall.x1 + (wall.x2 - wall.x1) * door.t;
                     const posY = wall.y1 + (wall.y2 - wall.y1) * door.t;
                     ctx.fillStyle = '#ffcc00';
-                    ctx.beginPath(); ctx.arc(posX, posY, DOOR_WIDTH/2, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(posX, posY, 6/zoom, 0, Math.PI * 2); ctx.fill();
                 });
 
                 wall.windows.forEach(win => {
                     const posX = wall.x1 + (wall.x2 - wall.x1) * win.t;
                     const posY = wall.y1 + (wall.y2 - wall.y1) * win.t;
                     ctx.fillStyle = '#00ccff';
-                    ctx.beginPath(); ctx.arc(posX, posY, WIN_WIDTH/2, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(posX, posY, 6/zoom, 0, Math.PI * 2); ctx.fill();
                 });
             });
 
@@ -386,34 +391,36 @@
             const mode = document.getElementById('drawMode').value;
             if (mode === 'wall') {
                 if (isDrawing) {
-                    ctx.lineWidth = baseThickness;
+                    ctx.lineWidth = visualThickness;
                     ctx.strokeStyle = 'rgba(0, 122, 255, 0.7)'; 
                     ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(currentX, currentY); ctx.stroke();
                 }
                 const snapped = getSnapPoint(worldMouseX, worldMouseY);
                 if (snapped.x !== worldMouseX || snapped.y !== worldMouseY) {
                     ctx.fillStyle = 'rgba(52, 199, 89, 0.8)'; 
-                    ctx.beginPath(); ctx.arc(snapped.x, snapped.y, 10/zoom, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(snapped.x, snapped.y, 6/zoom, 0, Math.PI*2); ctx.fill();
                 }
             } else if (mode === 'door' || mode === 'window') {
                 const snap = getClosestWallPoint(worldMouseX, worldMouseY);
                 if (snap.point) {
                     ctx.fillStyle = mode === 'door' ? 'rgba(255, 204, 0, 0.8)' : 'rgba(0, 204, 255, 0.8)';
-                    ctx.beginPath(); ctx.arc(snap.point.x, snap.point.y, 12/zoom, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(snap.point.x, snap.point.y, 8/zoom, 0, Math.PI*2); ctx.fill();
                 }
             } else {
                 ctx.fillStyle = 'rgba(255, 59, 48, 0.6)'; 
-                ctx.fillRect(worldMouseX - 20, worldMouseY - 20, 40, 40);
+                ctx.fillRect(worldMouseX - 15/zoom, worldMouseY - 15/zoom, 30/zoom, 30/zoom);
             }
 
             ctx.restore();
         }
 
-        // --- 2D EVENTS ---
-        canvas2d.addEventListener('contextmenu', e => e.preventDefault());
-
-        canvas2d.addEventListener('mousedown', (e) => {
-            if (e.button === 2) { isPanning = true; return; }
+        // --- INPUT HANDLERS (Shared for Mouse & Touch) ---
+        function handleInputDown(x, y, rightClick) {
+            if (rightClick) { isPanning = true; return; }
+            
+            rawMouseX = x; rawMouseY = y;
+            const world = toWorld(x, y);
+            worldMouseX = world.x; worldMouseY = world.y;
 
             const mode = document.getElementById('drawMode').value;
             
@@ -443,15 +450,11 @@
                 generate3D();
             }
             drawCanvas();
-        });
+        }
 
-        canvas2d.addEventListener('mousemove', (e) => {
-            if (isPanning) { panX += e.movementX; panY += e.movementY; drawCanvas(); return; }
-            const rect = canvas2d.getBoundingClientRect();
-            rawMouseX = e.clientX - rect.left;
-            rawMouseY = e.clientY - rect.top;
-            
-            const world = toWorld(rawMouseX, rawMouseY);
+        function handleInputMove(x, y) {
+            rawMouseX = x; rawMouseY = y;
+            const world = toWorld(x, y);
             worldMouseX = world.x; worldMouseY = world.y;
 
             if (isDrawing && document.getElementById('drawMode').value === 'wall') {
@@ -459,9 +462,27 @@
                 currentX = snapped.x; currentY = snapped.y;
             }
             drawCanvas();
+        }
+
+        function handleInputUp(rightClick) {
+            if (rightClick) isPanning = false;
+        }
+
+        // --- MOUSE EVENTS ---
+        canvas2d.addEventListener('contextmenu', e => e.preventDefault());
+        
+        canvas2d.addEventListener('mousedown', (e) => {
+            const rect = canvas2d.getBoundingClientRect();
+            handleInputDown(e.clientX - rect.left, e.clientY - rect.top, e.button === 2);
         });
 
-        window.addEventListener('mouseup', (e) => { if(e.button === 2) isPanning = false; });
+        canvas2d.addEventListener('mousemove', (e) => {
+            if (isPanning) { panX += e.movementX; panY += e.movementY; drawCanvas(); return; }
+            const rect = canvas2d.getBoundingClientRect();
+            handleInputMove(e.clientX - rect.left, e.clientY - rect.top);
+        });
+
+        window.addEventListener('mouseup', (e) => { handleInputUp(e.button === 2); });
 
         canvas2d.addEventListener('wheel', (e) => {
             e.preventDefault();
@@ -473,6 +494,73 @@
             drawCanvas();
         });
 
+        // --- TOUCH EVENTS (Untuk iPad / Tablet) ---
+        canvas2d.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Mencegah scrolling browser
+            const rect = canvas2d.getBoundingClientRect();
+            
+            if (e.touches.length === 1) {
+                // 1 Jari = Draw / Place Item
+                handleInputDown(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top, false);
+            } else if (e.touches.length === 2) {
+                // 2 Jari = Pinch & Pan
+                if (isDrawing) { isDrawing = false; drawCanvas(); } // Batalkan draw kalau tiba-tiba pinch
+                
+                const t1 = e.touches[0], t2 = e.touches[1];
+                lastPinchDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+                lastPanX = (t1.clientX + t2.clientX) / 2;
+                lastPanY = (t1.clientY + t2.clientY) / 2;
+            }
+        }, { passive: false });
+
+        canvas2d.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const rect = canvas2d.getBoundingClientRect();
+
+            if (e.touches.length === 1) {
+                handleInputMove(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
+            } else if (e.touches.length === 2) {
+                const t1 = e.touches[0], t2 = e.touches[1];
+                const currentDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+                const currentPanX = (t1.clientX + t2.clientX) / 2;
+                const currentPanY = (t1.clientY + t2.clientY) / 2;
+
+                // Handle Pan (Geser 2 jari)
+                panX += currentPanX - lastPanX;
+                panY += currentPanY - lastPanY;
+
+                // Handle Zoom (Pinch)
+                if (lastPinchDist) {
+                    const zoomFactor = currentDist / lastPinchDist;
+                    const newZoom = zoom * zoomFactor;
+                    
+                    const centerX = currentPanX - rect.left;
+                    const centerY = currentPanY - rect.top;
+
+                    panX = centerX - (centerX - panX) * (newZoom / zoom);
+                    panY = centerY - (centerY - panY) * (newZoom / zoom);
+                    zoom = newZoom;
+                }
+
+                lastPinchDist = currentDist;
+                lastPanX = currentPanX;
+                lastPanY = currentPanY;
+                
+                rawMouseX = currentPanX - rect.left;
+                rawMouseY = currentPanY - rect.top;
+                drawCanvas();
+            }
+        }, { passive: false });
+
+        canvas2d.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (e.touches.length === 0) {
+                // Semua jari diangkat
+                lastPinchDist = null;
+            }
+        }, { passive: false });
+
+
         // --- UI BINDINGS ---
         document.getElementById('imageUpload').addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -480,14 +568,11 @@
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     backgroundImage.onload = () => {
-                        // Logika Auto-Fit Gambar
                         const scaleX = canvas2d.width / backgroundImage.width;
                         const scaleY = canvas2d.height / backgroundImage.height;
-                        // Ambil skala terkecil lalu kalikan 0.85 agar ada jarak sisa (margin)
                         const fitScale = Math.min(scaleX, scaleY) * 0.85;
                         
                         zoom = fitScale;
-                        // Menengahkan posisi gambar yang sudah diskalakan
                         panX = (canvas2d.width - (backgroundImage.width * zoom)) / 2;
                         panY = (canvas2d.height - (backgroundImage.height * zoom)) / 2;
                         
@@ -508,7 +593,7 @@
         
         document.getElementById('unitSelect').addEventListener('change', () => { drawCanvas(); generate3D(); });
         document.getElementById('wallHeight').addEventListener('input', generate3D);
-        document.getElementById('wallThickness').addEventListener('input', () => { drawCanvas(); generate3D(); });
+        document.getElementById('wallThickness').addEventListener('input', () => { generate3D(); });
         document.getElementById('wallColor').addEventListener('input', generate3D);
         document.getElementById('floorColor').addEventListener('input', generate3D);
         
@@ -555,7 +640,7 @@
         let mainGroup = new THREE.Group();
         scene.add(mainGroup);
 
-        // --- PROCEDURAL 3D FURNITURE (Skala cm) ---
+        // --- PROCEDURAL 3D FURNITURE ---
         function createBed() {
             const group = new THREE.Group();
             const frameMat = new THREE.MeshStandardMaterial({ color: 0x5c4033 });
