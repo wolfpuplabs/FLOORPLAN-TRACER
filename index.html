@@ -32,7 +32,7 @@
             margin: 0; 
             overflow: hidden; 
             font-family: 'Segoe UI', Tahoma, Helvetica, sans-serif; 
-            background: #d4d4d8; /* Warna latar belakang luar kanvas */
+            background: #d4d4d8; 
             display: flex; 
             flex-direction: row; 
             height: 100vh; 
@@ -166,7 +166,7 @@
         #workspace-container { 
             position: relative; background: #e4e4e7; overflow: hidden; 
             border-right: 2px solid #a1a1aa; touch-action: none; cursor: crosshair; 
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.05); /* Sedikit shadow ke dalam untuk estetika */
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.05); 
         }
 
         #workspace { 
@@ -358,6 +358,7 @@
             
             <button id="helpBtnToggle" title="Panduan">?</button>
 
+            <!-- Popup/Modal Bantuan -->
             <div id="helpModal">
                 <div class="help-content">
                     <button class="close-help" id="closeHelpBtn">&times;</button>
@@ -524,28 +525,28 @@
         inputWallH.addEventListener('change', () => { saveState(); update3D(); });
         inputWallT.addEventListener('change', () => { saveState(); update3D(); draw2D(); });
 
-        // === INITIALIZE CANVAS (SMART RESPONSIVE FREE DRAWING) ===
+        // === INITIALIZE CANVAS (SMART RESPONSIVE FREE DRAWING DENGAN GRID CSS) ===
         let scale = 1; let panX = 0, panY = 0; let isPanning = false, startPanX = 0, startPanY = 0;
         let touchStartDist = 0, initialScale = 1;
 
         function initDefaultCanvas() {
             imgElement.src = ""; imgElement.style.display = "none";
             
-            // Buat kanvas sangat besar (5000x5000) agar user bebas berkreasi di tengah-tengahnya
             canvas.width = 5000; 
             canvas.height = 5000;
             
-            // Visualisasikan sebagai lembar kerja (Kertas Putih)
-            workspace.style.background = "#ffffff";
+            // Terapkan CSS Grid Background yang tajam (1 Kotak = 50px = 1 meter)
+            workspace.style.backgroundColor = "#ffffff";
+            workspace.style.backgroundImage = "linear-gradient(#e4e4e7 1px, transparent 1px), linear-gradient(90deg, #e4e4e7 1px, transparent 1px)";
+            workspace.style.backgroundSize = "50px 50px";
             workspace.style.boxShadow = "0 10px 30px rgba(0,0,0,0.15)";
             
-            scale3D = 0.02; // Fixed Scale: 50 pixels = 1 meter (skala akurat 3D)
+            scale3D = 0.02;
 
-            // Tunggu layout ter-render untuk posisi ke tengah secara akurat
             setTimeout(() => {
                 const panelWidth = workspaceContainer.clientWidth; 
                 const panelHeight = workspaceContainer.clientHeight;
-                scale = 0.8; // Sedikit zoom-out di awal
+                scale = 0.8; 
                 panX = (panelWidth - (canvas.width * scale)) / 2;
                 panY = (panelHeight - (canvas.height * scale)) / 2;
                 applyTransform(); 
@@ -588,10 +589,9 @@
             scale = newScale; applyTransform();
         }, { passive: false });
 
-        // Event Pointer (Mouse & Touch Digabung)
         canvas.addEventListener('pointerdown', (e) => {
             if (isPanning) return; 
-            if (e.button === 2 || e.button === 1) { // Klik Kanan atau Tengah untuk Panning bebas
+            if (e.button === 2 || e.button === 1) { 
                 isPanning = true; startPanX = e.clientX - panX; startPanY = e.clientY - panY; 
                 workspaceContainer.style.cursor = 'grabbing';
                 stopDrawing(); return;
@@ -615,8 +615,6 @@
                 } else { 
                     selectedItem = null; 
                     closeEditPanel(); 
-                    
-                    // FITUR BARU: Kalau klik kosong di mode "Select", aktifkan 1-Finger Panning untuk tablet/mobile!
                     isDraggingCanvas = true;
                     startPanX = e.clientX - panX; 
                     startPanY = e.clientY - panY;
@@ -664,7 +662,6 @@
         
         workspaceContainer.addEventListener('contextmenu', e => e.preventDefault());
 
-        // Multi-touch Zoom (Pinch) untuk Tablet / HP
         workspaceContainer.addEventListener('touchstart', (e) => {
             if (e.touches.length === 2) {
                 isPanning = true; touchStartDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
@@ -729,6 +726,14 @@
                 const dist = Math.hypot(x - projX, y - projY);
                 if (dist < minDist) { minDist = dist; snapX = projX; snapY = projY; }
             }
+            
+            // Snap to Grid (Hanya berjalan mulus ketika tracing tidak aktif / grid terlihat)
+            if (workspace.style.backgroundImage !== "none" && minDist > SNAP_RADIUS / scale) {
+                const gridSnap = 50; // Sesuai dengan ukuran CSS grid background
+                if (Math.abs(x % gridSnap) < (SNAP_RADIUS / scale)) snapX = Math.round(x / gridSnap) * gridSnap;
+                if (Math.abs(y % gridSnap) < (SNAP_RADIUS / scale)) snapY = Math.round(y / gridSnap) * gridSnap;
+            }
+
             return { x: snapX, y: snapY };
         }
 
@@ -789,15 +794,10 @@
         document.getElementById('delObjBtn').addEventListener('click', () => { if (selectedItem) { saveState(); if (selectedItem.lineIndex !== undefined) openings = openings.filter(o => o.id !== selectedItem.id); else freeObjects = freeObjects.filter(o => o.id !== selectedItem.id); closeEditPanel(); update3D(); draw2D(); }});
 
         // === 2D RENDER ===
-        function drawGrid() {
-            ctx.save(); ctx.strokeStyle = '#e4e4e7'; ctx.lineWidth = 1 / scale; 
-            const gridSize = 50; // Grid representatif (1 kotak = 1 meter saat Free Draw)
-            for (let x = 0; x <= canvas.width; x += gridSize) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
-            for (let y = 0; y <= canvas.height; y += gridSize) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); } ctx.restore();
-        }
-
         function draw2D() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.lineCap = 'round'; drawGrid(); 
+            ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.lineCap = 'round';
+            // Grid render canvas dibuang, karena sudah pakai CSS Background yang lebih tajam
+            
             const globalThick2D = parseFloat(inputWallT.value) / scale3D; ctx.lineWidth = Math.max(2, globalThick2D); 
             ctx.strokeStyle = 'rgba(37, 99, 235, 0.45)';
             lines.forEach(l => { ctx.beginPath(); ctx.moveTo(l.start.x, l.start.y); ctx.lineTo(l.end.x, l.end.y); ctx.stroke(); });
@@ -828,25 +828,24 @@
             reader.onload = (event) => {
                 imgElement.src = event.target.result; imgElement.style.display = "block";
                 imgElement.onload = () => {
-                    // Ketika tracing, ukuran kanvas otomatis mengepaskan gambar
                     canvas.width = imgElement.width; canvas.height = imgElement.height; 
                     
-                    // Hilangkan efek kertas putih karena kita mau tracing full
-                    workspace.style.background = "transparent";
+                    // Hilangkan CSS grid saat mode Tracing diaktifkan
+                    workspace.style.backgroundImage = "none";
+                    workspace.style.backgroundColor = "transparent";
                     workspace.style.boxShadow = "none";
                     
                     const panelWidth = workspaceContainer.clientWidth; const panelHeight = workspaceContainer.clientHeight;
                     scale = Math.min(panelWidth / imgElement.width, panelHeight / imgElement.height) * 0.9;
                     panX = (panelWidth - (imgElement.width * scale)) / 2; panY = (panelHeight - (imgElement.height * scale)) / 2; applyTransform(); 
                     
-                    // Skala 3D adaptif mengikuti ukuran pixel gambar
                     scale3D = 20 / Math.max(canvas.width, canvas.height); 
                     lines = []; openings = []; freeObjects = []; undoStack = []; redoStack = []; stopDrawing(); closeEditPanel(); draw2D(); update3D();
                 }
             }; reader.readAsDataURL(file);
         });
 
-        // Event Hapus (Panggil Default Kanvas kembali)
+        // Event Hapus (Panggil Default Kanvas & Grid CSS kembali)
         document.getElementById('clearBtn').onclick = () => { initDefaultCanvas(); lines = []; openings = []; freeObjects = []; undoStack = []; redoStack = []; stopDrawing(); closeEditPanel(); update3D(); };
 
         // === 3D ENGINE ===
