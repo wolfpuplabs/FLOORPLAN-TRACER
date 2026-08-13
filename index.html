@@ -509,10 +509,11 @@
             updateToggleIcon();
         });
 
-        // === STATE & DATA ===
+        // === STATE & DATA (DEKLARASI SEMUA VARIABEL UTAMA DI AWAL) ===
         let lines = []; let openings = []; let freeObjects = [];
         let mode = 'wall'; let scale3D = 0.02; 
         let isTracingMode = false;
+        let isDrawing = false; let currentLine = null; // Fix error isDrawing not defined
 
         let selectedItem = null; let isDraggingObject = false; let isDraggingCanvas = false;
         let undoStack = []; let redoStack = [];
@@ -522,6 +523,7 @@
         const canvas = document.getElementById('draw-canvas');
         const ctx = canvas.getContext('2d');
         const imgElement = document.getElementById('floorplan-img');
+        const renderContainer = document.getElementById('render-container'); // Dipindah ke atas agar tidak error observer
         
         const inputWallH = document.getElementById('valWallH');
         const inputWallT = document.getElementById('valWallT');
@@ -539,7 +541,7 @@
             imgElement.style.display = "none";
             isTracingMode = false;
             
-            // Kita tetap menggunakan kanvas besar agar leluasa menggambar
+            // Kanvas diset besar agar free-draw leluasa
             canvas.width = 5000; 
             canvas.height = 5000;
             
@@ -561,20 +563,6 @@
 
         window.addEventListener('load', () => { initDefaultCanvas(); });
         function applyTransform() { workspace.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`; }
-
-        // === FIX AUTO-RESIZE THREE.JS ===
-        function resizeViewports() {
-            const renderRect = renderContainer.getBoundingClientRect();
-            if (renderRect.width > 0 && renderRect.height > 0) {
-                camera.aspect = renderRect.width / renderRect.height;
-                camera.updateProjectionMatrix();
-                renderer.setSize(renderRect.width, renderRect.height);
-            }
-        }
-        window.addEventListener('resize', resizeViewports);
-        const resizeObserver = new ResizeObserver(() => resizeViewports());
-        resizeObserver.observe(renderContainer);
-        resizeObserver.observe(workspaceContainer);
 
         // === UNDO / REDO ===
         function saveState() {
@@ -702,7 +690,6 @@
         }, { passive: false });
 
         // === TOOLS & DRAWING LOGIC ===
-        let isDrawing = false; let currentLine = null;
         function stopDrawing() { isDrawing = false; currentLine = null; draw2D(); }
 
         document.getElementById('modeSelect').onclick = (e) => setMode('select', e.target);
@@ -887,14 +874,32 @@
         document.getElementById('clearBtn').onclick = () => { initDefaultCanvas(); lines = []; openings = []; freeObjects = []; undoStack = []; redoStack = []; stopDrawing(); closeEditPanel(); update3D(); };
 
         // === 3D ENGINE ===
-        const renderContainer = document.getElementById('render-container'); const scene = new THREE.Scene();
+        const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(45, renderContainer.clientWidth / renderContainer.clientHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true }); 
         renderer.setSize(renderContainer.clientWidth, renderContainer.clientHeight); 
-        renderer.setClearColor(0x27272a); renderContainer.appendChild(renderer.domElement);
-        const controls = new THREE.OrbitControls(camera, renderer.domElement); scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.6); dirLight.position.set(20, 40, 20); scene.add(dirLight); scene.add(new THREE.GridHelper(50, 50, 0x555555, 0x333333));
+        renderer.setClearColor(0x27272a); 
+        renderContainer.appendChild(renderer.domElement);
+        
+        const controls = new THREE.OrbitControls(camera, renderer.domElement); 
+        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.6); dirLight.position.set(20, 40, 20); 
+        scene.add(dirLight); scene.add(new THREE.GridHelper(50, 50, 0x555555, 0x333333));
         const modelGroup = new THREE.Group(); scene.add(modelGroup); camera.position.set(0, 15, 20); 
+
+        // === FIX AUTO-RESIZE THREE.JS ===
+        function resizeViewports() {
+            const renderRect = renderContainer.getBoundingClientRect();
+            if (renderRect.width > 0 && renderRect.height > 0) {
+                camera.aspect = renderRect.width / renderRect.height;
+                camera.updateProjectionMatrix();
+                renderer.setSize(renderRect.width, renderRect.height);
+            }
+        }
+        window.addEventListener('resize', resizeViewports);
+        const resizeObserver = new ResizeObserver(() => resizeViewports());
+        resizeObserver.observe(renderContainer);
+        resizeObserver.observe(workspaceContainer);
 
         function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); } animate();
 
