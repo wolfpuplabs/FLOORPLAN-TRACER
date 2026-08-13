@@ -508,7 +508,8 @@
         // === STATE & DATA ===
         let lines = []; let openings = []; let freeObjects = [];
         let mode = 'wall'; let scale3D = 0.02; 
-        
+        let isTracingMode = false; // Flag penanda mode trace
+
         let selectedItem = null; let isDraggingObject = false; let isDraggingCanvas = false;
         let undoStack = []; let redoStack = [];
 
@@ -525,20 +526,18 @@
         inputWallH.addEventListener('change', () => { saveState(); update3D(); });
         inputWallT.addEventListener('change', () => { saveState(); update3D(); draw2D(); });
 
-        // === INITIALIZE CANVAS (SMART RESPONSIVE FREE DRAWING DENGAN GRID CSS) ===
+        // === INITIALIZE CANVAS (FREE DRAWING DEFAULT) ===
         let scale = 1; let panX = 0, panY = 0; let isPanning = false, startPanX = 0, startPanY = 0;
         let touchStartDist = 0, initialScale = 1;
 
         function initDefaultCanvas() {
             imgElement.src = ""; imgElement.style.display = "none";
+            isTracingMode = false;
             
             canvas.width = 5000; 
             canvas.height = 5000;
             
-            // Terapkan CSS Grid Background yang tajam (1 Kotak = 50px = 1 meter)
             workspace.style.backgroundColor = "#ffffff";
-            workspace.style.backgroundImage = "linear-gradient(#e4e4e7 1px, transparent 1px), linear-gradient(90deg, #e4e4e7 1px, transparent 1px)";
-            workspace.style.backgroundSize = "50px 50px";
             workspace.style.boxShadow = "0 10px 30px rgba(0,0,0,0.15)";
             
             scale3D = 0.02;
@@ -727,9 +726,9 @@
                 if (dist < minDist) { minDist = dist; snapX = projX; snapY = projY; }
             }
             
-            // Snap to Grid (Hanya berjalan mulus ketika tracing tidak aktif / grid terlihat)
-            if (workspace.style.backgroundImage !== "none" && minDist > SNAP_RADIUS / scale) {
-                const gridSnap = 50; // Sesuai dengan ukuran CSS grid background
+            // Snap to Grid (Hanya berjalan di Free Draw)
+            if (!isTracingMode && minDist > SNAP_RADIUS / scale) {
+                const gridSnap = 50; 
                 if (Math.abs(x % gridSnap) < (SNAP_RADIUS / scale)) snapX = Math.round(x / gridSnap) * gridSnap;
                 if (Math.abs(y % gridSnap) < (SNAP_RADIUS / scale)) snapY = Math.round(y / gridSnap) * gridSnap;
             }
@@ -793,10 +792,29 @@
         document.getElementById('flipHingeBtn').addEventListener('click', () => { if (selectedItem && selectedItem.type === 'door') { saveState(); selectedItem.flipHinge = !selectedItem.flipHinge; update3D(); draw2D(); }});
         document.getElementById('delObjBtn').addEventListener('click', () => { if (selectedItem) { saveState(); if (selectedItem.lineIndex !== undefined) openings = openings.filter(o => o.id !== selectedItem.id); else freeObjects = freeObjects.filter(o => o.id !== selectedItem.id); closeEditPanel(); update3D(); draw2D(); }});
 
+        // === FUNGSI MENGGAMBAR GRID LANGSUNG KE CANVAS ===
+        function drawCanvasGrid() {
+            if (isTracingMode) return; // Jangan gambar grid kalau lagi mode jiplak denah
+            ctx.save();
+            ctx.strokeStyle = '#e4e4e7';
+            ctx.lineWidth = 1;
+            const gridSize = 50; // 50px = 1 meter
+            for (let x = 0; x <= canvas.width; x += gridSize) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+            }
+            for (let y = 0; y <= canvas.height; y += gridSize) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+            }
+            ctx.restore();
+        }
+
         // === 2D RENDER ===
         function draw2D() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.lineCap = 'round';
-            // Grid render canvas dibuang, karena sudah pakai CSS Background yang lebih tajam
+            ctx.clearRect(0, 0, canvas.width, canvas.height); 
+            ctx.lineCap = 'round';
+            
+            // Panggil Fungsi Gambar Grid
+            drawCanvasGrid();
             
             const globalThick2D = parseFloat(inputWallT.value) / scale3D; ctx.lineWidth = Math.max(2, globalThick2D); 
             ctx.strokeStyle = 'rgba(37, 99, 235, 0.45)';
@@ -830,8 +848,7 @@
                 imgElement.onload = () => {
                     canvas.width = imgElement.width; canvas.height = imgElement.height; 
                     
-                    // Hilangkan CSS grid saat mode Tracing diaktifkan
-                    workspace.style.backgroundImage = "none";
+                    isTracingMode = true; // Aktifkan mode jiplak agar grid menghilang
                     workspace.style.backgroundColor = "transparent";
                     workspace.style.boxShadow = "none";
                     
@@ -845,7 +862,7 @@
             }; reader.readAsDataURL(file);
         });
 
-        // Event Hapus (Panggil Default Kanvas & Grid CSS kembali)
+        // Event Hapus / Reset
         document.getElementById('clearBtn').onclick = () => { initDefaultCanvas(); lines = []; openings = []; freeObjects = []; undoStack = []; redoStack = []; stopDrawing(); closeEditPanel(); update3D(); };
 
         // === 3D ENGINE ===
