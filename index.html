@@ -22,7 +22,7 @@
             height: 100vh;
             background-color: var(--bg-color);
             overflow: hidden;
-            touch-action: none; /* Mencegah browser scroll saat drag di kanvas */
+            touch-action: none;
         }
         
         #controls {
@@ -34,7 +34,7 @@
             align-items: center;
             flex-wrap: wrap;
             z-index: 10;
-            font-size: 15px;
+            font-size: 14px;
             max-height: 40vh;
             overflow-y: auto;
             border-bottom: 1px solid var(--border);
@@ -43,7 +43,7 @@
         .control-group {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             padding-right: 15px;
             border-right: 1px solid var(--border);
             flex-wrap: wrap;
@@ -53,20 +53,20 @@
         .control-group:last-child { border-right: none; }
         
         input[type="number"], select, button, input[type="file"] {
-            height: 38px;
+            height: 36px;
             border-radius: 8px;
             border: 1px solid var(--border);
-            padding: 0 12px;
+            padding: 0 10px;
             font-size: 14px;
             background-color: #fff;
         }
         
-        input[type="number"] { width: 60px; text-align: center; }
-        input[type="file"] { padding: 6px; width: 180px; border: none; }
-        input[type="color"] { width: 38px; height: 38px; padding: 0; border: none; border-radius: 8px; cursor: pointer; }
+        input[type="number"] { width: 55px; text-align: center; }
+        input[type="file"] { padding: 5px; width: 170px; border: none; }
+        input[type="color"] { width: 36px; height: 36px; padding: 0; border: none; border-radius: 8px; cursor: pointer; }
         
         label { font-weight: 500; color: #333; display: flex; align-items: center; gap: 5px; }
-        input[type="checkbox"] { width: 20px; height: 20px; }
+        input[type="checkbox"] { width: 18px; height: 18px; }
         
         button {
             background-color: var(--primary);
@@ -147,8 +147,8 @@
         <div class="control-group">
             <label>Plan:</label>
             <input type="file" id="imageUpload" accept="image/*">
-            <button id="btnUndo" disabled>↩️ Undo</button>
-            <button id="btnRedo" disabled>↪️ Redo</button>
+            <button id="btnUndo" disabled>↩️</button>
+            <button id="btnRedo" disabled>↪️</button>
         </div>
 
         <div class="control-group">
@@ -165,17 +165,10 @@
         </div>
 
         <div class="control-group">
-            <label>Unit:</label>
-            <select id="unitSelect">
-                <option value="mm">mm</option>
-                <option value="cm" selected>cm</option>
-                <option value="m">m</option>
-                <option value="inch">inch</option>
-            </select>
             <label>Tinggi:</label>
-            <input type="number" id="wallHeight" value="300">
-            <label>Tebal 3D:</label>
-            <input type="number" id="wallThickness" value="15">
+            <input type="number" id="wallHeight" value="100">
+            <label>Tebal:</label>
+            <input type="number" id="wallThickness" value="8">
         </div>
 
         <div class="control-group">
@@ -188,7 +181,7 @@
         </div>
         
         <div class="control-group" style="flex: 1; justify-content: flex-end;">
-            <button class="danger" id="clearAll">🗑️ Hapus Semua</button>
+            <button class="danger" id="clearAll">🗑️ Clear</button>
         </div>
     </div>
 
@@ -196,10 +189,11 @@
         <div class="panel" id="panel2d">
             <canvas id="canvas2d"></canvas>
             <div class="instructions">
-                <strong>Kontrol 2D (Tablet/Mouse):</strong><br>
+                <strong>Kontrol 2D:</strong><br>
                 - <b>Tap/Klik:</b> Taruh Item / Gambar Tembok<br>
-                - <b>Pinch (2 Jari) / Scroll:</b> Zoom In/Out<br>
-                - <b>Drag (2 Jari) / Klik Kanan:</b> Pindah Kanvas
+                - <b>Double Tap / Klik Kanan:</b> Akhiri garis tembok<br>
+                - <b>Pinch / Scroll:</b> Zoom In/Out<br>
+                - <b>Drag 2 Jari:</b> Pindah Kanvas
             </div>
         </div>
         <div id="canvas3d-container"></div>
@@ -269,11 +263,11 @@
         let isPanning = false;
         let rawMouseX = 0, rawMouseY = 0, worldMouseX = 0, worldMouseY = 0;
         let lastPinchDist = null, lastPanX = null, lastPanY = null;
+        let lastTapTime = 0; // Untuk mendeteksi double-tap
 
         const SNAP_DIST = 15;
-        // Constants for 3D logic
-        const DOOR_WIDTH = 80, DOOR_HEIGHT = 200; 
-        const WIN_WIDTH = 100, WIN_HEIGHT = 100, WIN_BOTTOM = 80;
+        const DOOR_WIDTH = 40, DOOR_HEIGHT = 80; 
+        const WIN_WIDTH = 50, WIN_HEIGHT = 40, WIN_BOTTOM = 30;
 
         function resizeCanvas() {
             canvas2d.width = panel2d.clientWidth;
@@ -311,14 +305,6 @@
             return { x, y };
         }
 
-        function getUnitMultiplier() {
-            const unit = document.getElementById('unitSelect').value;
-            if (unit === 'mm') return 0.1;
-            if (unit === 'm') return 100;
-            if (unit === 'inch') return 2.54;
-            return 1; // Default: cm 
-        }
-
         // --- DRAW 2D ---
         function drawCanvas() {
             ctx.clearRect(0, 0, canvas2d.width, canvas2d.height);
@@ -348,51 +334,51 @@
             }
 
             if (backgroundImage.src && backgroundImage.width > 0) {
-                ctx.globalAlpha = 0.6; 
+                ctx.globalAlpha = 0.8; 
                 ctx.drawImage(backgroundImage, 0, 0);
                 ctx.globalAlpha = 1.0;
             }
 
             // Draw Items (Furniture)
             items.forEach(item => {
-                ctx.fillStyle = 'rgba(0,0,0,0.6)';
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
                 ctx.fillRect(item.x - 15/zoom, item.y - 15/zoom, 30/zoom, 30/zoom);
                 ctx.fillStyle = 'white';
                 ctx.font = `bold ${10/zoom}px sans-serif`;
                 ctx.fillText(item.type.substring(0,3).toUpperCase(), item.x - 12/zoom, item.y + 3/zoom);
             });
 
-            // FIXED LINE THICKNESS (Tipis & nyaman untuk ditrace)
-            const visualThickness = 4 / zoom;
+            // FIXED LINE THICKNESS & TRANSPARENCY
+            const visualThickness = parseFloat(document.getElementById('wallThickness').value);
             ctx.lineCap = 'round';
             
-            // Draw Walls
+            // Draw Walls (Semi Transparent Dark)
             walls.forEach(wall => {
                 ctx.lineWidth = visualThickness;
-                ctx.strokeStyle = '#333333';
+                ctx.strokeStyle = 'rgba(68, 68, 68, 0.6)'; // Transparan agar floorplan terlihat
                 ctx.beginPath(); ctx.moveTo(wall.x1, wall.y1); ctx.lineTo(wall.x2, wall.y2); ctx.stroke();
 
                 wall.doors.forEach(door => {
                     const posX = wall.x1 + (wall.x2 - wall.x1) * door.t;
                     const posY = wall.y1 + (wall.y2 - wall.y1) * door.t;
-                    ctx.fillStyle = '#ffcc00';
+                    ctx.fillStyle = 'rgba(255, 204, 0, 0.8)';
                     ctx.beginPath(); ctx.arc(posX, posY, 6/zoom, 0, Math.PI * 2); ctx.fill();
                 });
 
                 wall.windows.forEach(win => {
                     const posX = wall.x1 + (wall.x2 - wall.x1) * win.t;
                     const posY = wall.y1 + (wall.y2 - wall.y1) * win.t;
-                    ctx.fillStyle = '#00ccff';
+                    ctx.fillStyle = 'rgba(0, 204, 255, 0.8)';
                     ctx.beginPath(); ctx.arc(posX, posY, 6/zoom, 0, Math.PI * 2); ctx.fill();
                 });
             });
 
-            // Preview Interaksi
+            // Preview Interaksi (Semi Transparent Blue)
             const mode = document.getElementById('drawMode').value;
             if (mode === 'wall') {
                 if (isDrawing) {
                     ctx.lineWidth = visualThickness;
-                    ctx.strokeStyle = 'rgba(0, 122, 255, 0.7)'; 
+                    ctx.strokeStyle = 'rgba(0, 122, 255, 0.5)'; 
                     ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(currentX, currentY); ctx.stroke();
                 }
                 const snapped = getSnapPoint(worldMouseX, worldMouseY);
@@ -414,26 +400,56 @@
             ctx.restore();
         }
 
-        // --- INPUT HANDLERS (Shared for Mouse & Touch) ---
+        // --- INPUT HANDLERS (Mouse & Touch) ---
         function handleInputDown(x, y, rightClick) {
-            if (rightClick) { isPanning = true; return; }
+            if (rightClick) {
+                // Klik kanan membatalkan drawing (End Line)
+                if (isDrawing) { isDrawing = false; drawCanvas(); return; }
+                isPanning = true; 
+                return;
+            }
             
             rawMouseX = x; rawMouseY = y;
             const world = toWorld(x, y);
             worldMouseX = world.x; worldMouseY = world.y;
 
+            // Deteksi Double Tap / Double Click untuk memutus garis
+            const now = Date.now();
+            const isDoubleTap = (now - lastTapTime < 300);
+            lastTapTime = now;
+
             const mode = document.getElementById('drawMode').value;
             
             if (mode === 'wall') {
-                const snapped = getSnapPoint(worldMouseX, worldMouseY);
+                if (isDoubleTap && isDrawing) {
+                    isDrawing = false; // Memutus garis
+                    drawCanvas();
+                    return;
+                }
+
+                let snapX = worldMouseX;
+                let snapY = worldMouseY;
+
+                // Ortho Snap (saat klik)
+                if (isDrawing) {
+                    const snapTolerance = 20 / zoom;
+                    if (Math.abs(snapX - startX) < snapTolerance) snapX = startX;
+                    if (Math.abs(snapY - startY) < snapTolerance) snapY = startY;
+                }
+
+                const snapped = getSnapPoint(snapX, snapY);
+
                 if (!isDrawing) {
                     isDrawing = true;
                     startX = snapped.x; startY = snapped.y;
                     currentX = startX; currentY = startY;
                 } else {
+                    // Simpan segmen garis dan lanjutkan titik berikutnya (Continuous)
                     saveState(); 
                     walls.push({ x1: startX, y1: startY, x2: snapped.x, y2: snapped.y, doors: [], windows: [] });
-                    isDrawing = false;
+                    startX = snapped.x; // Set titik awal baru ke titik akhir sebelumnya
+                    startY = snapped.y;
+                    currentX = startX; currentY = startY;
                     generate3D();
                 }
             } else if (mode === 'door' || mode === 'window') {
@@ -458,8 +474,17 @@
             worldMouseX = world.x; worldMouseY = world.y;
 
             if (isDrawing && document.getElementById('drawMode').value === 'wall') {
-                const snapped = getSnapPoint(worldMouseX, worldMouseY);
-                currentX = snapped.x; currentY = snapped.y;
+                let snapX = worldMouseX;
+                let snapY = worldMouseY;
+                
+                // Axis/Ortho Snap (Menempel lurus sumbu X/Y)
+                const snapTolerance = 20 / zoom;
+                if (Math.abs(snapX - startX) < snapTolerance) snapX = startX;
+                if (Math.abs(snapY - startY) < snapTolerance) snapY = startY;
+
+                const snapped = getSnapPoint(snapX, snapY);
+                currentX = snapped.x; 
+                currentY = snapped.y;
             }
             drawCanvas();
         }
@@ -469,7 +494,11 @@
         }
 
         // --- MOUSE EVENTS ---
-        canvas2d.addEventListener('contextmenu', e => e.preventDefault());
+        canvas2d.addEventListener('contextmenu', e => {
+            e.preventDefault();
+            // Jika sedang gambar, klik kanan memutuskan garis
+            if (isDrawing) { isDrawing = false; drawCanvas(); }
+        });
         
         canvas2d.addEventListener('mousedown', (e) => {
             const rect = canvas2d.getBoundingClientRect();
@@ -494,17 +523,15 @@
             drawCanvas();
         });
 
-        // --- TOUCH EVENTS (Untuk iPad / Tablet) ---
+        // --- TOUCH EVENTS ---
         canvas2d.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // Mencegah scrolling browser
+            e.preventDefault(); 
             const rect = canvas2d.getBoundingClientRect();
             
             if (e.touches.length === 1) {
-                // 1 Jari = Draw / Place Item
                 handleInputDown(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top, false);
             } else if (e.touches.length === 2) {
-                // 2 Jari = Pinch & Pan
-                if (isDrawing) { isDrawing = false; drawCanvas(); } // Batalkan draw kalau tiba-tiba pinch
+                if (isDrawing) { isDrawing = false; drawCanvas(); } 
                 
                 const t1 = e.touches[0], t2 = e.touches[1];
                 lastPinchDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
@@ -525,11 +552,9 @@
                 const currentPanX = (t1.clientX + t2.clientX) / 2;
                 const currentPanY = (t1.clientY + t2.clientY) / 2;
 
-                // Handle Pan (Geser 2 jari)
                 panX += currentPanX - lastPanX;
                 panY += currentPanY - lastPanY;
 
-                // Handle Zoom (Pinch)
                 if (lastPinchDist) {
                     const zoomFactor = currentDist / lastPinchDist;
                     const newZoom = zoom * zoomFactor;
@@ -554,10 +579,7 @@
 
         canvas2d.addEventListener('touchend', (e) => {
             e.preventDefault();
-            if (e.touches.length === 0) {
-                // Semua jari diangkat
-                lastPinchDist = null;
-            }
+            if (e.touches.length === 0) { lastPinchDist = null; }
         }, { passive: false });
 
 
@@ -587,16 +609,14 @@
         document.getElementById('clearAll').addEventListener('click', () => { 
             if(confirm("Yakin ingin menghapus semua?")) {
                 saveState(); 
-                walls = []; items = []; drawCanvas(); generate3D(); 
+                walls = []; items = []; isDrawing = false; drawCanvas(); generate3D(); 
             }
         });
         
-        document.getElementById('unitSelect').addEventListener('change', () => { drawCanvas(); generate3D(); });
         document.getElementById('wallHeight').addEventListener('input', generate3D);
-        document.getElementById('wallThickness').addEventListener('input', () => { generate3D(); });
+        document.getElementById('wallThickness').addEventListener('input', () => { drawCanvas(); generate3D(); });
         document.getElementById('wallColor').addEventListener('input', generate3D);
         document.getElementById('floorColor').addEventListener('input', generate3D);
-        
         document.getElementById('showGrid2D').addEventListener('change', drawCanvas);
 
         // --- 3D SCENE ---
@@ -605,7 +625,7 @@
         scene.background = new THREE.Color(0x333333); 
 
         const camera = new THREE.PerspectiveCamera(50, container3d.clientWidth / container3d.clientHeight, 1, 15000);
-        camera.position.set(0, 800, 800); 
+        camera.position.set(0, 600, 600); 
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(container3d.clientWidth, container3d.clientHeight);
@@ -644,12 +664,11 @@
         function createBed() {
             const group = new THREE.Group();
             const frameMat = new THREE.MeshStandardMaterial({ color: 0x5c4033 });
-            const frame = new THREE.Mesh(new THREE.BoxGeometry(160, 25, 200), frameMat);
-            frame.position.y = 12.5;
-            
+            const frame = new THREE.Mesh(new THREE.BoxGeometry(80, 15, 100), frameMat);
+            frame.position.y = 7.5;
             const mattMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-            const matt = new THREE.Mesh(new THREE.BoxGeometry(150, 15, 190), mattMat);
-            matt.position.y = 32.5;
+            const matt = new THREE.Mesh(new THREE.BoxGeometry(75, 10, 95), mattMat);
+            matt.position.y = 20;
             group.add(frame); group.add(matt);
             return group;
         }
@@ -657,14 +676,13 @@
         function createTable() {
             const group = new THREE.Group();
             const woodMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b });
-            const top = new THREE.Mesh(new THREE.BoxGeometry(120, 5, 80), woodMat);
-            top.position.y = 75;
+            const top = new THREE.Mesh(new THREE.BoxGeometry(60, 3, 40), woodMat);
+            top.position.y = 40;
             group.add(top);
-
-            const legGeo = new THREE.CylinderGeometry(3, 3, 72);
-            [[-55,-35], [55,-35], [-55,35], [55,35]].forEach(p => {
+            const legGeo = new THREE.CylinderGeometry(1.5, 1.5, 38);
+            [[-28,-18], [28,-18], [-28,18], [28,18]].forEach(p => {
                 const leg = new THREE.Mesh(legGeo, woodMat);
-                leg.position.set(p[0], 36, p[1]);
+                leg.position.set(p[0], 19, p[1]);
                 group.add(leg);
             });
             return group;
@@ -673,17 +691,15 @@
         function createChair() {
             const group = new THREE.Group();
             const mat = new THREE.MeshStandardMaterial({ color: 0x444444 });
-            const seat = new THREE.Mesh(new THREE.BoxGeometry(40, 5, 40), mat);
-            seat.position.y = 45;
-            const back = new THREE.Mesh(new THREE.BoxGeometry(40, 45, 5), mat);
-            back.position.set(0, 70, -17.5);
-            
+            const seat = new THREE.Mesh(new THREE.BoxGeometry(20, 3, 20), mat);
+            seat.position.y = 25;
+            const back = new THREE.Mesh(new THREE.BoxGeometry(20, 25, 3), mat);
+            back.position.set(0, 39, -8.5);
             group.add(seat); group.add(back);
-            
-            const legGeo = new THREE.CylinderGeometry(2, 2, 42);
-            [[-17,-17], [17,-17], [-17,17], [17,17]].forEach(p => {
+            const legGeo = new THREE.CylinderGeometry(1, 1, 23);
+            [[-8,-8], [8,-8], [-8,8], [8,8]].forEach(p => {
                 const leg = new THREE.Mesh(legGeo, mat);
-                leg.position.set(p[0], 21, p[1]);
+                leg.position.set(p[0], 11.5, p[1]);
                 group.add(leg);
             });
             return group;
@@ -692,9 +708,8 @@
         function createStairs() {
             const group = new THREE.Group();
             const mat = new THREE.MeshStandardMaterial({ color: 0x999999 });
-            const stepCount = 15;
-            const stepHeight = 20, stepDepth = 25, width = 100;
-
+            const stepCount = 12;
+            const stepHeight = 10, stepDepth = 12, width = 50;
             for(let i=0; i<stepCount; i++) {
                 const step = new THREE.Mesh(new THREE.BoxGeometry(width, stepHeight, stepDepth), mat);
                 step.position.set(0, (i * stepHeight) + (stepHeight/2), i * stepDepth);
@@ -711,13 +726,19 @@
 
             floorMesh.material.color.set(document.getElementById('floorColor').value);
 
-            const mult = getUnitMultiplier();
-            const height = (parseFloat(document.getElementById('wallHeight').value) || 300) * mult;
-            const thickness = (parseFloat(document.getElementById('wallThickness').value) || 15) * mult;
+            const height = parseFloat(document.getElementById('wallHeight').value) || 100;
+            const thickness = parseFloat(document.getElementById('wallThickness').value) || 8;
             const wallColor = document.getElementById('wallColor').value;
             
             const wallMat = new THREE.MeshStandardMaterial({ color: wallColor, side: THREE.DoubleSide });
             const glassMat = new THREE.MeshStandardMaterial({ color: 0x88ccff, transparent: true, opacity: 0.5 });
+
+            // KALKULASI CENTER GAMBAR AGAR 3D BERADA DI 0,0,0
+            let centerX = 0, centerY = 0;
+            if (backgroundImage.src && backgroundImage.width > 0) {
+                centerX = backgroundImage.width / 2;
+                centerY = backgroundImage.height / 2;
+            }
 
             // Generate Walls
             walls.forEach(wall => {
@@ -745,7 +766,9 @@
                     const glass = new THREE.Mesh(new THREE.BoxGeometry(WIN_WIDTH, WIN_HEIGHT, thickness - 1), glassMat);
                     glass.position.set(pos, WIN_BOTTOM + WIN_HEIGHT/2, 0);
                     const winPivot = new THREE.Group();
-                    winPivot.add(glass); winPivot.position.set(wall.x1, 0, wall.y1); winPivot.rotation.y = -angle;
+                    winPivot.add(glass); 
+                    winPivot.position.set(wall.x1 - centerX, 0, wall.y1 - centerY); 
+                    winPivot.rotation.y = -angle;
                     mainGroup.add(winPivot);
                 });
 
@@ -754,7 +777,9 @@
 
                 const mesh = new THREE.Mesh(geometry, wallMat);
                 mesh.castShadow = true; mesh.receiveShadow = true;
-                mesh.position.set(wall.x1, 0, wall.y1);
+                
+                // Posisikan dengan mengurangi centerX dan centerY
+                mesh.position.set(wall.x1 - centerX, 0, wall.y1 - centerY);
                 mesh.rotation.y = -angle;
                 mainGroup.add(mesh);
             });
@@ -768,7 +793,8 @@
                 else if(item.type === 'stairs') meshObj = createStairs();
 
                 if(meshObj) {
-                    meshObj.position.set(item.x, 0, item.y);
+                    // Posisikan dengan mengurangi centerX dan centerY
+                    meshObj.position.set(item.x - centerX, 0, item.y - centerY);
                     meshObj.castShadow = true;
                     mainGroup.add(meshObj);
                 }
