@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Floor Plan Tracer - BIM Architect + AR</title>
+    <title>3D Floor Plan Tracer - BIM Architect + Furniture & AR</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -14,8 +14,8 @@
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f0f0; display: flex; flex-direction: column; height: 100vh; touch-action: none; }
         
-        #toolbar { background: #fff; padding: 10px 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 10; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-        button, select, input[type="number"] { padding: 6px 12px; cursor: pointer; border: 1px solid #ccc; background: #eee; border-radius: 4px; font-size: 13px; transition: 0.2s; }
+        #toolbar { background: #fff; padding: 10px 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 10; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        button, select, input[type="number"] { padding: 6px 10px; cursor: pointer; border: 1px solid #ccc; background: #eee; border-radius: 4px; font-size: 13px; transition: 0.2s; }
         input[type="number"] { cursor: text; background: #fff; }
         button:hover { background: #ddd; }
         button:disabled { cursor: not-allowed; opacity: 0.5; }
@@ -36,10 +36,10 @@
         #edit-panel {
             display: none; position: absolute; top: 70px; right: 20px; background: white; 
             padding: 15px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); 
-            z-index: 100; width: 230px; border: 1px solid #ccc;
+            z-index: 100; width: 240px; border: 1px solid #ccc; max-height: 80vh; overflow-y: auto;
         }
-        #edit-panel label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; }
-        #edit-panel input[type="range"] { width: 100%; margin-bottom: 12px; }
+        #edit-panel label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 3px; }
+        #edit-panel input[type="range"] { width: 100%; margin-bottom: 10px; }
 
         /* Modal WebAR View */
         #ar-modal {
@@ -65,18 +65,27 @@
 <body>
 
     <div id="toolbar">
-        <input type="file" id="upload" accept="image/*" style="max-width: 170px;">
+        <input type="file" id="upload" accept="image/*" style="max-width: 160px;">
         <div style="border-left: 1px solid #ccc; height: 20px;"></div>
         
-        <button id="modeSelect">👆 Pilih / Edit</button>
+        <button id="modeSelect">👆 Pilih/Edit</button>
         <button id="modeWall" class="active">Gambar Tembok</button>
         <button id="modeDoor">🚪 Pintu</button>
         <button id="modeWindow">🪟 Jendela</button>
+        <button id="modeStairs">🪜 Tangga</button>
+        
+        <select id="furnitureSelect">
+            <option value="">+ Mebel...</option>
+            <option value="bed">🛏️ Kasur</option>
+            <option value="sofa">🛋️ Sofa</option>
+            <option value="table">🪵 Meja</option>
+            <option value="chair">🪑 Kursi</option>
+        </select>
         
         <div style="border-left: 1px solid #ccc; height: 20px;"></div>
         
-        <label style="font-size:12px; font-weight:bold;">Tinggi(m): <input type="number" id="valWallH" value="3.0" step="0.1" style="width:45px; padding:4px;"></label>
-        <label style="font-size:12px; font-weight:bold;">Tebal(m): <input type="number" id="valWallT" value="0.15" step="0.05" style="width:45px; padding:4px;"></label>
+        <label style="font-size:11px; font-weight:bold;">Tinggi(m): <input type="number" id="valWallH" value="3.0" step="0.1" style="width:40px; padding:3px;"></label>
+        <label style="font-size:11px; font-weight:bold;">Tebal(m): <input type="number" id="valWallT" value="0.15" step="0.05" style="width:40px; padding:3px;"></label>
 
         <div style="border-left: 1px solid #ccc; height: 20px;"></div>
         <button id="undoBtn" disabled>Undo</button>
@@ -89,20 +98,36 @@
     </div>
 
     <div id="edit-panel">
-        <h4 style="margin: 0 0 10px 0; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Parameter Objek</h4>
-        <label>Posisi Tembok: <span id="valPos">50</span>%</label>
-        <input type="range" id="editPos" min="0" max="100" step="1" value="50">
-
-        <label>Lebar: <span id="valWidth">0.9</span> m</label>
-        <input type="range" id="editWidth" min="0.4" max="4.0" step="0.1" value="0.9">
+        <h4 id="editTitle" style="margin: 0 0 10px 0; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Parameter Objek</h4>
         
-        <div id="doorControls">
-            <label>Rotasi (Swing): <span id="valSwing">45</span>°</label>
-            <input type="range" id="editSwing" min="-180" max="180" step="5" value="45">
-            <button id="flipHingeBtn" style="width: 100%; margin-bottom: 15px; background: #e0e0e0;">🔄 Balik Engsel (Kiri/Kanan)</button>
+        <div id="wallObjectControls">
+            <label>Posisi Tembok: <span id="valPos">50</span>%</label>
+            <input type="range" id="editPos" min="0" max="100" step="1" value="50">
+
+            <label>Lebar: <span id="valWidth">0.9</span> m</label>
+            <input type="range" id="editWidth" min="0.4" max="4.0" step="0.1" value="0.9">
+            
+            <div id="doorControls">
+                <label>Rotasi (Swing): <span id="valSwing">45</span>°</label>
+                <input type="range" id="editSwing" min="-180" max="180" step="5" value="45">
+                <button id="flipHingeBtn" style="width: 100%; margin-bottom: 10px; background: #e0e0e0;">🔄 Balik Engsel</button>
+            </div>
         </div>
 
-        <button id="delObjBtn" style="background: #f44336; color: white; width: 100%; border: none; padding: 8px; border-radius: 4px;">🗑️ Hapus Objek</button>
+        <div id="freeObjectControls">
+            <label>Rotasi: <span id="valRot">0</span>°</label>
+            <input type="range" id="editRot" min="0" max="360" step="5" value="0">
+
+            <div id="stairsControls">
+                <label>Jumlah Anak Tangga: <span id="valSteps">14</span></label>
+                <input type="range" id="editSteps" min="5" max="25" step="1" value="14">
+
+                <label>Lebar Tangga: <span id="valStairW">1.0</span> m</label>
+                <input type="range" id="editStairW" min="0.8" max="2.5" step="0.1" value="1.0">
+            </div>
+        </div>
+
+        <button id="delObjBtn" style="background: #f44336; color: white; width: 100%; border: none; padding: 8px; border-radius: 4px; margin-top: 10px;">🗑️ Hapus Objek</button>
     </div>
 
     <div id="ar-modal">
@@ -121,10 +146,9 @@
                 <canvas id="draw-canvas"></canvas>
             </div>
             <div id="instructions">
-                <b>Tips:</b><br>
-                - Garis 2D transparan agar gambar denah acuan tetap kelihatan.<br>
-                - Tembok 3D kembali solid (tidak transparan).<br>
-                - Lantai 3D otomatis dibuat terang (normal diperbaiki).
+                <b>Fitur Mebel & Tangga:</b><br>
+                - <b>Tangga/Mebel</b>: Pilih ikon di toolbar lalu klik posisi di lantai.<br>
+                - <b>Edit</b>: Gunakan mode [👆 Pilih/Edit] untuk memutar, merubah anak tangga, atau menggeser objek.
             </div>
         </div>
         <div id="right-panel"></div>
@@ -134,10 +158,11 @@
         // === STATE & DATA ===
         let lines = []; 
         let openings = []; 
+        let freeObjects = []; // Tangga & Furniture
         let mode = 'wall'; 
         let scale3D = 0.02; 
         
-        let selectedOpening = null;
+        let selectedItem = null; // Bisa opening atau freeObject
         let undoStack = []; let redoStack = [];
 
         const workspace = document.getElementById('workspace');
@@ -148,29 +173,38 @@
         
         const inputWallH = document.getElementById('valWallH');
         const inputWallT = document.getElementById('valWallT');
+        const furnitureSelect = document.getElementById('furnitureSelect');
 
         inputWallH.addEventListener('change', () => { saveState(); update3D(); });
         inputWallT.addEventListener('change', () => { saveState(); update3D(); draw2D(); });
 
         // === UNDO / REDO LOGIC ===
         function saveState() {
-            undoStack.push({ lines: JSON.parse(JSON.stringify(lines)), openings: JSON.parse(JSON.stringify(openings)) });
+            undoStack.push({ 
+                lines: JSON.parse(JSON.stringify(lines)), 
+                openings: JSON.parse(JSON.stringify(openings)),
+                freeObjects: JSON.parse(JSON.stringify(freeObjects))
+            });
             redoStack = []; 
             document.getElementById('undoBtn').disabled = false; document.getElementById('redoBtn').disabled = true;
         }
 
         function restoreState(isUndo) {
-            const current = { lines: JSON.parse(JSON.stringify(lines)), openings: JSON.parse(JSON.stringify(openings)) };
+            const current = { 
+                lines: JSON.parse(JSON.stringify(lines)), 
+                openings: JSON.parse(JSON.stringify(openings)),
+                freeObjects: JSON.parse(JSON.stringify(freeObjects))
+            };
             if (isUndo) {
                 redoStack.push(current); const prev = undoStack.pop();
-                lines = prev.lines; openings = prev.openings;
+                lines = prev.lines; openings = prev.openings; freeObjects = prev.freeObjects || [];
             } else {
                 undoStack.push(current); const next = redoStack.pop();
-                lines = next.lines; openings = next.openings;
+                lines = next.lines; openings = next.openings; freeObjects = next.freeObjects || [];
             }
             document.getElementById('undoBtn').disabled = undoStack.length === 0;
             document.getElementById('redoBtn').disabled = redoStack.length === 0;
-            selectedOpening = null; closeEditPanel(); draw2D(); update3D();
+            selectedItem = null; closeEditPanel(); draw2D(); update3D();
         }
 
         document.getElementById('undoBtn').onclick = () => restoreState(true);
@@ -234,11 +268,18 @@
         document.getElementById('modeWall').onclick = (e) => setMode('wall', e.target);
         document.getElementById('modeDoor').onclick = (e) => setMode('door', e.target);
         document.getElementById('modeWindow').onclick = (e) => setMode('window', e.target);
+        document.getElementById('modeStairs').onclick = (e) => setMode('stairs', e.target);
+
+        furnitureSelect.addEventListener('change', (e) => {
+            if(e.target.value) {
+                setMode(e.target.value, null);
+            }
+        });
 
         function setMode(newMode, btn) {
             mode = newMode;
             document.querySelectorAll('#toolbar button.active').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
+            if(btn) btn.classList.add('active');
             isDrawing = false; currentLine = null;
             if (mode !== 'select') closeEditPanel();
             draw2D();
@@ -278,17 +319,27 @@
             let { x, y } = getTrueCoords(clientX, clientY);
             
             if (mode === 'select') {
-                let clickedOp = null; let minDist = 20 / scale;
+                let clickedItem = null; let minDist = 25 / scale;
+                
+                // Deteksi klik Pintu / Jendela
                 openings.forEach(op => {
                     let l = lines[op.lineIndex];
                     if(l) {
                         const cx = l.start.x + (l.end.x - l.start.x) * op.ratio;
                         const cy = l.start.y + (l.end.y - l.start.y) * op.ratio;
-                        if (Math.hypot(cx - x, cy - y) < minDist) { clickedOp = op; minDist = Math.hypot(cx - x, cy - y); }
+                        if (Math.hypot(cx - x, cy - y) < minDist) { clickedItem = op; minDist = Math.hypot(cx - x, cy - y); }
                     }
                 });
-                if (clickedOp) { selectedOpening = clickedOp; openEditPanel(selectedOpening); } 
-                else { selectedOpening = null; closeEditPanel(); }
+
+                // Deteksi klik Tangga / Mebel
+                freeObjects.forEach(obj => {
+                    if (Math.hypot(obj.x - x, obj.y - y) < minDist) {
+                        clickedItem = obj; minDist = Math.hypot(obj.x - x, obj.y - y);
+                    }
+                });
+
+                if (clickedItem) { selectedItem = clickedItem; openEditPanel(selectedItem); } 
+                else { selectedItem = null; closeEditPanel(); }
                 draw2D();
             } 
             else if (mode === 'wall') {
@@ -316,6 +367,20 @@
                     });
                     update3D(); draw2D();
                 }
+            }
+            else if (mode === 'stairs' || ['bed', 'sofa', 'table', 'chair'].includes(mode)) {
+                saveState();
+                freeObjects.push({
+                    id: Date.now(),
+                    type: mode,
+                    x: x, y: y,
+                    rotation: 0,
+                    steps: 14, // Default tangga
+                    width3D: mode === 'stairs' ? 1.0 : (mode === 'bed' ? 1.6 : (mode === 'sofa' ? 1.8 : 1.0))
+                });
+                furnitureSelect.value = "";
+                setMode('select', document.getElementById('modeSelect'));
+                update3D(); draw2D();
             }
         }
 
@@ -346,56 +411,111 @@
 
         // === PANEL EDITOR MELAYANG ===
         const editPanel = document.getElementById('edit-panel');
+        const wallObjectControls = document.getElementById('wallObjectControls');
+        const freeObjectControls = document.getElementById('freeObjectControls');
+        const stairsControls = document.getElementById('stairsControls');
+        
         const editPos = document.getElementById('editPos');
         const editWidth = document.getElementById('editWidth');
         const editSwing = document.getElementById('editSwing');
-        const valPos = document.getElementById('valPos');
-        const valWidth = document.getElementById('valWidth');
-        const valSwing = document.getElementById('valSwing');
+        const editRot = document.getElementById('editRot');
+        const editSteps = document.getElementById('editSteps');
+        const editStairW = document.getElementById('editStairW');
 
-        function openEditPanel(op) {
+        function openEditPanel(item) {
             editPanel.style.display = 'block';
-            editPos.value = Math.round(op.ratio * 100); valPos.innerText = Math.round(op.ratio * 100);
-            editWidth.value = op.width3D; valWidth.innerText = op.width3D;
-            if (op.type === 'door') {
-                document.getElementById('doorControls').style.display = 'block';
-                editSwing.value = op.swing; valSwing.innerText = op.swing;
-            } else { document.getElementById('doorControls').style.display = 'none'; }
+            
+            if (item.lineIndex !== undefined) { // Pintu / Jendela
+                wallObjectControls.style.display = 'block';
+                freeObjectControls.style.display = 'none';
+                
+                editPos.value = Math.round(item.ratio * 100); document.getElementById('valPos').innerText = Math.round(item.ratio * 100);
+                editWidth.value = item.width3D; document.getElementById('valWidth').innerText = item.width3D;
+                if (item.type === 'door') {
+                    document.getElementById('doorControls').style.display = 'block';
+                    editSwing.value = item.swing; document.getElementById('valSwing').innerText = item.swing;
+                } else { document.getElementById('doorControls').style.display = 'none'; }
+            } else { // Tangga / Mebel
+                wallObjectControls.style.display = 'none';
+                freeObjectControls.style.display = 'block';
+                
+                editRot.value = item.rotation || 0; document.getElementById('valRot').innerText = item.rotation || 0;
+                
+                if (item.type === 'stairs') {
+                    stairsControls.style.display = 'block';
+                    editSteps.value = item.steps || 14; document.getElementById('valSteps').innerText = item.steps || 14;
+                    editStairW.value = item.width3D || 1.0; document.getElementById('valStairW').innerText = item.width3D || 1.0;
+                } else {
+                    stairsControls.style.display = 'none';
+                }
+            }
         }
-        function closeEditPanel() { editPanel.style.display = 'none'; selectedOpening = null; }
+
+        function closeEditPanel() { editPanel.style.display = 'none'; selectedItem = null; }
 
         editPos.addEventListener('input', (e) => {
-            if (selectedOpening) { selectedOpening.ratio = parseFloat(e.target.value) / 100; valPos.innerText = e.target.value; update3D(); draw2D(); }
+            if (selectedItem && selectedItem.lineIndex !== undefined) { 
+                selectedItem.ratio = parseFloat(e.target.value) / 100; document.getElementById('valPos').innerText = e.target.value; update3D(); draw2D(); 
+            }
         });
         editPos.addEventListener('change', () => saveState());
 
         editWidth.addEventListener('input', (e) => {
-            if (selectedOpening) { selectedOpening.width3D = parseFloat(e.target.value); valWidth.innerText = selectedOpening.width3D; update3D(); draw2D(); }
+            if (selectedItem && selectedItem.lineIndex !== undefined) { 
+                selectedItem.width3D = parseFloat(e.target.value); document.getElementById('valWidth').innerText = selectedItem.width3D; update3D(); draw2D(); 
+            }
         });
         editWidth.addEventListener('change', () => saveState());
 
         editSwing.addEventListener('input', (e) => {
-            if (selectedOpening) { selectedOpening.swing = parseFloat(e.target.value); valSwing.innerText = selectedOpening.swing; update3D(); draw2D(); }
+            if (selectedItem && selectedItem.type === 'door') { 
+                selectedItem.swing = parseFloat(e.target.value); document.getElementById('valSwing').innerText = selectedItem.swing; update3D(); draw2D(); 
+            }
         });
         editSwing.addEventListener('change', () => saveState());
 
+        editRot.addEventListener('input', (e) => {
+            if (selectedItem && selectedItem.lineIndex === undefined) { 
+                selectedItem.rotation = parseInt(e.target.value); document.getElementById('valRot').innerText = selectedItem.rotation; update3D(); draw2D(); 
+            }
+        });
+        editRot.addEventListener('change', () => saveState());
+
+        editSteps.addEventListener('input', (e) => {
+            if (selectedItem && selectedItem.type === 'stairs') { 
+                selectedItem.steps = parseInt(e.target.value); document.getElementById('valSteps').innerText = selectedItem.steps; update3D(); draw2D(); 
+            }
+        });
+        editSteps.addEventListener('change', () => saveState());
+
+        editStairW.addEventListener('input', (e) => {
+            if (selectedItem && selectedItem.type === 'stairs') { 
+                selectedItem.width3D = parseFloat(e.target.value); document.getElementById('valStairW').innerText = selectedItem.width3D; update3D(); draw2D(); 
+            }
+        });
+        editStairW.addEventListener('change', () => saveState());
+
         document.getElementById('flipHingeBtn').addEventListener('click', () => {
-            if (selectedOpening && selectedOpening.type === 'door') {
-                saveState(); selectedOpening.flipHinge = !selectedOpening.flipHinge; update3D(); draw2D();
+            if (selectedItem && selectedItem.type === 'door') {
+                saveState(); selectedItem.flipHinge = !selectedItem.flipHinge; update3D(); draw2D();
             }
         });
 
         document.getElementById('delObjBtn').addEventListener('click', () => {
-            if (selectedOpening) { saveState(); openings = openings.filter(o => o.id !== selectedOpening.id); closeEditPanel(); update3D(); draw2D(); }
+            if (selectedItem) { 
+                saveState(); 
+                if (selectedItem.lineIndex !== undefined) openings = openings.filter(o => o.id !== selectedItem.id); 
+                else freeObjects = freeObjects.filter(o => o.id !== selectedItem.id);
+                closeEditPanel(); update3D(); draw2D(); 
+            }
         });
 
-        // === 2D RENDER (GARIS DENGAN TRANSPARANSI TERUKUR) ===
+        // === 2D RENDER ===
         function draw2D() {
             ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.lineCap = 'round';
             const globalThick2D = parseFloat(inputWallT.value) / scale3D;
             ctx.lineWidth = Math.max(2, globalThick2D); 
             
-            // Transparan pada 2D canvas agar gambar acuan tetap terlihat
             ctx.strokeStyle = 'rgba(33, 150, 243, 0.45)';
             lines.forEach(l => { ctx.beginPath(); ctx.moveTo(l.start.x, l.start.y); ctx.lineTo(l.end.x, l.end.y); ctx.stroke(); });
 
@@ -404,6 +524,7 @@
                 ctx.beginPath(); ctx.moveTo(currentLine.start.x, currentLine.start.y); ctx.lineTo(currentLine.end.x, currentLine.end.y); ctx.stroke(); 
             }
 
+            // Draw Openings
             openings.forEach(op => {
                 let l = lines[op.lineIndex]; if(!l) return;
                 const angle = Math.atan2(l.end.y - l.start.y, l.end.x - l.start.x);
@@ -413,7 +534,7 @@
                 ctx.save(); ctx.translate(cx, cy); ctx.rotate(angle);
                 if (op.flipHinge) { ctx.scale(-1, 1); }
 
-                if (op === selectedOpening) {
+                if (op === selectedItem) {
                     ctx.shadowColor = '#2196F3'; ctx.shadowBlur = 15; ctx.fillStyle = 'rgba(33, 150, 243, 0.4)';
                     ctx.fillRect(-opWidth2D/2, -ctx.lineWidth, opWidth2D, ctx.lineWidth*2);
                 }
@@ -433,6 +554,40 @@
                 }
                 ctx.restore();
             });
+
+            // Draw Free Objects (Tangga & Mebel)
+            freeObjects.forEach(obj => {
+                ctx.save();
+                ctx.translate(obj.x, obj.y);
+                ctx.rotate((obj.rotation || 0) * Math.PI / 180);
+
+                if (obj === selectedItem) {
+                    ctx.shadowColor = '#2196F3'; ctx.shadowBlur = 15;
+                }
+
+                if (obj.type === 'stairs') {
+                    const w = (obj.width3D || 1.0) / scale3D;
+                    const h = 1.5 / scale3D; // Panjang tangga 2D
+                    ctx.fillStyle = 'rgba(200, 200, 200, 0.8)';
+                    ctx.fillRect(-w/2, -h/2, w, h);
+                    ctx.strokeStyle = '#333'; ctx.lineWidth = 1.5;
+                    ctx.strokeRect(-w/2, -h/2, w, h);
+                    // Anak tangga 2D
+                    const steps = obj.steps || 14;
+                    for(let i=1; i<steps; i++) {
+                        let yStep = -h/2 + (h/steps)*i;
+                        ctx.beginPath(); ctx.moveTo(-w/2, yStep); ctx.lineTo(w/2, yStep); ctx.stroke();
+                    }
+                } else {
+                    // Mebel Icons / Boxes
+                    ctx.fillStyle = obj.type === 'bed' ? '#9C27B0' : (obj.type === 'sofa' ? '#FF9800' : '#4CAF50');
+                    const size = 30 / scale;
+                    ctx.fillRect(-size/2, -size/2, size, size);
+                    ctx.strokeStyle = '#222'; ctx.lineWidth = 1;
+                    ctx.strokeRect(-size/2, -size/2, size, size);
+                }
+                ctx.restore();
+            });
         }
 
         // === AUTO FIT IMAGE ===
@@ -448,7 +603,7 @@
                     panX = (panelWidth - (imgElement.width * scale)) / 2; panY = (panelHeight - (imgElement.height * scale)) / 2;
                     applyTransform();
                     scale3D = 20 / Math.max(canvas.width, canvas.height);
-                    lines = []; openings = []; undoStack = []; redoStack = []; closeEditPanel(); draw2D(); update3D();
+                    lines = []; openings = []; freeObjects = []; undoStack = []; redoStack = []; closeEditPanel(); draw2D(); update3D();
                 }
             };
             reader.readAsDataURL(file);
@@ -478,32 +633,86 @@
 
         function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); } animate();
 
-        // MENGHITUNG KONTUR TERBENTUK & URUTAN WINDING COUNTER-CLOCKWISE
         function findClosedLoops() {
             if (lines.length < 3) return [];
-            
             let nodes = [];
             const getIndex = (p) => {
                 let idx = nodes.findIndex(n => Math.hypot(n.x - p.x, n.y - p.y) < 3);
                 if (idx === -1) { nodes.push({ x: p.x, y: p.y }); return nodes.length - 1; }
                 return idx;
             };
-
             lines.forEach(l => { getIndex(l.start); getIndex(l.end); });
             if (nodes.length < 3) return [];
-
             let centerX = nodes.reduce((sum, n) => sum + n.x, 0) / nodes.length;
             let centerY = nodes.reduce((sum, n) => sum + n.y, 0) / nodes.length;
-
-            // Sort melingkar berdasarkan sudut polar
             nodes.sort((a, b) => Math.atan2(a.y - centerY, a.x - centerX) - Math.atan2(b.y - centerY, b.x - centerX));
-
             return nodes;
+        }
+
+        // ==========================================
+        // PROSEDURAL MODEL GENERATOR (TANGGA & MEBEL)
+        // ==========================================
+        function createStairsMesh(stepsCount, stairWidth, totalHeight) {
+            const stairsGroup = new THREE.Group();
+            const matStairs = new THREE.MeshLambertMaterial({ color: 0xd2b48c }); // Warna Kayu Terang
+            const stepHeight = totalHeight / stepsCount;
+            const stepDepth = 0.28; // Standard 28cm Aantrede
+
+            for (let i = 0; i < stepsCount; i++) {
+                const geom = new THREE.BoxGeometry(stairWidth, stepHeight, stepDepth * (stepsCount - i));
+                const mesh = new THREE.Mesh(geom, matStairs);
+                mesh.position.set(0, (i * stepHeight) + (stepHeight / 2), (i * stepDepth) / 2);
+                stairsGroup.add(mesh);
+            }
+            return stairsGroup;
+        }
+
+        function createFurnitureMesh(type) {
+            const group = new THREE.Group();
+            const matWood = new THREE.MeshLambertMaterial({ color: 0x8b5a2b });
+            const matFabric = new THREE.MeshLambertMaterial({ color: 0x34495e });
+            const matWhite = new THREE.MeshLambertMaterial({ color: 0xecf0f1 });
+
+            if (type === 'bed') {
+                // Frame
+                const frame = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.3, 2.0), matWood);
+                frame.position.y = 0.15; group.add(frame);
+                // Matras
+                const mattress = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.25, 1.9), matWhite);
+                mattress.position.set(0, 0.4, 0); group.add(mattress);
+                // Bantal
+                const pillow = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.1, 0.4), matFabric);
+                pillow.position.set(0, 0.55, -0.7); group.add(pillow);
+            } else if (type === 'sofa') {
+                // Dudukan
+                const base = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.3, 0.8), matFabric);
+                base.position.y = 0.25; group.add(base);
+                // Sandaran Punggung
+                const back = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.6, 0.2), matFabric);
+                back.position.set(0, 0.6, -0.3); group.add(back);
+            } else if (type === 'table') {
+                // Papan Meja
+                const top = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.05, 0.8), matWood);
+                top.position.y = 0.75; group.add(top);
+                // Kaki
+                for(let x of [-0.5, 0.5]) {
+                    for(let z of [-0.3, 0.3]) {
+                        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.72, 0.06), matWood);
+                        leg.position.set(x, 0.36, z); group.add(leg);
+                    }
+                }
+            } else if (type === 'chair') {
+                const seat = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.04, 0.45), matWood);
+                seat.position.y = 0.45; group.add(seat);
+                const back = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.45, 0.04), matWood);
+                back.position.set(0, 0.68, -0.2); group.add(back);
+            }
+            return group;
         }
 
         function update3D() {
             while(modelGroup.children.length > 0) modelGroup.remove(modelGroup.children[0]); 
-            if(lines.length === 0) return;
+            if(lines.length === 0 && freeObjects.length === 0) return;
 
             const heightWall = parseFloat(inputWallH.value); 
             const thickWall = parseFloat(inputWallT.value);
@@ -513,35 +722,30 @@
                 minX = Math.min(minX, l.start.x, l.end.x); maxX = Math.max(maxX, l.start.x, l.end.x);
                 minY = Math.min(minY, l.start.y, l.end.y); maxY = Math.max(maxY, l.start.y, l.end.y);
             });
-            const center2DX = (minX + maxX) / 2; const center2DY = (minY + maxY) / 2;
+            freeObjects.forEach(o => {
+                minX = Math.min(minX, o.x); maxX = Math.max(maxX, o.x);
+                minY = Math.min(minY, o.y); maxY = Math.max(maxY, o.y);
+            });
+
+            const center2DX = (minX === Infinity) ? 0 : (minX + maxX) / 2; 
+            const center2DY = (minY === Infinity) ? 0 : (minY + maxY) / 2;
             
-            // 1. MATERIAL TEMBOK SOLID / TIDAK TRANSPARAN
             const matWall = new THREE.MeshLambertMaterial({ color: 0xdedede });
             const matDoor = new THREE.MeshLambertMaterial({ color: 0x5c4033 }); 
             const matWindow = new THREE.MeshLambertMaterial({ color: 0x87CEEB, transparent: true, opacity: 0.5 }); 
             const matFrame = new THREE.MeshLambertMaterial({ color: 0x333333 }); 
-            
-            // 2. MATERIAL LANTAI PERBAIKAN (LAMBERT + DOUBLE SIDE)
-            const matFloor = new THREE.MeshLambertMaterial({ 
-                color: 0xd6d6d6, 
-                side: THREE.DoubleSide 
-            });
+            const matFloor = new THREE.MeshLambertMaterial({ color: 0xd6d6d6, side: THREE.DoubleSide });
 
-            // GENERATE LANTAI 3D (VERTEKS COUNTER-CLOCKWISE DENGAN NORMAL MENGHADAP ATAS)
+            // 1. LANTAI 3D
             const floorVertices = findClosedLoops();
             if (floorVertices.length >= 3) {
                 const floorShape = new THREE.Shape();
-                
-                // Memastikan winding order selalu Counter-Clockwise agar Normal tidak terbalik/hitam
                 let area = 0;
                 for (let i = 0; i < floorVertices.length; i++) {
                     let j = (i + 1) % floorVertices.length;
-                    area += floorVertices[i].x * floorVertices[j].y;
-                    area -= floorVertices[j].x * floorVertices[i].y;
+                    area += floorVertices[i].x * floorVertices[j].y - floorVertices[j].x * floorVertices[i].y;
                 }
-                if (area < 0) {
-                    floorVertices.reverse(); // Membalik jika urutannya Clockwise
-                }
+                if (area < 0) floorVertices.reverse();
 
                 floorVertices.forEach((v, idx) => {
                     const fx = (v.x - center2DX) * scale3D;
@@ -553,12 +757,12 @@
                 const floorGeom = new THREE.ShapeGeometry(floorShape);
                 floorGeom.computeVertexNormals();
                 const floorMesh = new THREE.Mesh(floorGeom, matFloor);
-                floorMesh.rotation.x = -Math.PI / 2; // Mengarahkan bidang sejajar tanah (+Y)
-                floorMesh.position.y = 0.001; // Naikkan sedikit agar tidak overlapping grid
+                floorMesh.rotation.x = -Math.PI / 2;
+                floorMesh.position.y = 0.001;
                 modelGroup.add(floorMesh);
             }
 
-            // GAMBAR TEMBOK & BUKAAN
+            // 2. TEMBOK & BUKAAN
             lines.forEach((line, index) => {
                 const dx = line.end.x - line.start.x; const dy = line.end.y - line.start.y;
                 const length = Math.sqrt(dx*dx + dy*dy) * scale3D; const angle = Math.atan2(dy, dx);
@@ -612,17 +816,33 @@
                 wallObj.position.set(posX, 0, posZ); wallObj.rotation.y = -angle; modelGroup.add(wallObj);
             });
 
-            // PILAR SUDUT TEMBOK
+            // 3. PILAR SUDUT TEMBOK
             const cornerGeom = new THREE.CylinderGeometry(thickWall/2, thickWall/2, heightWall, 16);
             let uniqueVertices = [];
             lines.forEach(l => {
                 [l.start, l.end].forEach(pt => { if(!uniqueVertices.some(v => Math.hypot(v.x - pt.x, v.y - pt.y) < 1)) uniqueVertices.push(pt); });
             });
-
             uniqueVertices.forEach(v => {
                 const posX = (v.x - center2DX) * scale3D; const posZ = (v.y - center2DY) * scale3D;
                 const cornerMesh = new THREE.Mesh(cornerGeom, matWall);
                 cornerMesh.position.set(posX, heightWall / 2, posZ); modelGroup.add(cornerMesh);
+            });
+
+            // 4. GENERATE TANGGA & MEBEL 3D
+            freeObjects.forEach(obj => {
+                const posX = (obj.x - center2DX) * scale3D;
+                const posZ = (obj.y - center2DY) * scale3D;
+
+                let meshGroup;
+                if (obj.type === 'stairs') {
+                    meshGroup = createStairsMesh(obj.steps || 14, obj.width3D || 1.0, heightWall);
+                } else {
+                    meshGroup = createFurnitureMesh(obj.type);
+                }
+
+                meshGroup.position.set(posX, 0, posZ);
+                meshGroup.rotation.y = THREE.MathUtils.degToRad(obj.rotation || 0);
+                modelGroup.add(meshGroup);
             });
         }
 
@@ -631,8 +851,8 @@
         const arViewer = document.getElementById('arViewer');
 
         document.getElementById('arBtn').addEventListener('click', () => {
-            if (lines.length === 0) {
-                alert("Gambar tembok terlebih dahulu sebelum melihat dalam AR!");
+            if (lines.length === 0 && freeObjects.length === 0) {
+                alert("Buat denah terlebih dahulu sebelum melihat dalam AR!");
                 return;
             }
 
@@ -649,7 +869,7 @@
             arModal.style.display = 'none';
         });
 
-        document.getElementById('clearBtn').onclick = () => { saveState(); lines = []; openings = []; closeEditPanel(); draw2D(); update3D(); };
+        document.getElementById('clearBtn').onclick = () => { saveState(); lines = []; openings = []; freeObjects = []; closeEditPanel(); draw2D(); update3D(); };
         document.getElementById('exportBtn').onclick = () => {
             new THREE.GLTFExporter().parse(modelGroup, (gltf) => {
                 const link = document.createElement('a');
