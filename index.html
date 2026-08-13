@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Floor Plan Tracer - Ultimate (Fixed Sync)</title>
+    <title>3D Floor Plan Tracer - Architect Edition</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
@@ -12,10 +12,10 @@
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f0f0; display: flex; flex-direction: column; height: 100vh; }
         
         #toolbar { background: #fff; padding: 10px 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 10; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-        button, select { padding: 6px 12px; cursor: pointer; border: 1px solid #ccc; background: #eee; border-radius: 4px; font-size: 14px; }
+        button, select { padding: 6px 12px; cursor: pointer; border: 1px solid #ccc; background: #eee; border-radius: 4px; font-size: 14px; transition: 0.2s; }
         button:hover { background: #ddd; }
         button:disabled { cursor: not-allowed; opacity: 0.5; }
-        button.active { background: #2196F3; color: white; border-color: #0b7dda; }
+        button.active { background: #2196F3; color: white; border-color: #0b7dda; font-weight: bold; }
         
         .spacer { flex-grow: 1; }
         
@@ -32,20 +32,30 @@
 
         #instructions { position: absolute; bottom: 15px; left: 15px; background: rgba(0,0,0,0.7); color: white; padding: 10px 15px; border-radius: 8px; font-size: 12px; pointer-events: none; z-index: 20; line-height: 1.5; }
 
-        /* Tablet / Mobile Responsive */
+        /* Panel Editor Objek Melayang */
+        #edit-panel {
+            display: none; position: absolute; top: 70px; right: 20px; background: white; 
+            padding: 15px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); 
+            z-index: 100; width: 220px; border: 1px solid #ccc;
+        }
+        #edit-panel label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; }
+        #edit-panel input[type="range"] { width: 100%; margin-bottom: 15px; }
+
         @media (max-width: 800px) {
             #main-container { flex-direction: column; }
             #left-panel, #right-panel { flex: none; height: 50%; }
             #toolbar { justify-content: center; }
+            #edit-panel { top: auto; bottom: 20px; right: 20px; }
         }
     </style>
 </head>
 <body>
 
     <div id="toolbar">
-        <input type="file" id="upload" accept="image/*" style="max-width: 200px;">
+        <input type="file" id="upload" accept="image/*" style="max-width: 180px;">
         <div style="border-left: 1px solid #ccc; height: 20px;"></div>
         
+        <button id="modeSelect">👆 Pilih / Edit</button>
         <button id="modeWall" class="active">Gambar Tembok</button>
         <button id="modeDoor">🚪 Pintu</button>
         <button id="modeWindow">🪟 Jendela</button>
@@ -59,6 +69,20 @@
         <button id="exportBtn" style="background: #4CAF50; color: white; border: none;">Export GLB</button>
     </div>
 
+    <div id="edit-panel">
+        <h4 style="margin: 0 0 15px 0; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Edit Objek</h4>
+        
+        <label>Lebar: <span id="valWidth">0.9</span> m</label>
+        <input type="range" id="editWidth" min="0.5" max="4.0" step="0.1" value="0.9">
+        
+        <div id="doorControls">
+            <label>Bukaan / Swing: <span id="valSwing">45</span>°</label>
+            <input type="range" id="editSwing" min="-180" max="180" step="5" value="45">
+        </div>
+
+        <button id="delObjBtn" style="background: #f44336; color: white; width: 100%; border: none; padding: 8px; border-radius: 4px;">🗑️ Hapus Objek</button>
+    </div>
+
     <div id="main-container">
         <div id="left-panel">
             <div id="workspace">
@@ -66,10 +90,9 @@
                 <canvas id="draw-canvas"></canvas>
             </div>
             <div id="instructions">
-                <b>Kontrol 2D:</b><br>
-                - <b>Scroll / Pinch</b>: Zoom In/Out<br>
-                - <b>Klik Kanan / 2 Jari</b>: Geser (Pan)<br>
-                - <b>Klik Tembok</b>: Taruh objek (Pintu/Jendela)
+                <b>Panduan:</b><br>
+                - <b>Pilih/Edit</b>: Klik pintu/jendela untuk ubah ukurannya<br>
+                - <b>Zoom/Pan</b>: Scroll & Klik Kanan (Tahan)
             </div>
         </div>
         <div id="right-panel"></div>
@@ -80,8 +103,9 @@
         let lines = []; 
         let openings = []; 
         let mode = 'wall'; 
+        let scale3D = 0.02; // Global scale conversion (1 unit 3D = 1 Meter)
         
-        // Undo & Redo Stacks
+        let selectedOpening = null;
         let undoStack = [];
         let redoStack = [];
 
@@ -91,9 +115,6 @@
         const imgElement = document.getElementById('floorplan-img');
         const leftPanel = document.getElementById('left-panel');
         
-        const undoBtn = document.getElementById('undoBtn');
-        const redoBtn = document.getElementById('redoBtn');
-
         // === UNDO / REDO LOGIC ===
         function saveState() {
             undoStack.push({
@@ -101,43 +122,30 @@
                 openings: JSON.parse(JSON.stringify(openings))
             });
             redoStack = []; 
-            updateButtons();
+            document.getElementById('undoBtn').disabled = false;
+            document.getElementById('redoBtn').disabled = true;
         }
 
-        function updateButtons() {
-            undoBtn.disabled = undoStack.length === 0;
-            redoBtn.disabled = redoStack.length === 0;
+        function restoreState(isUndo) {
+            const current = { lines: JSON.parse(JSON.stringify(lines)), openings: JSON.parse(JSON.stringify(openings)) };
+            if (isUndo) {
+                redoStack.push(current);
+                const prev = undoStack.pop();
+                lines = prev.lines; openings = prev.openings;
+            } else {
+                undoStack.push(current);
+                const next = redoStack.pop();
+                lines = next.lines; openings = next.openings;
+            }
+            document.getElementById('undoBtn').disabled = undoStack.length === 0;
+            document.getElementById('redoBtn').disabled = redoStack.length === 0;
+            selectedOpening = null;
+            closeEditPanel();
+            draw2D(); update3D();
         }
 
-        undoBtn.addEventListener('click', () => {
-            if (undoStack.length > 0) {
-                redoStack.push({
-                    lines: JSON.parse(JSON.stringify(lines)),
-                    openings: JSON.parse(JSON.stringify(openings))
-                });
-                const prevState = undoStack.pop();
-                lines = prevState.lines;
-                openings = prevState.openings;
-                updateButtons();
-                draw2D();
-                update3D();
-            }
-        });
-
-        redoBtn.addEventListener('click', () => {
-            if (redoStack.length > 0) {
-                undoStack.push({
-                    lines: JSON.parse(JSON.stringify(lines)),
-                    openings: JSON.parse(JSON.stringify(openings))
-                });
-                const nextState = redoStack.pop();
-                lines = nextState.lines;
-                openings = nextState.openings;
-                updateButtons();
-                draw2D();
-                update3D();
-            }
-        });
+        document.getElementById('undoBtn').onclick = () => restoreState(true);
+        document.getElementById('redoBtn').onclick = () => restoreState(false);
 
         // === ZOOM & PAN 2D LOGIC ===
         let scale = 1;
@@ -150,45 +158,33 @@
 
         leftPanel.addEventListener('wheel', (e) => {
             e.preventDefault();
-            const zoomAmount = e.deltaY * -0.001;
-            const newScale = Math.min(Math.max(0.05, scale + zoomAmount), 10);
-            
+            const newScale = Math.min(Math.max(0.05, scale + (e.deltaY * -0.001)), 10);
             const rect = workspace.parentElement.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
             
             panX = mouseX - ((mouseX - panX) * (newScale / scale));
             panY = mouseY - ((mouseY - panY) * (newScale / scale));
-            scale = newScale;
-            applyTransform();
+            scale = newScale; applyTransform();
         });
 
         leftPanel.addEventListener('mousedown', (e) => {
-            if (e.button === 2 || e.button === 1) { // Kanan atau Tengah Mouse
-                isPanning = true;
-                startPanX = e.clientX - panX;
-                startPanY = e.clientY - panY;
+            if (e.button === 2 || e.button === 1) { 
+                isPanning = true; startPanX = e.clientX - panX; startPanY = e.clientY - panY;
                 leftPanel.style.cursor = 'grabbing';
             }
         });
-        window.addEventListener('mouseup', () => {
-            isPanning = false;
-            leftPanel.style.cursor = 'crosshair';
-        });
+        window.addEventListener('mouseup', () => { isPanning = false; leftPanel.style.cursor = 'crosshair'; });
         window.addEventListener('mousemove', (e) => {
-            if (isPanning) {
-                panX = e.clientX - startPanX;
-                panY = e.clientY - startPanY;
-                applyTransform();
-            }
+            if (isPanning) { panX = e.clientX - startPanX; panY = e.clientY - startPanY; applyTransform(); }
         });
         leftPanel.addEventListener('contextmenu', e => e.preventDefault());
 
-        // === 2D DRAWING & EDITOR ===
-        let isDrawing = false;
-        let currentLine = null;
+        // === UI EDITOR & INTERAKSI KANVAS ===
+        let isDrawing = false, currentLine = null;
         const SNAP_RADIUS = 20;
 
+        document.getElementById('modeSelect').onclick = (e) => setMode('select', e.target);
         document.getElementById('modeWall').onclick = (e) => setMode('wall', e.target);
         document.getElementById('modeDoor').onclick = (e) => setMode('door', e.target);
         document.getElementById('modeWindow').onclick = (e) => setMode('window', e.target);
@@ -197,24 +193,87 @@
             mode = newMode;
             document.querySelectorAll('#toolbar button.active').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            isDrawing = false; currentLine = null; draw2D();
+            isDrawing = false; currentLine = null;
+            if (mode !== 'select') closeEditPanel();
+            draw2D();
         }
 
-        // ==========================================
-        // FITUR YANG DIPERBAIKI (PERHITUNGAN KURSOR)
-        // ==========================================
         function getTrueCoords(e) {
             const rect = canvas.getBoundingClientRect();
-            // Menghitung rasio sebenarnya antara gambar canvas internal dengan ukuran visual di layar
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            
             return {
-                x: (e.clientX - rect.left) * scaleX,
-                y: (e.clientY - rect.top) * scaleY
+                x: (e.clientX - rect.left) * (canvas.width / rect.width),
+                y: (e.clientY - rect.top) * (canvas.height / rect.height)
             };
         }
 
+        canvas.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return; 
+            let { x, y } = getTrueCoords(e);
+            
+            if (mode === 'select') {
+                // Deteksi klik objek (Pintu/Jendela)
+                let clickedOp = null;
+                let minDist = 20 / scale; // Toleransi klik
+                
+                openings.forEach(op => {
+                    let l = lines[op.lineIndex];
+                    if(l) {
+                        const cx = l.start.x + (l.end.x - l.start.x) * op.ratio;
+                        const cy = l.start.y + (l.end.y - l.start.y) * op.ratio;
+                        if (Math.hypot(cx - x, cy - y) < minDist) {
+                            clickedOp = op; minDist = Math.hypot(cx - x, cy - y);
+                        }
+                    }
+                });
+
+                if (clickedOp) {
+                    selectedOpening = clickedOp;
+                    openEditPanel(selectedOpening);
+                } else {
+                    selectedOpening = null;
+                    closeEditPanel();
+                }
+                draw2D();
+            } 
+            else if (mode === 'wall') {
+                let snap = getSnapped(x, y);
+                if (!isDrawing) {
+                    saveState(); 
+                    isDrawing = true; currentLine = { start: snap, end: snap };
+                } else {
+                    currentLine.end = snap; lines.push({...currentLine});
+                    isDrawing = false; currentLine = null; update3D();
+                }
+                draw2D();
+            } 
+            else if (mode === 'door' || mode === 'window') {
+                let nearest = findNearestLine(x, y);
+                if (nearest) {
+                    saveState(); 
+                    // Standar Kaidah Arsitektur 3D (dalam Meter)
+                    openings.push({
+                        id: Date.now(),
+                        type: mode,
+                        lineIndex: nearest.index,
+                        ratio: nearest.ratio,
+                        width3D: mode === 'door' ? 0.9 : 1.2, // Lebar Jendela/Pintu
+                        height3D: mode === 'door' ? 2.1 : 1.2, // Tinggi
+                        elevation: mode === 'door' ? 0 : 0.9, // Ketinggian dari lantai
+                        swing: 85 // Sudut bukaan pintu (Derajat)
+                    });
+                    update3D(); draw2D();
+                }
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDrawing && mode === 'wall') {
+                let { x, y } = getTrueCoords(e);
+                currentLine.end = getSnapped(x, y); draw2D();
+            }
+        });
+
+        // Fitur Snap dan Pencarian Garis Terdekat (Sama seperti sebelumnya)
         function getSnapped(x, y) {
             for (let l of lines) {
                 if (Math.hypot(l.start.x - x, l.start.y - y) < SNAP_RADIUS / scale) return { x: l.start.x, y: l.start.y };
@@ -223,72 +282,80 @@
             return { x, y };
         }
 
-        canvas.addEventListener('mousedown', (e) => {
-            if (e.button !== 0) return; // Hanya jalankan jika yang ditekan Klik Kiri
-            let { x, y } = getTrueCoords(e);
-            
-            if (mode === 'wall') {
-                let snap = getSnapped(x, y);
-                if (!isDrawing) {
-                    saveState(); 
-                    isDrawing = true;
-                    currentLine = { start: snap, end: snap };
-                } else {
-                    currentLine.end = snap;
-                    lines.push({...currentLine});
-                    isDrawing = false; currentLine = null;
-                    update3D();
-                }
-            } else if (mode === 'door' || mode === 'window') {
-                let nearest = findNearestLine(x, y);
-                if (nearest) {
-                    saveState(); 
-                    openings.push({
-                        type: mode,
-                        lineIndex: nearest.index,
-                        ratio: nearest.ratio,
-                        width: Math.max(40, canvas.width * 0.05) 
-                    });
-                    update3D();
-                }
-            }
-            draw2D();
-        });
-
-        canvas.addEventListener('mousemove', (e) => {
-            if (isDrawing && mode === 'wall') {
-                let { x, y } = getTrueCoords(e);
-                currentLine.end = getSnapped(x, y);
-                draw2D();
-            }
-        });
-
         function findNearestLine(px, py) {
-            let minDist = 30 / scale;
-            let result = null;
-            
+            let minDist = 30 / scale; let result = null;
             lines.forEach((l, index) => {
                 const l2 = Math.pow(l.end.x - l.start.x, 2) + Math.pow(l.end.y - l.start.y, 2);
                 if (l2 === 0) return;
                 let t = Math.max(0, Math.min(1, ((px - l.start.x) * (l.end.x - l.start.x) + (py - l.start.y) * (l.end.y - l.start.y)) / l2));
-                const projX = l.start.x + t * (l.end.x - l.start.x);
-                const projY = l.start.y + t * (l.end.y - l.start.y);
+                const projX = l.start.x + t * (l.end.x - l.start.x); const projY = l.start.y + t * (l.end.y - l.start.y);
                 const dist = Math.hypot(px - projX, py - projY);
-                
-                if (dist < minDist) {
-                    minDist = dist;
-                    result = { index, ratio: t };
-                }
+                if (dist < minDist) { minDist = dist; result = { index, ratio: t }; }
             });
             return result;
         }
 
+        // === PANEL EDITOR MELAYANG ===
+        const editPanel = document.getElementById('edit-panel');
+        const editWidth = document.getElementById('editWidth');
+        const editSwing = document.getElementById('editSwing');
+        const valWidth = document.getElementById('valWidth');
+        const valSwing = document.getElementById('valSwing');
+
+        function openEditPanel(op) {
+            editPanel.style.display = 'block';
+            editWidth.value = op.width3D; valWidth.innerText = op.width3D;
+            
+            if (op.type === 'door') {
+                document.getElementById('doorControls').style.display = 'block';
+                editSwing.value = op.swing; valSwing.innerText = op.swing;
+            } else {
+                document.getElementById('doorControls').style.display = 'none';
+            }
+        }
+
+        function closeEditPanel() {
+            editPanel.style.display = 'none';
+            selectedOpening = null;
+        }
+
+        // Event Listener Slider (Real-time update)
+        editWidth.addEventListener('input', (e) => {
+            if (selectedOpening) {
+                selectedOpening.width3D = parseFloat(e.target.value);
+                valWidth.innerText = selectedOpening.width3D;
+                update3D(); draw2D();
+            }
+        });
+        
+        editWidth.addEventListener('change', () => saveState()); // Save saat di-drop
+
+        editSwing.addEventListener('input', (e) => {
+            if (selectedOpening) {
+                selectedOpening.swing = parseFloat(e.target.value);
+                valSwing.innerText = selectedOpening.swing;
+                update3D(); draw2D();
+            }
+        });
+
+        editSwing.addEventListener('change', () => saveState());
+
+        document.getElementById('delObjBtn').addEventListener('click', () => {
+            if (selectedOpening) {
+                saveState();
+                openings = openings.filter(o => o.id !== selectedOpening.id);
+                closeEditPanel(); update3D(); draw2D();
+            }
+        });
+
+        // === 2D RENDER (SIMBOL ARSITEKTUR) ===
         function draw2D() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.lineCap = 'round';
-            ctx.lineWidth = Math.max(4, canvas.width * 0.005); 
+            ctx.lineWidth = Math.max(4, canvas.width * 0.003); 
             
-            ctx.strokeStyle = '#333';
+            // Gambar Garis Tembok
+            ctx.strokeStyle = '#222';
             lines.forEach(l => {
                 ctx.beginPath(); ctx.moveTo(l.start.x, l.start.y); ctx.lineTo(l.end.x, l.end.y); ctx.stroke();
             });
@@ -298,16 +365,57 @@
                 ctx.beginPath(); ctx.moveTo(currentLine.start.x, currentLine.start.y); ctx.lineTo(currentLine.end.x, currentLine.end.y); ctx.stroke();
             }
 
+            // Gambar Simbol Pintu & Jendela
             openings.forEach(op => {
                 let l = lines[op.lineIndex];
                 if(!l) return;
+                const angle = Math.atan2(l.end.y - l.start.y, l.end.x - l.start.x);
                 const cx = l.start.x + (l.end.x - l.start.x) * op.ratio;
                 const cy = l.start.y + (l.end.y - l.start.y) * op.ratio;
                 
-                ctx.fillStyle = op.type === 'door' ? '#8B4513' : '#87CEEB';
-                ctx.beginPath();
-                ctx.arc(cx, cy, op.width/2, 0, Math.PI*2);
-                ctx.fill();
+                // Konversi ukuran 3D (Meter) kembali ke ukuran pixel 2D
+                const opWidth2D = op.width3D / scale3D; 
+
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.rotate(angle);
+
+                // Highlight jika sedang diedit
+                if (op === selectedOpening) {
+                    ctx.shadowColor = '#2196F3';
+                    ctx.shadowBlur = 15;
+                    ctx.fillStyle = 'rgba(33, 150, 243, 0.3)';
+                    ctx.fillRect(-opWidth2D/2, -ctx.lineWidth, opWidth2D, ctx.lineWidth*2);
+                }
+
+                if (op.type === 'door') {
+                    // Hapus visual tembok di area bukaan
+                    ctx.clearRect(-opWidth2D/2, -ctx.lineWidth, opWidth2D, ctx.lineWidth * 2);
+                    
+                    // Arah Bukaan Pintu (berdasarkan nilai slider)
+                    let swingDir = op.swing >= 0 ? -1 : 1;
+                    
+                    ctx.beginPath(); // Daun pintu
+                    ctx.moveTo(-opWidth2D/2, 0);
+                    ctx.lineTo(-opWidth2D/2, opWidth2D * swingDir); 
+                    ctx.lineWidth = Math.max(2, canvas.width * 0.002);
+                    ctx.strokeStyle = '#8B4513';
+                    ctx.stroke();
+
+                    ctx.beginPath(); // Lengkungan swing (Arc)
+                    ctx.arc(-opWidth2D/2, 0, opWidth2D, swingDir < 0 ? -Math.PI/2 : 0, swingDir < 0 ? 0 : Math.PI/2);
+                    ctx.strokeStyle = 'rgba(139, 69, 19, 0.4)';
+                    ctx.stroke();
+                } else {
+                    // Jendela (Kotak biru)
+                    ctx.fillStyle = 'rgba(135, 206, 235, 0.8)';
+                    const th = ctx.lineWidth * 1.5;
+                    ctx.fillRect(-opWidth2D/2, -th/2, opWidth2D, th);
+                    ctx.strokeStyle = '#555';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(-opWidth2D/2, -th/2, opWidth2D, th);
+                }
+                ctx.restore();
             });
         }
 
@@ -319,31 +427,24 @@
             reader.onload = (event) => {
                 imgElement.src = event.target.result;
                 imgElement.onload = () => {
-                    canvas.width = imgElement.width;
-                    canvas.height = imgElement.height;
+                    canvas.width = imgElement.width; canvas.height = imgElement.height;
                     
-                    const panelWidth = leftPanel.clientWidth;
-                    const panelHeight = leftPanel.clientHeight;
-                    
-                    const scaleX = panelWidth / imgElement.width;
-                    const scaleY = panelHeight / imgElement.height;
-                    
-                    scale = Math.min(scaleX, scaleY) * 0.9;
-                    
-                    panX = (panelWidth - (imgElement.width * scale)) / 2;
-                    panY = (panelHeight - (imgElement.height * scale)) / 2;
-                    
+                    const panelWidth = leftPanel.clientWidth; const panelHeight = leftPanel.clientHeight;
+                    scale = Math.min(panelWidth / imgElement.width, panelHeight / imgElement.height) * 0.9;
+                    panX = (panelWidth - (imgElement.width * scale)) / 2; panY = (panelHeight - (imgElement.height * scale)) / 2;
                     applyTransform();
                     
-                    lines = []; openings = []; 
-                    undoStack = []; redoStack = []; updateButtons();
+                    // Setup skala 3D: Anggap lebar gambar terbesar merepresentasikan rumah 20 meter.
+                    scale3D = 20 / Math.max(canvas.width, canvas.height);
+
+                    lines = []; openings = []; undoStack = []; redoStack = []; closeEditPanel();
                     draw2D(); update3D();
                 }
             };
             reader.readAsDataURL(file);
         });
 
-        // === 3D ENGINE (THREE.JS with ExtrudeGeometry) ===
+        // === 3D ENGINE (Extrude + Origin Centering) ===
         const rightPanel = document.getElementById('right-panel');
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(45, rightPanel.clientWidth / rightPanel.clientHeight, 0.1, 1000);
@@ -356,13 +457,13 @@
         
         scene.add(new THREE.AmbientLight(0xffffff, 0.6));
         const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
-        dirLight.position.set(10, 20, 10);
+        dirLight.position.set(20, 40, 20);
         scene.add(dirLight);
-        scene.add(new THREE.GridHelper(100, 100, 0x555555, 0x444444));
+        scene.add(new THREE.GridHelper(50, 50, 0x555555, 0x333333));
         
         const modelGroup = new THREE.Group();
         scene.add(modelGroup);
-        camera.position.set(0, 30, 30); 
+        camera.position.set(0, 15, 20); 
 
         window.addEventListener('resize', () => {
             camera.aspect = rightPanel.clientWidth / rightPanel.clientHeight;
@@ -372,21 +473,33 @@
 
         function animate() {
             requestAnimationFrame(animate);
-            controls.update();
-            renderer.render(scene, camera);
+            controls.update(); renderer.render(scene, camera);
         }
         animate();
 
         function update3D() {
             while(modelGroup.children.length > 0) modelGroup.remove(modelGroup.children[0]); 
 
-            const scale3D = 50 / Math.max(canvas.width || 1000, canvas.height || 1000);  
-            const heightWall = 2.5; 
-            const thickWall = 0.2; 
+            if(lines.length === 0) return;
 
-            const matWall = new THREE.MeshLambertMaterial({ color: 0xe0e0e0 });
-            const matDoor = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
-            const matWindow = new THREE.MeshLambertMaterial({ color: 0x87CEEB, transparent: true, opacity: 0.6 }); 
+            // 1. Kalkulasi Bounding Box untuk memusatkan obyek di 0,0,0
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            lines.forEach(l => {
+                minX = Math.min(minX, l.start.x, l.end.x); maxX = Math.max(maxX, l.start.x, l.end.x);
+                minY = Math.min(minY, l.start.y, l.end.y); maxY = Math.max(maxY, l.start.y, l.end.y);
+            });
+            
+            // Titik tengah gambar sebenarnya
+            const center2DX = (minX + maxX) / 2;
+            const center2DY = (minY + maxY) / 2;
+
+            const heightWall = 3.0; // Tinggi plafon standar 3m
+            const thickWall = 0.15; // Ketebalan bata 15cm
+
+            const matWall = new THREE.MeshLambertMaterial({ color: 0xf5f5f5 });
+            const matDoor = new THREE.MeshLambertMaterial({ color: 0x5c4033 }); // Kayu Jati
+            const matWindow = new THREE.MeshLambertMaterial({ color: 0x87CEEB, transparent: true, opacity: 0.5 }); 
+            const matFrame = new THREE.MeshLambertMaterial({ color: 0x333333 }); 
 
             lines.forEach((line, index) => {
                 const dx = line.end.x - line.start.x;
@@ -396,50 +509,62 @@
                 
                 const midX = (line.start.x + line.end.x) / 2;
                 const midY = (line.start.y + line.end.y) / 2;
-                const posX = (midX - canvas.width / 2) * scale3D;
-                const posZ = (midY - canvas.height / 2) * scale3D;
+                
+                // Kurangi kordinat saat ini dengan titik tengah agar 3D ter-align ke (0,0,0)
+                const posX = (midX - center2DX) * scale3D;
+                const posZ = (midY - center2DY) * scale3D;
 
                 const wallObj = new THREE.Group();
                 const wallShape = new THREE.Shape();
-                wallShape.moveTo(0, 0);
-                wallShape.lineTo(length, 0);
-                wallShape.lineTo(length, heightWall);
-                wallShape.lineTo(0, heightWall);
-                wallShape.lineTo(0, 0);
+                wallShape.moveTo(0, 0); wallShape.lineTo(length, 0);
+                wallShape.lineTo(length, heightWall); wallShape.lineTo(0, heightWall); wallShape.lineTo(0, 0);
 
                 let ops = openings.filter(o => o.lineIndex === index).sort((a,b) => a.ratio - b.ratio);
                 
                 ops.forEach(op => {
-                    const opWidth = op.width * scale3D;
                     const opCenter = length * op.ratio; 
-                    const opStart = opCenter - opWidth/2;
-                    const opEnd = opCenter + opWidth/2;
+                    const opStart = opCenter - op.width3D/2;
+                    const opEnd = opCenter + op.width3D/2;
                     const hole = new THREE.Path();
                     
                     if (op.type === 'door') {
-                        const hDoor = 2.0;
-                        hole.moveTo(opStart, 0);
-                        hole.lineTo(opEnd, 0);
-                        hole.lineTo(opEnd, hDoor);
-                        hole.lineTo(opStart, hDoor);
-                        hole.lineTo(opStart, 0);
+                        // Bolongan Pintu
+                        hole.moveTo(opStart, op.elevation);
+                        hole.lineTo(opEnd, op.elevation);
+                        hole.lineTo(opEnd, op.elevation + op.height3D);
+                        hole.lineTo(opStart, op.elevation + op.height3D);
+                        hole.lineTo(opStart, op.elevation);
                         
-                        const doorMesh = new THREE.Mesh(new THREE.BoxGeometry(opWidth, hDoor, thickWall * 0.8), matDoor);
-                        doorMesh.position.set(opCenter - length/2, hDoor/2, 0); 
-                        doorMesh.rotation.y = Math.PI / 4; 
+                        // Objek 3D Daun Pintu (Tebal 4cm)
+                        const leafGeom = new THREE.BoxGeometry(op.width3D, op.height3D, 0.04);
+                        // Pindahkan pivot ke engsel (ujung kiri)
+                        leafGeom.translate(op.width3D/2, op.height3D/2, 0); 
+                        
+                        const doorMesh = new THREE.Mesh(leafGeom, matDoor);
+                        // Posisikan engsel di ujung bolongan
+                        doorMesh.position.set((opStart) - length/2, op.elevation, 0); 
+                        doorMesh.rotation.y = THREE.MathUtils.degToRad(op.swing); 
                         wallObj.add(doorMesh);
 
                     } else if (op.type === 'window') {
-                        const hWin = 1.2, yWin = 0.8;
-                        hole.moveTo(opStart, yWin);
-                        hole.lineTo(opEnd, yWin);
-                        hole.lineTo(opEnd, yWin + hWin);
-                        hole.lineTo(opStart, yWin + hWin);
-                        hole.lineTo(opStart, yWin);
+                        // Bolongan Jendela
+                        hole.moveTo(opStart, op.elevation);
+                        hole.lineTo(opEnd, op.elevation);
+                        hole.lineTo(opEnd, op.elevation + op.height3D);
+                        hole.lineTo(opStart, op.elevation + op.height3D);
+                        hole.lineTo(opStart, op.elevation);
                         
-                        const winMesh = new THREE.Mesh(new THREE.BoxGeometry(opWidth, hWin, thickWall * 0.5), matWindow);
-                        winMesh.position.set(opCenter - length/2, yWin + hWin/2, 0);
+                        // Objek 3D Kaca Jendela
+                        const winMesh = new THREE.Mesh(new THREE.BoxGeometry(op.width3D, op.height3D, 0.02), matWindow);
+                        winMesh.position.set(opCenter - length/2, op.elevation + op.height3D/2, 0);
                         wallObj.add(winMesh);
+
+                        // Kusen Bawah & Atas
+                        const frame1 = new THREE.Mesh(new THREE.BoxGeometry(op.width3D, 0.05, thickWall + 0.02), matFrame);
+                        frame1.position.set(opCenter - length/2, op.elevation + 0.025, 0);
+                        const frame2 = frame1.clone();
+                        frame2.position.set(opCenter - length/2, op.elevation + op.height3D - 0.025, 0);
+                        wallObj.add(frame1); wallObj.add(frame2);
                     }
                     wallShape.holes.push(hole);
                 });
@@ -450,6 +575,7 @@
                 
                 wallMesh.position.set(-length/2, 0, -thickWall/2);
                 wallObj.add(wallMesh);
+                
                 wallObj.position.set(posX, 0, posZ);
                 wallObj.rotation.y = -angle;
                 
@@ -458,15 +584,14 @@
         }
 
         document.getElementById('clearBtn').onclick = () => { 
-            saveState(); 
-            lines = []; openings = []; draw2D(); update3D(); 
+            saveState(); lines = []; openings = []; closeEditPanel(); draw2D(); update3D(); 
         };
         
         document.getElementById('exportBtn').onclick = () => {
             new THREE.GLTFExporter().parse(modelGroup, (gltf) => {
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(new Blob([gltf], { type: 'application/octet-stream' }));
-                link.download = 'denah_3d_pro.glb';
+                link.download = 'denah_3d_architect.glb';
                 link.click();
             }, { binary: true });
         };
