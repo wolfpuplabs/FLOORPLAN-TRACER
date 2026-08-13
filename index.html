@@ -1,864 +1,3106 @@
-<!DOCTYPE html>
-<html lang="id">
+<!doctype html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Floor Plan Architect</title>
-    <style>
-        :root {
-            --primary: #007aff;
-            --danger: #ff3b30;
-            --bg-color: #f2f2f7;
-            --panel-bg: #ffffff;
-            --border: #c6c6c8;
-        }
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Floorplan Tracer → 3D</title>
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            background-color: var(--bg-color);
-            overflow: hidden;
-            touch-action: none;
-        }
-        
-        #controls {
-            padding: 10px 15px;
-            background-color: var(--panel-bg);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            flex-wrap: wrap;
-            z-index: 10;
-            font-size: 13px;
-            max-height: 40vh;
-            overflow-y: auto;
-            border-bottom: 1px solid var(--border);
-        }
-        
-        .control-group {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding-right: 12px;
-            border-right: 1px solid var(--border);
-            flex-wrap: wrap;
-        }
-        .control-group:last-child { border-right: none; }
-        
-        input[type="number"], select, button, input[type="file"] {
-            height: 32px;
-            border-radius: 6px;
-            border: 1px solid var(--border);
-            padding: 0 8px;
-            font-size: 13px;
-            background-color: #fff;
-        }
-        
-        input[type="number"] { width: 50px; text-align: center; }
-        input[type="file"] { padding: 4px; width: 140px; border: none; }
-        input[type="color"] { width: 32px; height: 32px; padding: 0; border: none; border-radius: 6px; cursor: pointer; }
-        
-        label { font-weight: 600; color: #333; display: flex; align-items: center; gap: 4px; }
-        input[type="checkbox"] { width: 16px; height: 16px; }
-        
-        button {
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            cursor: pointer;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        button:active { opacity: 0.7; }
-        button.danger { background-color: var(--danger); }
-        button:disabled { background-color: #cccccc; cursor: not-allowed; opacity: 0.5; }
-        
-        #workspace {
-            display: flex;
-            flex-direction: row;
-            flex: 1;
-            overflow: hidden;
-        }
-        .panel {
-            flex: 1;
-            position: relative;
-            border-right: 2px solid #333;
-            background-color: #e5e5ea;
-            overflow: hidden;
-        }
-        #canvas2d { display: block; touch-action: none; cursor: crosshair; }
-        
-        #canvas3d-container {
-            flex: 1;
-            position: relative;
-            background-color: #2b2b2b;
-        }
-        
-        .instructions {
-            position: absolute;
-            bottom: 15px;
-            left: 15px;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 10px 12px;
-            border-radius: 6px;
-            font-size: 12px;
-            pointer-events: none;
-            line-height: 1.4;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
+<style>
+*{box-sizing:border-box}
 
-        @media (max-width: 900px) {
-            #workspace { flex-direction: column; }
-            .panel, #canvas3d-container {
-                flex: none;
-                height: 50%;
-                border-right: none;
-                border-bottom: 2px solid #333;
-            }
-            .control-group { border-right: none; border-bottom: 1px solid var(--border); width: 100%; justify-content: flex-start; padding-bottom: 8px;}
-            .control-group:last-child { border-bottom: none; }
-            #controls { gap: 8px; padding: 10px; }
-        }
-    </style>
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-            }
-        }
-    </script>
+html,body{
+  margin:0;
+  height:100%;
+  overflow:hidden;
+  font-family:Inter,Arial,sans-serif;
+  background:#101114;
+  color:#eee
+}
+
+button,input,select{
+  font:inherit
+}
+
+button{
+  border:1px solid #3a3e47;
+  background:#20232a;
+  color:#eee;
+  border-radius:7px;
+  padding:8px 10px;
+  cursor:pointer
+}
+
+button:hover{
+  background:#2b2f38
+}
+
+button.primary{
+  background:#4d8dff;
+  border-color:#4d8dff;
+  color:white;
+  font-weight:700
+}
+
+button.active{
+  outline:2px solid #78a9ff
+}
+
+button.danger{
+  background:#54282b;
+  border-color:#743238
+}
+
+input[type=number],
+input[type=text],
+select{
+  width:100%;
+  background:#111318;
+  color:#eee;
+  border:1px solid #3a3e47;
+  border-radius:6px;
+  padding:8px
+}
+
+input[type=file]{
+  width:100%;
+  font-size:11px
+}
+
+#app{
+  display:grid;
+  grid-template-columns:310px 1fr;
+  height:100vh
+}
+
+#sidebar{
+  background:#191b20;
+  border-right:1px solid #30333a;
+  padding:15px;
+  overflow:auto
+}
+
+h1{
+  font-size:19px;
+  margin:0 0 3px
+}
+
+.sub{
+  font-size:11px;
+  color:#8f949e;
+  margin-bottom:15px
+}
+
+section{
+  border-top:1px solid #30333a;
+  padding:13px 0
+}
+
+.title{
+  font-size:12px;
+  font-weight:700;
+  margin-bottom:9px
+}
+
+.row{
+  display:flex;
+  gap:6px;
+  margin:6px 0
+}
+
+.row>*{
+  flex:1
+}
+
+label{
+  display:block;
+  font-size:10px;
+  color:#999;
+  margin:8px 0 4px
+}
+
+.help{
+  font-size:10px;
+  color:#858a94;
+  line-height:1.45;
+  margin-top:7px
+}
+
+#viewport{
+  position:relative;
+  min-width:0;
+  background:#101114
+}
+
+#three{
+  position:absolute;
+  inset:0
+}
+
+#canvasWrap{
+  position:absolute;
+  inset:0;
+  background:#e8e8e8;
+  display:none;
+  overflow:hidden
+}
+
+#traceCanvas{
+  position:absolute;
+  left:0;
+  top:0;
+  cursor:crosshair;
+  touch-action:none
+}
+
+#topbar{
+  position:absolute;
+  left:12px;
+  top:12px;
+  z-index:10;
+  display:flex;
+  gap:6px
+}
+
+.badge{
+  background:rgba(15,16,19,.9);
+  border:1px solid #3b3f47;
+  border-radius:7px;
+  padding:7px 9px;
+  font-size:11px;
+  color:#bbb
+}
+
+#status{
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  z-index:20;
+  background:rgba(0,0,0,.7);
+  font-size:11px;
+  padding:7px 12px;
+  color:#ccc
+}
+
+#empty{
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  pointer-events:none;
+  color:#888;
+  text-align:center
+}
+
+#empty b{
+  display:block;
+  font-size:24px;
+  color:#ddd;
+  margin-bottom:6px
+}
+
+.small{
+  font-size:10px;
+  color:#777
+}
+
+</style>
 </head>
+
 <body>
 
-    <div id="controls">
-        <div class="control-group">
-            <input type="file" id="imageUpload" accept="image/*">
-            <button id="btnUndo" disabled>↩️</button>
-            <button id="btnRedo" disabled>↪️</button>
-        </div>
+<div id="app">
 
-        <div class="control-group">
-            <label>Mode:</label>
-            <select id="drawMode">
-                <option value="wall">✏️ Tembok</option>
-                <option value="door">🚪 Pintu</option>
-                <option value="window">🪟 Jendela</option>
-                <option value="stairs">🪜 Tangga</option>
-                <option value="bed">🛏️ Kasur</option>
-                <option value="table">🍽️ Meja</option>
-                <option value="chair">🪑 Kursi</option>
-            </select>
-        </div>
+<aside id="sidebar">
 
-        <!-- KALIBRASI SKALA -->
-        <div class="control-group" title="Ubah angka ini jika hasil 3D terlalu besar/kecil dibanding denah asli">
-            <label>Skala Denah:</label>
-            <span style="font-weight: 500;">1px =</span>
-            <input type="number" id="pxScale" value="2.5" step="0.5">
-            <span style="font-weight: 500;">cm</span>
-        </div>
+<h1>Floorplan Tracer → 3D</h1>
 
-        <div class="control-group">
-            <label>Tinggi 3D:</label>
-            <input type="number" id="wallHeight" value="300">
-            <label>Tebal 3D:</label>
-            <input type="number" id="wallThickness" value="15">
-            <select id="unitSelect">
-                <option value="mm">mm</option>
-                <option value="cm" selected>cm</option>
-                <option value="m">m</option>
-                <option value="inch">inch</option>
-            </select>
-        </div>
+<div class="sub">
+Manual CAD-style MVP · no backend
+</div>
 
-        <div class="control-group">
-            <label><input type="checkbox" id="showGrid2D" checked> 2D</label>
-            <label><input type="checkbox" id="showGrid3D" checked> 3D</label>
-            <input type="color" id="wallColor" value="#f0f0f0" title="Warna Tembok">
-            <input type="color" id="floorColor" value="#888888" title="Warna Lantai">
-        </div>
-        
-        <div class="control-group" style="flex: 1; justify-content: flex-end;">
-            <button class="danger" id="clearAll">🗑️ Clear</button>
-        </div>
-    </div>
 
-    <div id="workspace">
-        <div class="panel" id="panel2d">
-            <canvas id="canvas2d"></canvas>
-            <div class="instructions">
-                <strong>Kontrol 2D Tracer:</strong><br>
-                - <b>Klik/Tap:</b> Tarik garis tembok<br>
-                - <b>Double Tap / Klik Kanan:</b> Putus garis tembok<br>
-                - <b>Pinch / Scroll:</b> Zoom | <b>Drag 2 Jari:</b> Geser
-            </div>
-        </div>
-        <div id="canvas3d-container"></div>
-    </div>
+<section>
 
-    <script type="module">
-        import * as THREE from 'three';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+<div class="title">
+FLOORPLAN UNDERLAY
+</div>
 
-        // --- UKURAN STANDAR ARSITEK (dalam CM) ---
-        const STD_DOOR_WIDTH = 80;
-        const STD_DOOR_HEIGHT = 210;
-        const STD_WIN_WIDTH = 120;
-        const STD_WIN_HEIGHT = 120;
-        const STD_WIN_BOTTOM = 90;
+<input
+  id="file"
+  type="file"
+  accept="image/png,image/jpeg,image/webp"
+>
 
-        // --- STATE MANAGEMENT ---
-        let walls = []; 
-        let items = []; 
-        let undoStack = [];
-        let redoStack = [];
+<label>
+Image opacity
+</label>
 
-        function saveState() {
-            undoStack.push(JSON.stringify({ walls, items }));
-            redoStack = []; 
-            updateUndoRedoButtons();
+<input
+  id="opacity"
+  type="range"
+  min="0"
+  max="100"
+  value="55"
+>
+
+<div class="row">
+
+<button id="fit">
+Fit Image
+</button>
+
+<button id="hideImage">
+Hide
+</button>
+
+</div>
+
+</section>
+
+
+<section>
+
+<div class="title">
+WALL TRACER
+</div>
+
+<div class="row">
+
+<button
+  id="wallTool"
+  class="primary active"
+>
+Wall
+</button>
+
+<button id="selectTool">
+Select
+</button>
+
+</div>
+
+
+<div class="row">
+
+<button id="finish">
+Finish
+</button>
+
+<button id="undo">
+Undo
+</button>
+
+</div>
+
+
+<button
+  id="delete"
+  class="danger"
+  style="width:100%"
+>
+Delete Selected
+</button>
+
+
+<div class="help">
+
+Wall tool:
+click points along the wall centerline.
+
+Double-click or Finish commits the wall.
+
+Select mode lets you select a wall and delete it.
+
+</div>
+
+</section>
+
+
+<section>
+
+<div class="title">
+SCALE
+</div>
+
+<label>
+Drawing width (meters)
+</label>
+
+<input
+  id="widthM"
+  type="number"
+  value="10"
+  min="0.1"
+  step="0.1"
+>
+
+
+<label>
+Grid spacing (meters)
+</label>
+
+<input
+  id="gridM"
+  type="number"
+  value="0.5"
+  min="0.05"
+  step="0.05"
+>
+
+
+<div class="row">
+
+<button
+  id="snap"
+  class="active"
+>
+Snap ON
+</button>
+
+<button id="grid">
+Grid ON
+</button>
+
+</div>
+
+</section>
+
+
+<section>
+
+<div class="title">
+3D WALL
+</div>
+
+<label>
+Height (meters)
+</label>
+
+<input
+  id="heightM"
+  type="number"
+  value="2.8"
+  min="0.1"
+  step="0.1"
+>
+
+
+<label>
+Thickness (meters)
+</label>
+
+<input
+  id="thickM"
+  type="number"
+  value="0.15"
+  min="0.02"
+  step="0.01"
+>
+
+
+<button
+  id="build"
+  class="primary"
+  style="width:100%;margin-top:8px"
+>
+Generate 3D
+</button>
+
+</section>
+
+
+<section>
+
+<div class="title">
+VIEW
+</div>
+
+<div class="row">
+
+<button
+  id="view2d"
+  class="active"
+>
+2D
+</button>
+
+<button id="view3d">
+3D
+</button>
+
+<button id="resetCam">
+Reset
+</button>
+
+</div>
+
+
+<label>
+Wall material
+</label>
+
+<select id="material">
+
+<option value="white">
+White
+</option>
+
+<option value="concrete">
+Concrete
+</option>
+
+<option value="warm">
+Warm
+</option>
+
+<option value="dark">
+Dark
+</option>
+
+</select>
+
+</section>
+
+
+<section>
+
+<div class="title">
+PROJECT
+</div>
+
+<div class="row">
+
+<button id="save">
+Save JSON
+</button>
+
+<button id="loadBtn">
+Load JSON
+</button>
+
+</div>
+
+
+<input
+  id="loadFile"
+  type="file"
+  accept="application/json"
+  style="display:none"
+>
+
+
+<button
+  id="export"
+  class="primary"
+  style="width:100%"
+>
+Export GLB
+</button>
+
+</section>
+
+
+<section>
+
+<div class="title">
+INFO
+</div>
+
+<div
+  id="info"
+  class="small"
+>
+0 walls · 0 segments
+</div>
+
+</section>
+
+</aside>
+
+
+<main id="viewport">
+
+<div id="three"></div>
+
+
+<div id="canvasWrap">
+
+<canvas id="traceCanvas"></canvas>
+
+</div>
+
+
+<div id="topbar">
+
+<div
+  class="badge"
+  id="modeBadge"
+>
+2D TRACER
+</div>
+
+<div
+  class="badge"
+  id="statusBadge"
+>
+Upload a floorplan
+</div>
+
+</div>
+
+
+<div id="empty">
+
+<div>
+
+<b>
+Floorplan Tracer
+</b>
+
+Upload a floorplan and start tracing walls.
+
+</div>
+
+</div>
+
+
+<div id="status">
+Ready.
+</div>
+
+</main>
+
+</div>
+
+
+<!-- THREE.JS -->
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/exporters/GLTFExporter.js"></script>
+
+
+<script>
+
+(function(){
+
+"use strict";
+
+
+/* =========================================================
+   DOM
+========================================================= */
+
+function $(id){
+
+  return document.getElementById(id);
+
+}
+
+
+/* =========================================================
+   STATE
+========================================================= */
+
+var image=null;
+
+var imageURL=null;
+
+var imgW=0;
+
+var imgH=0;
+
+var walls=[];
+
+var current=[];
+
+var selectedWall=-1;
+
+var tool="wall";
+
+var snapEnabled=true;
+
+var gridEnabled=true;
+
+var imageVisible=true;
+
+var view="2d";
+
+var canvas=$("traceCanvas");
+
+var ctx=canvas.getContext("2d");
+
+var canvasW=1;
+
+var canvasH=1;
+
+var zoom=1;
+
+var panX=0;
+
+var panY=0;
+
+var dragging=false;
+
+var dragStartX=0;
+
+var dragStartY=0;
+
+var startPanX=0;
+
+var startPanY=0;
+
+
+/* THREE */
+
+var scene=null;
+
+var camera=null;
+
+var renderer=null;
+
+var controls=null;
+
+var modelGroup=null;
+
+var floorMesh=null;
+
+
+/* =========================================================
+   STATUS
+========================================================= */
+
+function status(t){
+
+  $("status").textContent=t;
+
+  $("statusBadge").textContent=t;
+
+}
+
+
+/* =========================================================
+   IMAGE LOAD
+========================================================= */
+
+$("file").addEventListener(
+  "change",
+  function(e){
+
+    var file=e.target.files[0];
+
+    if(!file)return;
+
+
+    /*
+      FileReader is used instead of Blob URL.
+
+      This is more reliable on iPad/iPhone Safari,
+      especially when opening this HTML locally.
+    */
+
+    var reader=new FileReader();
+
+
+    reader.onload=function(){
+
+      var dataURL=reader.result;
+
+      var im=new Image();
+
+
+      im.onload=function(){
+
+        image=im;
+
+        imgW=
+          im.naturalWidth ||
+          im.width;
+
+        imgH=
+          im.naturalHeight ||
+          im.height;
+
+
+        if(!imgW || !imgH){
+
+          status(
+            "Image dimensions could not be read."
+          );
+
+          return;
+
         }
 
-        function restoreState(stateStr) {
-            const state = JSON.parse(stateStr);
-            walls = state.walls;
-            items = state.items;
+
+        walls=[];
+
+        current=[];
+
+        selectedWall=-1;
+
+
+        /*
+          Force 2D canvas visible.
+        */
+
+        $("empty").style.display="none";
+
+        $("canvasWrap").style.display="block";
+
+        $("three").style.display="none";
+
+
+        view="2d";
+
+
+        $("view2d")
+          .classList
+          .add("active");
+
+        $("view3d")
+          .classList
+          .remove("active");
+
+
+        $("modeBadge").textContent=
+          "2D TRACER";
+
+
+        resizeCanvas();
+
+        fitImage();
+
+        draw2D();
+
+        updateInfo();
+
+
+        status(
+          "Floorplan loaded: "+
+          imgW+
+          " × "+
+          imgH+
+          " px. Start tracing."
+        );
+
+      };
+
+
+      im.onerror=function(){
+
+        status(
+          "Image could not be decoded. Try JPG or PNG."
+        );
+
+      };
+
+
+      im.src=dataURL;
+
+    };
+
+
+    reader.onerror=function(){
+
+      status(
+        "Could not read the selected file."
+      );
+
+    };
+
+
+    reader.readAsDataURL(file);
+
+  }
+);
+
+
+/* =========================================================
+   CANVAS SIZE
+========================================================= */
+
+function resizeCanvas(){
+
+  var rect=
+    $("canvasWrap")
+    .getBoundingClientRect();
+
+
+  canvasW=rect.width;
+
+  canvasH=rect.height;
+
+
+  var dpr=
+    window.devicePixelRatio || 1;
+
+
+  canvas.width=
+    Math.max(
+      1,
+      Math.floor(canvasW*dpr)
+    );
+
+
+  canvas.height=
+    Math.max(
+      1,
+      Math.floor(canvasH*dpr)
+    );
+
+
+  canvas.style.width=
+    canvasW+"px";
+
+
+  canvas.style.height=
+    canvasH+"px";
+
+
+  ctx.setTransform(
+    dpr,
+    0,
+    0,
+    dpr,
+    0,
+    0
+  );
+
+
+  draw2D();
+
+}
+
+
+window.addEventListener(
+  "resize",
+  function(){
+
+    resizeCanvas();
+
+    resize3D();
+
+  }
+);
+
+
+/* =========================================================
+   FIT IMAGE
+========================================================= */
+
+function fitImage(){
+
+  if(!image)return;
+
+
+  var rect=
+    $("canvasWrap")
+    .getBoundingClientRect();
+
+
+  if(rect.width>0){
+
+    canvasW=rect.width;
+
+  }
+
+
+  if(rect.height>0){
+
+    canvasH=rect.height;
+
+  }
+
+
+  var margin=40;
+
+
+  var sx=
+    (canvasW-margin*2)/
+    imgW;
+
+
+  var sy=
+    (canvasH-margin*2)/
+    imgH;
+
+
+  zoom=
+    Math.min(
+      sx,
+      sy
+    );
+
+
+  panX=
+    (canvasW-imgW*zoom)/2;
+
+
+  panY=
+    (canvasH-imgH*zoom)/2;
+
+
+  draw2D();
+
+}
+
+
+$("fit").onclick=fitImage;
+
+
+/* =========================================================
+   COORDINATES
+========================================================= */
+
+function screenToImage(
+  sx,
+  sy
+){
+
+  return {
+
+    x:
+      (sx-panX)/zoom,
+
+    y:
+      (sy-panY)/zoom
+
+  };
+
+}
+
+
+function imageToScreen(p){
+
+  return {
+
+    x:
+      panX+p.x*zoom,
+
+    y:
+      panY+p.y*zoom
+
+  };
+
+}
+
+
+/* =========================================================
+   SNAP
+========================================================= */
+
+function snapPoint(p){
+
+  if(!snapEnabled){
+
+    return p;
+
+  }
+
+
+  var widthM=
+    parseFloat(
+      $("widthM").value
+    ) || 10;
+
+
+  var gridM=
+    parseFloat(
+      $("gridM").value
+    ) || .5;
+
+
+  var pxPerMeter=
+    imgW/widthM;
+
+
+  var step=
+    gridM*pxPerMeter;
+
+
+  if(step<=0){
+
+    return p;
+
+  }
+
+
+  return {
+
+    x:
+      Math.round(p.x/step)*step,
+
+    y:
+      Math.round(p.y/step)*step
+
+  };
+
+}
+
+
+/* =========================================================
+   DRAW 2D
+========================================================= */
+
+function draw2D(){
+
+  if(!ctx)return;
+
+
+  ctx.clearRect(
+    0,
+    0,
+    canvasW,
+    canvasH
+  );
+
+
+  ctx.fillStyle="#e7e7e7";
+
+  ctx.fillRect(
+    0,
+    0,
+    canvasW,
+    canvasH
+  );
+
+
+  if(gridEnabled){
+
+    drawGrid();
+
+  }
+
+
+  /*
+    Floorplan
+  */
+
+  if(image && imageVisible){
+
+    ctx.globalAlpha=
+      parseFloat(
+        $("opacity").value
+      )/100;
+
+
+    ctx.drawImage(
+
+      image,
+
+      panX,
+
+      panY,
+
+      imgW*zoom,
+
+      imgH*zoom
+
+    );
+
+
+    ctx.globalAlpha=1;
+
+  }
+
+
+  /*
+    Existing walls
+  */
+
+  walls.forEach(
+    function(w,index){
+
+      if(!w.points.length)return;
+
+
+      var selected=
+        index===selectedWall;
+
+
+      ctx.strokeStyle=
+        selected
+        ? "#1677ff"
+        : "#e11d48";
+
+
+      ctx.lineWidth=
+        selected
+        ? 6
+        : 4;
+
+
+      ctx.lineCap="round";
+
+      ctx.lineJoin="round";
+
+
+      ctx.beginPath();
+
+
+      w.points.forEach(
+        function(p,i){
+
+          var s=
+            imageToScreen(p);
+
+
+          if(i===0){
+
+            ctx.moveTo(
+              s.x,
+              s.y
+            );
+
+          }else{
+
+            ctx.lineTo(
+              s.x,
+              s.y
+            );
+
+          }
+
+        }
+      );
+
+
+      ctx.stroke();
+
+
+      /*
+        Handles
+      */
+
+      if(selected){
+
+        w.points.forEach(
+          function(p){
+
+            var s=
+              imageToScreen(p);
+
+
+            ctx.fillStyle="#fff";
+
+            ctx.strokeStyle=
+              "#1677ff";
+
+            ctx.lineWidth=2;
+
+
+            ctx.beginPath();
+
+
+            ctx.arc(
+              s.x,
+              s.y,
+              5,
+              0,
+              Math.PI*2
+            );
+
+
+            ctx.fill();
+
+            ctx.stroke();
+
+          }
+        );
+
+      }
+
+    }
+  );
+
+
+  /*
+    Current wall
+  */
+
+  if(current.length){
+
+    ctx.strokeStyle=
+      "#00a3ff";
+
+    ctx.lineWidth=4;
+
+    ctx.lineCap="round";
+
+    ctx.lineJoin="round";
+
+    ctx.setLineDash([
+      8,
+      5
+    ]);
+
+
+    ctx.beginPath();
+
+
+    current.forEach(
+      function(p,i){
+
+        var s=
+          imageToScreen(p);
+
+
+        if(i===0){
+
+          ctx.moveTo(
+            s.x,
+            s.y
+          );
+
+        }else{
+
+          ctx.lineTo(
+            s.x,
+            s.y
+          );
+
         }
 
-        function undo() {
-            if (undoStack.length > 0) {
-                redoStack.push(JSON.stringify({ walls, items }));
-                restoreState(undoStack.pop());
-                updateUndoRedoButtons();
-                drawCanvas();
-                generate3D();
-            }
+      }
+    );
+
+
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+
+
+    current.forEach(
+      function(p){
+
+        var s=
+          imageToScreen(p);
+
+
+        ctx.fillStyle=
+          "#00a3ff";
+
+
+        ctx.beginPath();
+
+
+        ctx.arc(
+          s.x,
+          s.y,
+          5,
+          0,
+          Math.PI*2
+        );
+
+
+        ctx.fill();
+
+      }
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   GRID
+========================================================= */
+
+function drawGrid(){
+
+  if(!imgW)return;
+
+
+  var widthM=
+    parseFloat(
+      $("widthM").value
+    ) || 10;
+
+
+  var gridM=
+    parseFloat(
+      $("gridM").value
+    ) || .5;
+
+
+  var pxPerMeter=
+    imgW/widthM;
+
+
+  var stepImage=
+    gridM*pxPerMeter;
+
+
+  var stepScreen=
+    stepImage*zoom;
+
+
+  if(stepScreen<8)return;
+
+
+  var origin=
+    imageToScreen({
+      x:0,
+      y:0
+    });
+
+
+  ctx.strokeStyle=
+    "rgba(0,0,0,.12)";
+
+  ctx.lineWidth=1;
+
+
+  var startX=
+    (
+      (origin.x%stepScreen)+
+      stepScreen
+    )%stepScreen;
+
+
+  for(
+    var x=startX;
+    x<canvasW;
+    x+=stepScreen
+  ){
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      x,
+      0
+    );
+
+    ctx.lineTo(
+      x,
+      canvasH
+    );
+
+    ctx.stroke();
+
+  }
+
+
+  var startY=
+    (
+      (origin.y%stepScreen)+
+      stepScreen
+    )%stepScreen;
+
+
+  for(
+    var y=startY;
+    y<canvasH;
+    y+=stepScreen
+  ){
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      0,
+      y
+    );
+
+    ctx.lineTo(
+      canvasW,
+      y
+    );
+
+    ctx.stroke();
+
+  }
+
+}
+
+
+/* =========================================================
+   MOUSE / TOUCH PAN
+========================================================= */
+
+canvas.addEventListener(
+  "mousedown",
+  function(e){
+
+    if(view!=="2d")return;
+
+
+    if(
+      e.button===1 ||
+      e.button===2
+    ){
+
+      dragging=true;
+
+      dragStartX=e.clientX;
+
+      dragStartY=e.clientY;
+
+      startPanX=panX;
+
+      startPanY=panY;
+
+      e.preventDefault();
+
+    }
+
+  }
+);
+
+
+window.addEventListener(
+  "mousemove",
+  function(e){
+
+    if(!dragging)return;
+
+
+    panX=
+      startPanX+
+      e.clientX-
+      dragStartX;
+
+
+    panY=
+      startPanY+
+      e.clientY-
+      dragStartY;
+
+
+    draw2D();
+
+  }
+);
+
+
+window.addEventListener(
+  "mouseup",
+  function(){
+
+    dragging=false;
+
+  }
+);
+
+
+canvas.addEventListener(
+  "contextmenu",
+  function(e){
+
+    e.preventDefault();
+
+  }
+);
+
+
+/* =========================================================
+   ZOOM
+========================================================= */
+
+canvas.addEventListener(
+  "wheel",
+  function(e){
+
+    if(view!=="2d")return;
+
+
+    e.preventDefault();
+
+
+    var rect=
+      canvas.getBoundingClientRect();
+
+
+    var mx=
+      e.clientX-
+      rect.left;
+
+
+    var my=
+      e.clientY-
+      rect.top;
+
+
+    var before=
+      screenToImage(
+        mx,
+        my
+      );
+
+
+    var factor=
+      e.deltaY<0
+      ? 1.12
+      : .89;
+
+
+    zoom*=factor;
+
+
+    zoom=
+      Math.max(
+        .05,
+        Math.min(
+          20,
+          zoom
+        )
+      );
+
+
+    var after=
+      screenToImage(
+        mx,
+        my
+      );
+
+
+    panX+=
+      (after.x-before.x)*
+      zoom;
+
+
+    panY+=
+      (after.y-before.y)*
+      zoom;
+
+
+    draw2D();
+
+  },
+  {
+    passive:false
+  }
+);
+
+
+/* =========================================================
+   DOUBLE CLICK
+========================================================= */
+
+canvas.addEventListener(
+  "dblclick",
+  function(){
+
+    if(tool==="wall"){
+
+      finishWall();
+
+    }
+
+  }
+);
+
+
+/* =========================================================
+   CANVAS CLICK
+========================================================= */
+
+canvas.addEventListener(
+  "click",
+  function(e){
+
+    if(view!=="2d")return;
+
+
+    var rect=
+      canvas.getBoundingClientRect();
+
+
+    var sx=
+      e.clientX-
+      rect.left;
+
+
+    var sy=
+      e.clientY-
+      rect.top;
+
+
+    /*
+      WALL TOOL
+    */
+
+    if(tool==="wall"){
+
+      var p=
+        screenToImage(
+          sx,
+          sy
+        );
+
+
+      p=
+        snapPoint(p);
+
+
+      current.push(p);
+
+
+      draw2D();
+
+
+      status(
+        "Tracing wall: "+
+        current.length+
+        " points"
+      );
+
+
+      return;
+
+    }
+
+
+    /*
+      SELECT TOOL
+    */
+
+    if(tool==="select"){
+
+      selectWallAt(
+        sx,
+        sy
+      );
+
+    }
+
+  }
+);
+
+
+/* =========================================================
+   FINISH WALL
+========================================================= */
+
+function finishWall(){
+
+  if(current.length<2){
+
+    status(
+      "A wall needs at least 2 points."
+    );
+
+    return;
+
+  }
+
+
+  walls.push({
+
+    points:
+      current.slice()
+
+  });
+
+
+  current=[];
+
+
+  updateInfo();
+
+  draw2D();
+
+  build3D();
+
+
+  status(
+    "Wall created."
+  );
+
+}
+
+
+$("finish").onclick=
+  finishWall;
+
+
+/* =========================================================
+   UNDO
+========================================================= */
+
+$("undo").onclick=function(){
+
+  if(current.length){
+
+    current.pop();
+
+    draw2D();
+
+    return;
+
+  }
+
+
+  if(walls.length){
+
+    walls.pop();
+
+    selectedWall=-1;
+
+    updateInfo();
+
+    draw2D();
+
+    build3D();
+
+
+    status(
+      "Last wall removed."
+    );
+
+  }
+
+};
+
+
+/* =========================================================
+   TOOLS
+========================================================= */
+
+$("wallTool").onclick=function(){
+
+  tool="wall";
+
+
+  $("wallTool")
+    .classList
+    .add("active");
+
+
+  $("selectTool")
+    .classList
+    .remove("active");
+
+
+  status(
+    "Wall tool active."
+  );
+
+};
+
+
+$("selectTool").onclick=function(){
+
+  tool="select";
+
+
+  $("selectTool")
+    .classList
+    .add("active");
+
+
+  $("wallTool")
+    .classList
+    .remove("active");
+
+
+  status(
+    "Select a wall."
+  );
+
+};
+
+
+/* =========================================================
+   DISTANCE
+========================================================= */
+
+function distancePointSegment(
+  p,
+  a,
+  b
+){
+
+  var dx=
+    b.x-a.x;
+
+  var dy=
+    b.y-a.y;
+
+
+  var len2=
+    dx*dx+
+    dy*dy;
+
+
+  if(len2===0){
+
+    return Math.hypot(
+      p.x-a.x,
+      p.y-a.y
+    );
+
+  }
+
+
+  var t=
+    (
+      (p.x-a.x)*dx+
+      (p.y-a.y)*dy
+    )/
+    len2;
+
+
+  t=
+    Math.max(
+      0,
+      Math.min(
+        1,
+        t
+      )
+    );
+
+
+  var x=
+    a.x+t*dx;
+
+  var y=
+    a.y+t*dy;
+
+
+  return Math.hypot(
+    p.x-x,
+    p.y-y
+  );
+
+}
+
+
+/* =========================================================
+   SELECT WALL
+========================================================= */
+
+function selectWallAt(
+  sx,
+  sy
+){
+
+  var p=
+    screenToImage(
+      sx,
+      sy
+    );
+
+
+  var best=-1;
+
+  var bestDist=
+    Infinity;
+
+
+  walls.forEach(
+    function(w,index){
+
+      for(
+        var i=0;
+        i<w.points.length-1;
+        i++
+      ){
+
+        var d=
+          distancePointSegment(
+            p,
+            w.points[i],
+            w.points[i+1]
+          );
+
+
+        if(d<bestDist){
+
+          bestDist=d;
+
+          best=index;
+
         }
 
-        function redo() {
-            if (redoStack.length > 0) {
-                undoStack.push(JSON.stringify({ walls, items }));
-                restoreState(redoStack.pop());
-                updateUndoRedoButtons();
-                drawCanvas();
-                generate3D();
-            }
+      }
+
+    }
+  );
+
+
+  var tolerance=
+    15/zoom;
+
+
+  if(
+    best>=0 &&
+    bestDist<tolerance
+  ){
+
+    selectedWall=best;
+
+    draw2D();
+
+
+    status(
+      "Wall "+
+      (best+1)+
+      " selected."
+    );
+
+  }else{
+
+    selectedWall=-1;
+
+    draw2D();
+
+  }
+
+}
+
+
+/* =========================================================
+   DELETE
+========================================================= */
+
+$("delete").onclick=function(){
+
+  if(
+    selectedWall<0 ||
+    selectedWall>=walls.length
+  ){
+
+    status(
+      "Select a wall first."
+    );
+
+    return;
+
+  }
+
+
+  walls.splice(
+    selectedWall,
+    1
+  );
+
+
+  selectedWall=-1;
+
+
+  updateInfo();
+
+  draw2D();
+
+  build3D();
+
+
+  status(
+    "Wall deleted."
+  );
+
+};
+
+
+/* =========================================================
+   SNAP
+========================================================= */
+
+$("snap").onclick=function(){
+
+  snapEnabled=
+    !snapEnabled;
+
+
+  $("snap")
+    .classList
+    .toggle(
+      "active",
+      snapEnabled
+    );
+
+
+  status(
+    snapEnabled
+    ? "Snap ON"
+    : "Snap OFF"
+  );
+
+};
+
+
+/* =========================================================
+   GRID
+========================================================= */
+
+$("grid").onclick=function(){
+
+  gridEnabled=
+    !gridEnabled;
+
+
+  $("grid")
+    .classList
+    .toggle(
+      "active",
+      gridEnabled
+    );
+
+
+  draw2D();
+
+};
+
+
+/* =========================================================
+   OPACITY
+========================================================= */
+
+$("opacity").addEventListener(
+  "input",
+  draw2D
+);
+
+
+/* =========================================================
+   HIDE IMAGE
+========================================================= */
+
+$("hideImage").onclick=function(){
+
+  imageVisible=
+    !imageVisible;
+
+
+  $("hideImage").textContent=
+    imageVisible
+    ? "Hide"
+    : "Show";
+
+
+  draw2D();
+
+};
+
+
+/* =========================================================
+   THREE INIT
+========================================================= */
+
+function init3D(){
+
+  scene=
+    new THREE.Scene();
+
+
+  scene.background=
+    new THREE.Color(
+      0x101114
+    );
+
+
+  camera=
+    new THREE.PerspectiveCamera(
+      50,
+      1,
+      .01,
+      1000
+    );
+
+
+  camera.position.set(
+    7,
+    6,
+    7
+  );
+
+
+  renderer=
+    new THREE.WebGLRenderer({
+      antialias:true
+    });
+
+
+  renderer.setPixelRatio(
+    Math.min(
+      2,
+      window.devicePixelRatio||1
+    )
+  );
+
+
+  $("three").appendChild(
+    renderer.domElement
+  );
+
+
+  controls=
+    new THREE.OrbitControls(
+      camera,
+      renderer.domElement
+    );
+
+
+  controls.enableDamping=true;
+
+
+  controls.target.set(
+    0,
+    0,
+    0
+  );
+
+
+  var hemi=
+    new THREE.HemisphereLight(
+      0xffffff,
+      0x555555,
+      2
+    );
+
+
+  scene.add(hemi);
+
+
+  var dir=
+    new THREE.DirectionalLight(
+      0xffffff,
+      2
+    );
+
+
+  dir.position.set(
+    5,
+    10,
+    5
+  );
+
+
+  scene.add(dir);
+
+
+  modelGroup=
+    new THREE.Group();
+
+
+  scene.add(
+    modelGroup
+  );
+
+
+  var grid=
+    new THREE.GridHelper(
+      30,
+      30,
+      0x444444,
+      0x252525
+    );
+
+
+  scene.add(grid);
+
+
+  resize3D();
+
+  animate();
+
+}
+
+
+/* =========================================================
+   THREE RESIZE
+========================================================= */
+
+function resize3D(){
+
+  if(!renderer)return;
+
+
+  var r=
+    $("three")
+    .getBoundingClientRect();
+
+
+  if(
+    r.width<=0 ||
+    r.height<=0
+  ){
+
+    return;
+
+  }
+
+
+  renderer.setSize(
+    r.width,
+    r.height,
+    false
+  );
+
+
+  camera.aspect=
+    r.width/r.height;
+
+
+  camera.updateProjectionMatrix();
+
+}
+
+
+/* =========================================================
+   MATERIAL
+========================================================= */
+
+function wallMaterial(){
+
+  var type=
+    $("material").value;
+
+
+  var color=
+    0xe8e8e8;
+
+
+  if(type==="concrete"){
+
+    color=0x999999;
+
+  }
+
+
+  if(type==="warm"){
+
+    color=0xd7b990;
+
+  }
+
+
+  if(type==="dark"){
+
+    color=0x3a3d43;
+
+  }
+
+
+  return new THREE.MeshStandardMaterial({
+
+    color:color,
+
+    roughness:.8
+
+  });
+
+}
+
+
+/* =========================================================
+   WORLD COORDINATES
+========================================================= */
+
+function world(p){
+
+  var widthM=
+    parseFloat(
+      $("widthM").value
+    ) || 10;
+
+
+  var ppm=
+    imgW/widthM;
+
+
+  return {
+
+    x:
+      (p.x-imgW/2)/
+      ppm,
+
+    z:
+      (p.y-imgH/2)/
+      ppm
+
+  };
+
+}
+
+
+/* =========================================================
+   ADD WALL
+========================================================= */
+
+function addWall(
+  a,
+  b
+){
+
+  var A=
+    world(a);
+
+  var B=
+    world(b);
+
+
+  var dx=
+    B.x-A.x;
+
+  var dz=
+    B.z-A.z;
+
+
+  var length=
+    Math.hypot(
+      dx,
+      dz
+    );
+
+
+  if(length<.001)return;
+
+
+  var height=
+    parseFloat(
+      $("heightM").value
+    ) || 2.8;
+
+
+  var thickness=
+    parseFloat(
+      $("thickM").value
+    ) || .15;
+
+
+  var geo=
+    new THREE.BoxGeometry(
+      length,
+      height,
+      thickness
+    );
+
+
+  var mesh=
+    new THREE.Mesh(
+      geo,
+      wallMaterial()
+    );
+
+
+  mesh.position.set(
+
+    (A.x+B.x)/2,
+
+    height/2,
+
+    (A.z+B.z)/2
+
+  );
+
+
+  mesh.rotation.y=
+    -Math.atan2(
+      dz,
+      dx
+    );
+
+
+  modelGroup.add(
+    mesh
+  );
+
+}
+
+
+/* =========================================================
+   FLOOR
+========================================================= */
+
+function addFloor(){
+
+  if(floorMesh){
+
+    scene.remove(
+      floorMesh
+    );
+
+    floorMesh=null;
+
+  }
+
+
+  if(!image)return;
+
+
+  var widthM=
+    parseFloat(
+      $("widthM").value
+    ) || 10;
+
+
+  var depthM=
+    widthM*
+    imgH/
+    imgW;
+
+
+  var geo=
+    new THREE.PlaneGeometry(
+      widthM,
+      depthM
+    );
+
+
+  floorMesh=
+    new THREE.Mesh(
+
+      geo,
+
+      new THREE.MeshStandardMaterial({
+
+        color:0x777777,
+
+        roughness:1,
+
+        side:
+          THREE.DoubleSide
+
+      })
+
+    );
+
+
+  floorMesh.rotation.x=
+    -Math.PI/2;
+
+
+  floorMesh.position.y=
+    -.01;
+
+
+  scene.add(
+    floorMesh
+  );
+
+}
+
+
+/* =========================================================
+   BUILD 3D
+========================================================= */
+
+function build3D(){
+
+  if(!modelGroup)return;
+
+
+  while(
+    modelGroup.children.length
+  ){
+
+    modelGroup.remove(
+      modelGroup.children[0]
+    );
+
+  }
+
+
+  walls.forEach(
+    function(w){
+
+      for(
+        var i=0;
+        i<w.points.length-1;
+        i++
+      ){
+
+        addWall(
+          w.points[i],
+          w.points[i+1]
+        );
+
+      }
+
+    }
+  );
+
+
+  addFloor();
+
+  resetCamera3D();
+
+}
+
+
+/* =========================================================
+   RESET CAMERA
+========================================================= */
+
+function resetCamera3D(){
+
+  if(!image)return;
+
+
+  var widthM=
+    parseFloat(
+      $("widthM").value
+    ) || 10;
+
+
+  var depthM=
+    widthM*
+    imgH/
+    imgW;
+
+
+  var size=
+    Math.max(
+      widthM,
+      depthM,
+      4
+    );
+
+
+  camera.position.set(
+    size,
+    size*.9,
+    size
+  );
+
+
+  controls.target.set(
+    0,
+    1,
+    0
+  );
+
+
+  controls.update();
+
+}
+
+
+$("resetCam").onclick=
+  resetCamera3D;
+
+
+/* =========================================================
+   GENERATE
+========================================================= */
+
+$("build").onclick=function(){
+
+  build3D();
+
+
+  status(
+    "3D generated from traced walls."
+  );
+
+};
+
+
+$("material").onchange=
+  build3D;
+
+
+/* =========================================================
+   VIEW 2D
+========================================================= */
+
+$("view2d").onclick=function(){
+
+  view="2d";
+
+
+  $("canvasWrap")
+    .style
+    .display="block";
+
+
+  $("three")
+    .style
+    .display="none";
+
+
+  $("view2d")
+    .classList
+    .add("active");
+
+
+  $("view3d")
+    .classList
+    .remove("active");
+
+
+  $("modeBadge").textContent=
+    "2D TRACER";
+
+
+  resizeCanvas();
+
+};
+
+
+/* =========================================================
+   VIEW 3D
+========================================================= */
+
+$("view3d").onclick=function(){
+
+  view="3d";
+
+
+  $("canvasWrap")
+    .style
+    .display="none";
+
+
+  $("three")
+    .style
+    .display="block";
+
+
+  $("view3d")
+    .classList
+    .add("active");
+
+
+  $("view2d")
+    .classList
+    .remove("active");
+
+
+  $("modeBadge").textContent=
+    "3D VIEW";
+
+
+  resize3D();
+
+};
+
+
+/* =========================================================
+   INFO
+========================================================= */
+
+function updateInfo(){
+
+  var segments=0;
+
+
+  walls.forEach(
+    function(w){
+
+      segments+=
+        Math.max(
+          0,
+          w.points.length-1
+        );
+
+    }
+  );
+
+
+  $("info").textContent=
+    walls.length+
+    " walls · "+
+    segments+
+    " segments";
+
+}
+
+
+/* =========================================================
+   SAVE JSON
+========================================================= */
+
+$("save").onclick=function(){
+
+  var data={
+
+    version:1,
+
+    imageWidth:imgW,
+
+    imageHeight:imgH,
+
+    walls:walls,
+
+    settings:{
+
+      widthM:
+        $("widthM").value,
+
+      gridM:
+        $("gridM").value,
+
+      heightM:
+        $("heightM").value,
+
+      thickM:
+        $("thickM").value
+
+    }
+
+  };
+
+
+  var blob=
+    new Blob(
+      [
+        JSON.stringify(
+          data,
+          null,
+          2
+        )
+      ],
+      {
+        type:
+          "application/json"
+      }
+    );
+
+
+  var url=
+    URL.createObjectURL(
+      blob
+    );
+
+
+  var a=
+    document.createElement(
+      "a"
+    );
+
+
+  a.href=url;
+
+  a.download=
+    "floorplan-project.json";
+
+
+  document.body.appendChild(a);
+
+  a.click();
+
+  document.body.removeChild(a);
+
+
+  setTimeout(
+    function(){
+
+      URL.revokeObjectURL(
+        url
+      );
+
+    },
+    1000
+  );
+
+
+  status(
+    "Project saved."
+  );
+
+};
+
+
+/* =========================================================
+   LOAD JSON
+========================================================= */
+
+$("loadBtn").onclick=function(){
+
+  $("loadFile").click();
+
+};
+
+
+$("loadFile").addEventListener(
+  "change",
+  function(e){
+
+    var file=
+      e.target.files[0];
+
+
+    if(!file)return;
+
+
+    var reader=
+      new FileReader();
+
+
+    reader.onload=function(){
+
+      try{
+
+        var data=
+          JSON.parse(
+            reader.result
+          );
+
+
+        walls=
+          data.walls ||
+          [];
+
+
+        if(data.settings){
+
+          $("widthM").value=
+            data.settings.widthM ||
+            10;
+
+
+          $("gridM").value=
+            data.settings.gridM ||
+            .5;
+
+
+          $("heightM").value=
+            data.settings.heightM ||
+            2.8;
+
+
+          $("thickM").value=
+            data.settings.thickM ||
+            .15;
+
         }
 
-        function updateUndoRedoButtons() {
-            document.getElementById('btnUndo').disabled = undoStack.length === 0;
-            document.getElementById('btnRedo').disabled = redoStack.length === 0;
-        }
-
-        document.getElementById('btnUndo').addEventListener('click', undo);
-        document.getElementById('btnRedo').addEventListener('click', redo);
-
-        // --- 2D CANVAS SETUP ---
-        const panel2d = document.getElementById('panel2d');
-        const canvas2d = document.getElementById('canvas2d');
-        const ctx = canvas2d.getContext('2d');
-        let backgroundImage = new Image();
-        
-        let isDrawing = false;
-        let startX, startY, currentX, currentY;
-        let panX = 0, panY = 0, zoom = 1;
-        
-        let isPanning = false;
-        let rawMouseX = 0, rawMouseY = 0, worldMouseX = 0, worldMouseY = 0;
-        let lastPinchDist = null, lastPanX = null, lastPanY = null;
-        let lastTapTime = 0; 
-
-        const SNAP_DIST = 15;
-
-        function resizeCanvas() {
-            canvas2d.width = panel2d.clientWidth;
-            canvas2d.height = panel2d.clientHeight;
-            drawCanvas();
-        }
-        window.addEventListener('resize', resizeCanvas);
-        setTimeout(resizeCanvas, 100);
-
-        function toWorld(x, y) { return { x: (x - panX) / zoom, y: (y - panY) / zoom }; }
-        
-        function getClosestWallPoint(px, py) {
-            let closest = null, minDist = Infinity, targetWall = null;
-            walls.forEach(wall => {
-                const dx = wall.x2 - wall.x1, dy = wall.y2 - wall.y1;
-                let t = ((px - wall.x1) * dx + (py - wall.y1) * dy) / (dx * dx + dy * dy);
-                t = Math.max(0, Math.min(1, t)); 
-                const projX = wall.x1 + t * dx, projY = wall.y1 + t * dy;
-                const dist = Math.hypot(px - projX, py - projY);
-
-                if (dist < minDist && dist < SNAP_DIST / zoom) {
-                    minDist = dist;
-                    closest = { x: projX, y: projY, t: t };
-                    targetWall = wall;
-                }
-            });
-            return { point: closest, wall: targetWall };
-        }
-
-        function getSnapPoint(x, y) {
-            for (let wall of walls) {
-                if (Math.hypot(wall.x1 - x, wall.y1 - y) < SNAP_DIST / zoom) return { x: wall.x1, y: wall.y1 };
-                if (Math.hypot(wall.x2 - x, wall.y2 - y) < SNAP_DIST / zoom) return { x: wall.x2, y: wall.y2 };
-            }
-            return { x, y };
-        }
-
-        function getUnitMultiplier() {
-            const unit = document.getElementById('unitSelect').value;
-            if (unit === 'mm') return 0.1;
-            if (unit === 'm') return 100;
-            if (unit === 'inch') return 2.54;
-            return 1; // Default: cm 
-        }
-
-        // --- DRAW 2D ---
-        function drawCanvas() {
-            ctx.clearRect(0, 0, canvas2d.width, canvas2d.height);
-            ctx.save();
-            ctx.translate(panX, panY);
-            ctx.scale(zoom, zoom);
-
-            if (document.getElementById('showGrid2D').checked) {
-                const gridSize = 50; 
-                ctx.strokeStyle = '#cccccc';
-                ctx.lineWidth = 1 / zoom; 
-                
-                const startGridX = -panX / zoom;
-                const startGridY = -panY / zoom;
-                const endGridX = startGridX + canvas2d.width / zoom;
-                const endGridY = startGridY + canvas2d.height / zoom;
-
-                ctx.beginPath();
-                for (let x = Math.floor(startGridX / gridSize) * gridSize; x < endGridX; x += gridSize) {
-                    ctx.moveTo(x, startGridY); ctx.lineTo(x, endGridY);
-                }
-                for (let y = Math.floor(startGridY / gridSize) * gridSize; y < endGridY; y += gridSize) {
-                    ctx.moveTo(startGridX, y); ctx.lineTo(endGridX, y);
-                }
-                ctx.stroke();
-            }
-
-            if (backgroundImage.src && backgroundImage.width > 0) {
-                ctx.globalAlpha = 0.8; 
-                ctx.drawImage(backgroundImage, 0, 0);
-                ctx.globalAlpha = 1.0;
-            }
-
-            // Ambil skala piksel dari UI untuk merender 2D items secara proporsional
-            const pxScale = parseFloat(document.getElementById('pxScale').value) || 2.5;
-
-            items.forEach(item => {
-                const renderSize = (100 / pxScale); // Visualisasi kira-kira box 100cm
-                ctx.fillStyle = 'rgba(0,0,0,0.5)';
-                ctx.fillRect(item.x - renderSize/2, item.y - renderSize/2, renderSize, renderSize);
-                ctx.fillStyle = 'white';
-                ctx.font = `bold ${10/zoom}px sans-serif`;
-                ctx.fillText(item.type.substring(0,3).toUpperCase(), item.x - renderSize/2 + 2, item.y + 4/zoom);
-            });
-
-            // 1. TRACER SELALU TIPIS & TERPISAH DARI 3D THICKNESS
-            const tracerThickness = 3 / zoom; 
-            ctx.lineCap = 'round';
-            
-            walls.forEach(wall => {
-                ctx.lineWidth = tracerThickness;
-                ctx.strokeStyle = 'rgba(68, 68, 68, 0.8)'; 
-                ctx.beginPath(); ctx.moveTo(wall.x1, wall.y1); ctx.lineTo(wall.x2, wall.y2); ctx.stroke();
-
-                wall.doors.forEach(door => {
-                    const posX = wall.x1 + (wall.x2 - wall.x1) * door.t;
-                    const posY = wall.y1 + (wall.y2 - wall.y1) * door.t;
-                    const radius = (STD_DOOR_WIDTH / pxScale) / 2; // Radius pintu dlm piksel
-                    ctx.fillStyle = 'rgba(255, 204, 0, 0.8)';
-                    ctx.beginPath(); ctx.arc(posX, posY, radius, 0, Math.PI * 2); ctx.fill();
-                });
-
-                wall.windows.forEach(win => {
-                    const posX = wall.x1 + (wall.x2 - wall.x1) * win.t;
-                    const posY = wall.y1 + (wall.y2 - wall.y1) * win.t;
-                    const radius = (STD_WIN_WIDTH / pxScale) / 2;
-                    ctx.fillStyle = 'rgba(0, 204, 255, 0.8)';
-                    ctx.beginPath(); ctx.arc(posX, posY, radius, 0, Math.PI * 2); ctx.fill();
-                });
-            });
-
-            const mode = document.getElementById('drawMode').value;
-            if (mode === 'wall') {
-                if (isDrawing) {
-                    ctx.lineWidth = tracerThickness;
-                    ctx.strokeStyle = 'rgba(0, 122, 255, 0.6)'; 
-                    ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(currentX, currentY); ctx.stroke();
-                }
-                const snapped = getSnapPoint(worldMouseX, worldMouseY);
-                if (snapped.x !== worldMouseX || snapped.y !== worldMouseY) {
-                    ctx.fillStyle = 'rgba(52, 199, 89, 0.8)'; 
-                    ctx.beginPath(); ctx.arc(snapped.x, snapped.y, 6/zoom, 0, Math.PI*2); ctx.fill();
-                }
-            } else if (mode === 'door' || mode === 'window') {
-                const snap = getClosestWallPoint(worldMouseX, worldMouseY);
-                if (snap.point) {
-                    ctx.fillStyle = mode === 'door' ? 'rgba(255, 204, 0, 0.8)' : 'rgba(0, 204, 255, 0.8)';
-                    ctx.beginPath(); ctx.arc(snap.point.x, snap.point.y, 8/zoom, 0, Math.PI*2); ctx.fill();
-                }
-            } else {
-                const renderSize = (100 / pxScale);
-                ctx.fillStyle = 'rgba(255, 59, 48, 0.6)'; 
-                ctx.fillRect(worldMouseX - renderSize/2, worldMouseY - renderSize/2, renderSize, renderSize);
-            }
-
-            ctx.restore();
-        }
-
-        // --- INPUT HANDLERS (Mouse & Touch) ---
-        function handleInputDown(x, y, rightClick) {
-            if (rightClick) {
-                if (isDrawing) { isDrawing = false; drawCanvas(); return; }
-                isPanning = true; 
-                return;
-            }
-            
-            rawMouseX = x; rawMouseY = y;
-            const world = toWorld(x, y);
-            worldMouseX = world.x; worldMouseY = world.y;
-
-            const now = Date.now();
-            const isDoubleTap = (now - lastTapTime < 300);
-            lastTapTime = now;
-
-            const mode = document.getElementById('drawMode').value;
-            
-            if (mode === 'wall') {
-                if (isDoubleTap && isDrawing) {
-                    isDrawing = false; 
-                    drawCanvas();
-                    return;
-                }
-
-                let snapX = worldMouseX;
-                let snapY = worldMouseY;
-
-                if (isDrawing) {
-                    const snapTolerance = 20 / zoom;
-                    if (Math.abs(snapX - startX) < snapTolerance) snapX = startX;
-                    if (Math.abs(snapY - startY) < snapTolerance) snapY = startY;
-                }
-
-                const snapped = getSnapPoint(snapX, snapY);
-
-                if (!isDrawing) {
-                    isDrawing = true;
-                    startX = snapped.x; startY = snapped.y;
-                    currentX = startX; currentY = startY;
-                } else {
-                    saveState(); 
-                    walls.push({ x1: startX, y1: startY, x2: snapped.x, y2: snapped.y, doors: [], windows: [] });
-                    startX = snapped.x; 
-                    startY = snapped.y;
-                    currentX = startX; currentY = startY;
-                    generate3D();
-                }
-            } else if (mode === 'door' || mode === 'window') {
-                const snap = getClosestWallPoint(worldMouseX, worldMouseY);
-                if (snap.point && snap.wall) {
-                    saveState();
-                    if (mode === 'door') snap.wall.doors.push({ t: snap.point.t });
-                    if (mode === 'window') snap.wall.windows.push({ t: snap.point.t });
-                    generate3D();
-                }
-            } else {
-                saveState();
-                items.push({ type: mode, x: worldMouseX, y: worldMouseY });
-                generate3D();
-            }
-            drawCanvas();
-        }
-
-        function handleInputMove(x, y) {
-            rawMouseX = x; rawMouseY = y;
-            const world = toWorld(x, y);
-            worldMouseX = world.x; worldMouseY = world.y;
-
-            if (isDrawing && document.getElementById('drawMode').value === 'wall') {
-                let snapX = worldMouseX;
-                let snapY = worldMouseY;
-                
-                const snapTolerance = 20 / zoom;
-                if (Math.abs(snapX - startX) < snapTolerance) snapX = startX;
-                if (Math.abs(snapY - startY) < snapTolerance) snapY = startY;
-
-                const snapped = getSnapPoint(snapX, snapY);
-                currentX = snapped.x; 
-                currentY = snapped.y;
-            }
-            drawCanvas();
-        }
-
-        function handleInputUp(rightClick) {
-            if (rightClick) isPanning = false;
-        }
-
-        // --- MOUSE & TOUCH EVENTS ---
-        canvas2d.addEventListener('contextmenu', e => {
-            e.preventDefault();
-            if (isDrawing) { isDrawing = false; drawCanvas(); }
-        });
-        
-        canvas2d.addEventListener('mousedown', (e) => {
-            const rect = canvas2d.getBoundingClientRect();
-            handleInputDown(e.clientX - rect.left, e.clientY - rect.top, e.button === 2);
-        });
-
-        canvas2d.addEventListener('mousemove', (e) => {
-            if (isPanning) { panX += e.movementX; panY += e.movementY; drawCanvas(); return; }
-            const rect = canvas2d.getBoundingClientRect();
-            handleInputMove(e.clientX - rect.left, e.clientY - rect.top);
-        });
-
-        window.addEventListener('mouseup', (e) => { handleInputUp(e.button === 2); });
-
-        canvas2d.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            const zoomAmount = Math.pow(0.999, e.deltaY * 0.5);
-            const newZoom = zoom * zoomAmount;
-            panX = rawMouseX - (rawMouseX - panX) * (newZoom / zoom);
-            panY = rawMouseY - (rawMouseY - panY) * (newZoom / zoom);
-            zoom = newZoom;
-            drawCanvas();
-        });
-
-        canvas2d.addEventListener('touchstart', (e) => {
-            e.preventDefault(); 
-            const rect = canvas2d.getBoundingClientRect();
-            
-            if (e.touches.length === 1) {
-                handleInputDown(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top, false);
-            } else if (e.touches.length === 2) {
-                if (isDrawing) { isDrawing = false; drawCanvas(); } 
-                
-                const t1 = e.touches[0], t2 = e.touches[1];
-                lastPinchDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
-                lastPanX = (t1.clientX + t2.clientX) / 2;
-                lastPanY = (t1.clientY + t2.clientY) / 2;
-            }
-        }, { passive: false });
-
-        canvas2d.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            const rect = canvas2d.getBoundingClientRect();
-
-            if (e.touches.length === 1) {
-                handleInputMove(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
-            } else if (e.touches.length === 2) {
-                const t1 = e.touches[0], t2 = e.touches[1];
-                const currentDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
-                const currentPanX = (t1.clientX + t2.clientX) / 2;
-                const currentPanY = (t1.clientY + t2.clientY) / 2;
-
-                panX += currentPanX - lastPanX;
-                panY += currentPanY - lastPanY;
-
-                if (lastPinchDist) {
-                    const zoomFactor = currentDist / lastPinchDist;
-                    const newZoom = zoom * zoomFactor;
-                    
-                    const centerX = currentPanX - rect.left;
-                    const centerY = currentPanY - rect.top;
-
-                    panX = centerX - (centerX - panX) * (newZoom / zoom);
-                    panY = centerY - (centerY - panY) * (newZoom / zoom);
-                    zoom = newZoom;
-                }
-
-                lastPinchDist = currentDist;
-                lastPanX = currentPanX;
-                lastPanY = currentPanY;
-                
-                rawMouseX = currentPanX - rect.left;
-                rawMouseY = currentPanY - rect.top;
-                drawCanvas();
-            }
-        }, { passive: false });
-
-        canvas2d.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            if (e.touches.length === 0) { lastPinchDist = null; }
-        }, { passive: false });
-
-
-        // --- UI BINDINGS ---
-        document.getElementById('imageUpload').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    backgroundImage.onload = () => {
-                        const scaleX = canvas2d.width / backgroundImage.width;
-                        const scaleY = canvas2d.height / backgroundImage.height;
-                        const fitScale = Math.min(scaleX, scaleY) * 0.85;
-                        
-                        zoom = fitScale;
-                        panX = (canvas2d.width - (backgroundImage.width * zoom)) / 2;
-                        panY = (canvas2d.height - (backgroundImage.height * zoom)) / 2;
-                        
-                        drawCanvas();
-                    };
-                    backgroundImage.src = event.target.result;
-                }
-                reader.readAsDataURL(file);
-            }
-        });
-        
-        document.getElementById('clearAll').addEventListener('click', () => { 
-            if(confirm("Yakin ingin menghapus semua?")) {
-                saveState(); 
-                walls = []; items = []; isDrawing = false; drawCanvas(); generate3D(); 
-            }
-        });
-        
-        // Pemicu Update Canvas & 3D saat Input berubah
-        document.getElementById('pxScale').addEventListener('input', () => { drawCanvas(); generate3D(); });
-        document.getElementById('unitSelect').addEventListener('change', () => { generate3D(); });
-        document.getElementById('wallHeight').addEventListener('input', generate3D);
-        document.getElementById('wallThickness').addEventListener('input', () => { generate3D(); });
-        document.getElementById('wallColor').addEventListener('input', generate3D);
-        document.getElementById('floorColor').addEventListener('input', generate3D);
-        document.getElementById('showGrid2D').addEventListener('change', drawCanvas);
-
-        // --- 3D SCENE ---
-        const container3d = document.getElementById('canvas3d-container');
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x333333); 
-
-        const camera = new THREE.PerspectiveCamera(50, container3d.clientWidth / container3d.clientHeight, 1, 30000);
-        camera.position.set(0, 1000, 1000); 
-
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(container3d.clientWidth, container3d.clientHeight);
-        renderer.shadowMap.enabled = true;
-        container3d.appendChild(renderer.domElement);
-
-        const controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-
-        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        dirLight.position.set(500, 1500, 500);
-        dirLight.castShadow = true;
-        scene.add(dirLight);
-
-        const floorGeo = new THREE.PlaneGeometry(15000, 15000);
-        const floorMat = new THREE.MeshStandardMaterial({ color: document.getElementById('floorColor').value });
-        const floorMesh = new THREE.Mesh(floorGeo, floorMat);
-        floorMesh.rotation.x = -Math.PI / 2;
-        floorMesh.receiveShadow = true;
-        scene.add(floorMesh);
-
-        const gridHelper3D = new THREE.GridHelper(15000, 300, 0x888888, 0x555555); 
-        gridHelper3D.position.y = 1; 
-        scene.add(gridHelper3D);
-
-        document.getElementById('showGrid3D').addEventListener('change', (e) => {
-            gridHelper3D.visible = e.target.checked;
-        });
-
-        let mainGroup = new THREE.Group();
-        scene.add(mainGroup);
-
-        // --- PROCEDURAL 3D FURNITURE (Dinormalisasi dengan Unit) ---
-        function createBed(m) {
-            const group = new THREE.Group();
-            const mat = new THREE.MeshStandardMaterial({ color: 0x5c4033 });
-            const frame = new THREE.Mesh(new THREE.BoxGeometry(160*m, 25*m, 200*m), mat);
-            frame.position.y = 12.5*m;
-            const matt = new THREE.Mesh(new THREE.BoxGeometry(150*m, 15*m, 190*m), new THREE.MeshStandardMaterial({ color: 0xffffff }));
-            matt.position.y = 32.5*m;
-            group.add(frame); group.add(matt);
-            return group;
-        }
-
-        function createTable(m) {
-            const group = new THREE.Group();
-            const mat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b });
-            const top = new THREE.Mesh(new THREE.BoxGeometry(120*m, 5*m, 80*m), mat);
-            top.position.y = 75*m;
-            group.add(top);
-            const legGeo = new THREE.CylinderGeometry(3*m, 3*m, 72*m);
-            [[-55,-35], [55,-35], [-55,35], [55,35]].forEach(p => {
-                const leg = new THREE.Mesh(legGeo, mat);
-                leg.position.set(p[0]*m, 36*m, p[1]*m);
-                group.add(leg);
-            });
-            return group;
-        }
-
-        function createChair(m) {
-            const group = new THREE.Group();
-            const mat = new THREE.MeshStandardMaterial({ color: 0x444444 });
-            const seat = new THREE.Mesh(new THREE.BoxGeometry(40*m, 5*m, 40*m), mat);
-            seat.position.y = 45*m;
-            const back = new THREE.Mesh(new THREE.BoxGeometry(40*m, 45*m, 5*m), mat);
-            back.position.set(0, 70*m, -17.5*m);
-            group.add(seat); group.add(back);
-            const legGeo = new THREE.CylinderGeometry(2*m, 2*m, 42*m);
-            [[-17,-17], [17,-17], [-17,17], [17,17]].forEach(p => {
-                const leg = new THREE.Mesh(legGeo, mat);
-                leg.position.set(p[0]*m, 21*m, p[1]*m);
-                group.add(leg);
-            });
-            return group;
-        }
-
-        function createStairs(m) {
-            const group = new THREE.Group();
-            const mat = new THREE.MeshStandardMaterial({ color: 0x999999 });
-            const stepCount = 15;
-            const stepHeight = 20*m, stepDepth = 25*m, width = 100*m;
-            for(let i=0; i<stepCount; i++) {
-                const step = new THREE.Mesh(new THREE.BoxGeometry(width, stepHeight, stepDepth), mat);
-                step.position.set(0, (i * stepHeight) + (stepHeight/2), i * stepDepth);
-                group.add(step);
-            }
-            return group;
-        }
-
-        function generate3D() {
-            while(mainGroup.children.length > 0){ 
-                const child = mainGroup.children[0];
-                mainGroup.remove(child); 
-            }
-
-            floorMesh.material.color.set(document.getElementById('floorColor').value);
-
-            const mult = getUnitMultiplier(); 
-            const pxScale = parseFloat(document.getElementById('pxScale').value) || 2.5;
-            const worldScale = pxScale * mult; // Kalibrator Pixel -> Real World 3D
-
-            const height = (parseFloat(document.getElementById('wallHeight').value) || 300) * mult;
-            const thickness = (parseFloat(document.getElementById('wallThickness').value) || 15) * mult;
-            
-            const wallMat = new THREE.MeshStandardMaterial({ color: document.getElementById('wallColor').value, side: THREE.DoubleSide });
-            const glassMat = new THREE.MeshStandardMaterial({ color: 0x88ccff, transparent: true, opacity: 0.5 });
-
-            let centerX = 0, centerY = 0;
-            if (backgroundImage.src && backgroundImage.width > 0) {
-                centerX = backgroundImage.width / 2;
-                centerY = backgroundImage.height / 2;
-            }
-
-            // Standar Arsitek yang Diaplikasikan secara Skala di 3D
-            const dW = STD_DOOR_WIDTH * mult;
-            const dH = STD_DOOR_HEIGHT * mult;
-            const wW = STD_WIN_WIDTH * mult;
-            const wH = STD_WIN_HEIGHT * mult;
-            const wB = STD_WIN_BOTTOM * mult;
-
-            const uniquePoints = new Map();
-
-            // Generate Walls
-            walls.forEach(wall => {
-                const dx = wall.x2 - wall.x1, dy = wall.y2 - wall.y1;
-                // Panjang riil 3D = Panjang Pixel * Skala Dunia
-                const length3D = Math.hypot(dx, dy) * worldScale; 
-                const angle = Math.atan2(dy, dx);
-
-                uniquePoints.set(`${wall.x1.toFixed(1)},${wall.y1.toFixed(1)}`, {x: wall.x1, y: wall.y1});
-                uniquePoints.set(`${wall.x2.toFixed(1)},${wall.y2.toFixed(1)}`, {x: wall.x2, y: wall.y2});
-
-                const shape = new THREE.Shape();
-                shape.moveTo(0, 0); shape.lineTo(length3D, 0); shape.lineTo(length3D, height); shape.lineTo(0, height); shape.lineTo(0, 0);
-
-                // Potong Jendela & Pintu
-                wall.doors.forEach(door => {
-                    const pos = length3D * door.t;
-                    const hole = new THREE.Path();
-                    hole.moveTo(pos - dW/2, 0); hole.lineTo(pos + dW/2, 0);
-                    hole.lineTo(pos + dW/2, dH); hole.lineTo(pos - dW/2, dH); hole.lineTo(pos - dW/2, 0);
-                    shape.holes.push(hole);
-                });
-
-                wall.windows.forEach(win => {
-                    const pos = length3D * win.t;
-                    const hole = new THREE.Path();
-                    hole.moveTo(pos - wW/2, wB); hole.lineTo(pos + wW/2, wB);
-                    hole.lineTo(pos + wW/2, wB + wH); hole.lineTo(pos - wW/2, wB + wH); hole.lineTo(pos - wW/2, wB);
-                    shape.holes.push(hole);
-
-                    const glass = new THREE.Mesh(new THREE.BoxGeometry(wW, wH, thickness - 1), glassMat);
-                    glass.position.set(pos, wB + wH/2, 0);
-                    const winPivot = new THREE.Group();
-                    winPivot.add(glass); 
-                    
-                    // Penyesuaian koordinat 3D
-                    winPivot.position.set((wall.x1 - centerX) * worldScale, 0, (wall.y1 - centerY) * worldScale); 
-                    winPivot.rotation.y = -angle;
-                    mainGroup.add(winPivot);
-                });
-
-                const geometry = new THREE.ExtrudeGeometry(shape, { depth: thickness, bevelEnabled: false });
-                geometry.translate(0, 0, -thickness/2);
-
-                const mesh = new THREE.Mesh(geometry, wallMat);
-                mesh.castShadow = true; mesh.receiveShadow = true;
-                
-                mesh.position.set((wall.x1 - centerX) * worldScale, 0, (wall.y1 - centerY) * worldScale);
-                mesh.rotation.y = -angle;
-                mainGroup.add(mesh);
-            });
-
-            // GAP FIXER 3D
-            const radius = thickness / 2;
-            const pillarGeo = new THREE.CylinderGeometry(radius, radius, height, 16);
-            
-            uniquePoints.forEach(pt => {
-                const pillar = new THREE.Mesh(pillarGeo, wallMat);
-                pillar.position.set((pt.x - centerX) * worldScale, height / 2, (pt.y - centerY) * worldScale);
-                pillar.castShadow = true; pillar.receiveShadow = true;
-                mainGroup.add(pillar);
-            });
-
-            // Generate Items
-            items.forEach(item => {
-                let meshObj;
-                if(item.type === 'bed') meshObj = createBed(mult);
-                else if(item.type === 'table') meshObj = createTable(mult);
-                else if(item.type === 'chair') meshObj = createChair(mult);
-                else if(item.type === 'stairs') meshObj = createStairs(mult);
-
-                if(meshObj) {
-                    meshObj.position.set((item.x - centerX) * worldScale, 0, (item.y - centerY) * worldScale);
-                    meshObj.castShadow = true;
-                    mainGroup.add(meshObj);
-                }
-            });
-        }
-
-        // Render Loop
-        function animate() {
-            requestAnimationFrame(animate);
-            controls.update();
-            renderer.render(scene, camera);
-        }
-        
-        window.addEventListener('resize', () => {
-            camera.aspect = container3d.clientWidth / container3d.clientHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(container3d.clientWidth, container3d.clientHeight);
-        });
-
-        animate();
-        drawCanvas();
-    </script>
+
+        selectedWall=-1;
+
+
+        updateInfo();
+
+        draw2D();
+
+        build3D();
+
+
+        status(
+          "Project loaded."
+        );
+
+
+      }catch(err){
+
+        console.error(err);
+
+
+        status(
+          "Invalid project JSON."
+        );
+
+      }
+
+    };
+
+
+    reader.readAsText(file);
+
+  }
+);
+
+
+/* =========================================================
+   GLB EXPORT
+========================================================= */
+
+$("export").onclick=function(){
+
+  if(
+    !modelGroup ||
+    modelGroup.children.length===0
+  ){
+
+    status(
+      "Generate 3D first."
+    );
+
+    return;
+
+  }
+
+
+  if(
+    typeof THREE.GLTFExporter!=="function"
+  ){
+
+    status(
+      "GLB exporter is not available."
+    );
+
+    return;
+
+  }
+
+
+  status(
+    "Exporting GLB..."
+  );
+
+
+  var exportScene=
+    new THREE.Scene();
+
+
+  exportScene.add(
+    modelGroup.clone(true)
+  );
+
+
+  if(floorMesh){
+
+    exportScene.add(
+      floorMesh.clone(true)
+    );
+
+  }
+
+
+  var exporter=
+    new THREE.GLTFExporter();
+
+
+  exporter.parse(
+
+    exportScene,
+
+
+    function(result){
+
+      var blob=
+        new Blob(
+          [result],
+          {
+            type:
+              "model/gltf-binary"
+          }
+        );
+
+
+      var url=
+        URL.createObjectURL(
+          blob
+        );
+
+
+      var a=
+        document.createElement(
+          "a"
+        );
+
+
+      a.href=url;
+
+      a.download=
+        "floorplan-3d.glb";
+
+
+      document.body.appendChild(a);
+
+      a.click();
+
+      document.body.removeChild(a);
+
+
+      setTimeout(
+        function(){
+
+          URL.revokeObjectURL(
+            url
+          );
+
+        },
+        1000
+      );
+
+
+      status(
+        "GLB exported."
+      );
+
+    },
+
+
+    function(error){
+
+      console.error(error);
+
+
+      status(
+        "GLB export failed."
+      );
+
+    },
+
+
+    {
+      binary:true
+    }
+
+  );
+
+};
+
+
+/* =========================================================
+   ANIMATION
+========================================================= */
+
+function animate(){
+
+  requestAnimationFrame(
+    animate
+  );
+
+
+  if(controls){
+
+    controls.update();
+
+  }
+
+
+  if(
+    renderer &&
+    scene &&
+    camera
+  ){
+
+    renderer.render(
+      scene,
+      camera
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   START
+========================================================= */
+
+init3D();
+
+
+$("canvasWrap")
+  .style
+  .display="block";
+
+
+$("three")
+  .style
+  .display="none";
+
+
+resizeCanvas();
+
+
+status(
+  "Ready. Upload a floorplan."
+);
+
+
+})();
+</script>
+
 </body>
 </html>
