@@ -121,9 +121,10 @@
                 <canvas id="draw-canvas"></canvas>
             </div>
             <div id="instructions">
-                <b>Fitur Terbaru:</b><br>
-                - <b>Tracing Transparan</b>: Garis menggambar dibuat transparan agar gambar acuan tetap terlihat.<br>
-                - <b>Auto-Lantai</b>: Begitu tembok saling terhubung membentuk area tertutup, lantai 3D akan otomatis terisi.
+                <b>Tips:</b><br>
+                - Garis 2D transparan agar gambar denah acuan tetap kelihatan.<br>
+                - Tembok 3D kembali solid (tidak transparan).<br>
+                - Lantai 3D otomatis dibuat terang (normal diperbaiki).
             </div>
         </div>
         <div id="right-panel"></div>
@@ -388,13 +389,13 @@
             if (selectedOpening) { saveState(); openings = openings.filter(o => o.id !== selectedOpening.id); closeEditPanel(); update3D(); draw2D(); }
         });
 
-        // === 2D RENDER (TERAS TRANSPARAN AGAR ACUAN GAMBAR TERLIHAT) ===
+        // === 2D RENDER (GARIS DENGAN TRANSPARANSI TERUKUR) ===
         function draw2D() {
             ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.lineCap = 'round';
             const globalThick2D = parseFloat(inputWallT.value) / scale3D;
             ctx.lineWidth = Math.max(2, globalThick2D); 
             
-            // Menggunakan warna semi-transparan (Alpha 0.45) untuk garis tembok
+            // Transparan pada 2D canvas agar gambar acuan tetap terlihat
             ctx.strokeStyle = 'rgba(33, 150, 243, 0.45)';
             lines.forEach(l => { ctx.beginPath(); ctx.moveTo(l.start.x, l.start.y); ctx.lineTo(l.end.x, l.end.y); ctx.stroke(); });
 
@@ -464,7 +465,7 @@
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         
         scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.7); dirLight.position.set(20, 40, 20); scene.add(dirLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8); dirLight.position.set(20, 40, 20); scene.add(dirLight);
         scene.add(new THREE.GridHelper(50, 50, 0x555555, 0x333333));
         
         const modelGroup = new THREE.Group(); scene.add(modelGroup);
@@ -477,7 +478,7 @@
 
         function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); } animate();
 
-        // LOGIKA PENYEMPURNAAN KONTUR OTOMATIS LANTAI (POLAR SORTED)
+        // MENGHITUNG KONTUR TERBENTUK & URUTAN WINDING COUNTER-CLOCKWISE
         function findClosedLoops() {
             if (lines.length < 3) return [];
             
@@ -491,11 +492,10 @@
             lines.forEach(l => { getIndex(l.start); getIndex(l.end); });
             if (nodes.length < 3) return [];
 
-            // Hitung centroid / titik tengah area
             let centerX = nodes.reduce((sum, n) => sum + n.x, 0) / nodes.length;
             let centerY = nodes.reduce((sum, n) => sum + n.y, 0) / nodes.length;
 
-            // Urutkan simpul melingkar berdasarkan sudut terhadap centroid
+            // Sort melingkar berdasarkan sudut polar
             nodes.sort((a, b) => Math.atan2(a.y - centerY, a.x - centerX) - Math.atan2(b.y - centerY, b.x - centerX));
 
             return nodes;
@@ -515,38 +515,50 @@
             });
             const center2DX = (minX + maxX) / 2; const center2DY = (minY + maxY) / 2;
             
-            // Tembok dibuat sedikit transparan (0.85) agar terlihat modern & bagian dalam ruangan kelihatan
-            const matWall = new THREE.MeshLambertMaterial({ color: 0xdedede, transparent: true, opacity: 0.85 });
+            // 1. MATERIAL TEMBOK SOLID / TIDAK TRANSPARAN
+            const matWall = new THREE.MeshLambertMaterial({ color: 0xdedede });
             const matDoor = new THREE.MeshLambertMaterial({ color: 0x5c4033 }); 
             const matWindow = new THREE.MeshLambertMaterial({ color: 0x87CEEB, transparent: true, opacity: 0.5 }); 
             const matFrame = new THREE.MeshLambertMaterial({ color: 0x333333 }); 
             
-            // Material Lantai (Warna abu terang dengan DoubleSide)
-            const matFloor = new THREE.MeshStandardMaterial({ 
-                color: 0xc8c8c8, 
-                roughness: 0.3, 
+            // 2. MATERIAL LANTAI PERBAIKAN (LAMBERT + DOUBLE SIDE)
+            const matFloor = new THREE.MeshLambertMaterial({ 
+                color: 0xd6d6d6, 
                 side: THREE.DoubleSide 
             });
 
-            // 1. OTOMATIS GENERATE LANTAI BILA KONTUR TERBENTUK
+            // GENERATE LANTAI 3D (VERTEKS COUNTER-CLOCKWISE DENGAN NORMAL MENGHADAP ATAS)
             const floorVertices = findClosedLoops();
             if (floorVertices.length >= 3) {
                 const floorShape = new THREE.Shape();
+                
+                // Memastikan winding order selalu Counter-Clockwise agar Normal tidak terbalik/hitam
+                let area = 0;
+                for (let i = 0; i < floorVertices.length; i++) {
+                    let j = (i + 1) % floorVertices.length;
+                    area += floorVertices[i].x * floorVertices[j].y;
+                    area -= floorVertices[j].x * floorVertices[i].y;
+                }
+                if (area < 0) {
+                    floorVertices.reverse(); // Membalik jika urutannya Clockwise
+                }
+
                 floorVertices.forEach((v, idx) => {
                     const fx = (v.x - center2DX) * scale3D;
                     const fz = (v.y - center2DY) * scale3D;
-                    if (idx === 0) floorShape.moveTo(fx, fz);
-                    else floorShape.lineTo(fx, fz);
+                    if (idx === 0) floorShape.moveTo(fx, -fz);
+                    else floorShape.lineTo(fx, -fz);
                 });
                 
                 const floorGeom = new THREE.ShapeGeometry(floorShape);
+                floorGeom.computeVertexNormals();
                 const floorMesh = new THREE.Mesh(floorGeom, matFloor);
-                floorMesh.rotation.x = Math.PI / 2; // Datar horizontal
-                floorMesh.position.y = 0; // Sejajar batas bawah
+                floorMesh.rotation.x = -Math.PI / 2; // Mengarahkan bidang sejajar tanah (+Y)
+                floorMesh.position.y = 0.001; // Naikkan sedikit agar tidak overlapping grid
                 modelGroup.add(floorMesh);
             }
 
-            // 2. GAMBAR TEMBOK & BUKAAN
+            // GAMBAR TEMBOK & BUKAAN
             lines.forEach((line, index) => {
                 const dx = line.end.x - line.start.x; const dy = line.end.y - line.start.y;
                 const length = Math.sqrt(dx*dx + dy*dy) * scale3D; const angle = Math.atan2(dy, dx);
@@ -600,7 +612,7 @@
                 wallObj.position.set(posX, 0, posZ); wallObj.rotation.y = -angle; modelGroup.add(wallObj);
             });
 
-            // 3. PILAR SUDUT TEMBOK
+            // PILAR SUDUT TEMBOK
             const cornerGeom = new THREE.CylinderGeometry(thickWall/2, thickWall/2, heightWall, 16);
             let uniqueVertices = [];
             lines.forEach(l => {
