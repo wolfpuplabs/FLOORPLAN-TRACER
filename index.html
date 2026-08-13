@@ -161,10 +161,10 @@
                 <canvas id="draw-canvas"></canvas>
             </div>
             <div id="instructions">
-                <b>Cara Pakai Mode Tembok:</b><br>
-                - Klik/Tap untuk mulai menggambar.<br>
-                - Klik/Tap lagi untuk lanjut (Tembok akan menyambung).<br>
-                - <b>Klik Kanan</b> atau <b>Tap 2x di posisi yang sama</b> untuk memutus/mengakhiri tembok.
+                <b>Cara Menggambar Tembok:</b><br>
+                1. Tap/Klik 1x untuk menentukan <b>Titik Awal</b>.<br>
+                2. Tap/Klik di titik lain untuk memasang tembok.<br>
+                3. <b>Putus Tembok</b>: Tap 2x di titik sama / Klik Kanan / Tekan ESC / Ganti Mode.
             </div>
         </div>
         <div id="right-panel"></div>
@@ -207,6 +207,7 @@
         }
 
         function restoreState(isUndo) {
+            stopDrawing();
             const current = { 
                 lines: JSON.parse(JSON.stringify(lines)), 
                 openings: JSON.parse(JSON.stringify(openings)),
@@ -293,6 +294,12 @@
         let isDrawing = false, currentLine = null;
         const SNAP_RADIUS = 20;
 
+        function stopDrawing() {
+            isDrawing = false;
+            currentLine = null;
+            draw2D();
+        }
+
         document.getElementById('modeSelect').onclick = (e) => setMode('select', e.target);
         document.getElementById('modeWall').onclick = (e) => setMode('wall', e.target);
         document.getElementById('modeDoor').onclick = (e) => setMode('door', e.target);
@@ -306,16 +313,16 @@
         });
 
         function setMode(newMode, btn) {
+            stopDrawing();
             mode = newMode;
             document.querySelectorAll('#toolbar button.active').forEach(b => b.classList.remove('active'));
             if(btn) btn.classList.add('active');
-            isDrawing = false; currentLine = null;
             if (mode !== 'select') closeEditPanel();
             draw2D();
         }
 
         window.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && isDrawing) { isDrawing = false; currentLine = null; draw2D(); }
+            if (e.key === 'Escape') { stopDrawing(); }
         });
 
         function getTrueCoords(x, y) {
@@ -341,11 +348,13 @@
         }
 
         function handlePointerDown(clientX, clientY, button) {
-            if (button !== 0 && button !== undefined) {
-                // Akhiri gambar (termasuk jika klik kanan)
-                if (isDrawing) { isDrawing = false; currentLine = null; draw2D(); }
+            // Klik Kanan: Batalkan/Putus Drawing
+            if (button === 2) {
+                stopDrawing();
                 return; 
             }
+            if (button !== 0 && button !== undefined) return;
+
             let { x, y } = getTrueCoords(clientX, clientY);
             
             if (mode === 'select') {
@@ -370,7 +379,7 @@
                     selectedItem = clickedItem; 
                     openEditPanel(selectedItem); 
                     if (selectedItem.lineIndex === undefined) {
-                        isDraggingObject = true; // Aktifkan Tap & Drag jika objek mebel/tangga
+                        isDraggingObject = true; 
                     }
                 } 
                 else { selectedItem = null; closeEditPanel(); }
@@ -381,20 +390,20 @@
                 if (!isDrawing) {
                     saveState(); 
                     isDrawing = true; 
+                    // Set Start Point & End Point sama di awal Tap
                     currentLine = { start: snap, end: snap };
                 } else {
-                    currentLine.end = snap; 
-                    const dist = Math.hypot(currentLine.end.x - currentLine.start.x, currentLine.end.y - currentLine.start.y);
+                    const dist = Math.hypot(snap.x - currentLine.start.x, snap.y - currentLine.start.y);
                     
-                    if (dist > 5) {
+                    // Jika titik kedua berada sangat dekat dengan titik awal (Double Tap/Click), putus tembok
+                    if (dist < 10 / scale) {
+                        stopDrawing();
+                    } else {
+                        currentLine.end = snap;
                         lines.push({...currentLine});
                         update3D();
-                        // CONTINUOUS DRAWING
+                        // Sambung tembok baru dari titik snap terakhir
                         currentLine = { start: snap, end: snap };
-                    } else {
-                        // END DRAWING jika jarak sangat kecil (Tap 2x di posisi yang sama)
-                        isDrawing = false; 
-                        currentLine = null;
                     }
                 }
                 draw2D();
@@ -411,7 +420,7 @@
                     update3D(); draw2D();
                 }
             }
-            else { // Tangga / Furniture Placement
+            else { // Tangga / Furniture
                 saveState();
                 freeObjects.push({
                     id: Date.now(),
@@ -428,17 +437,17 @@
             }
         }
 
-        // KODE BARU: Menggunakan pointerdown/pointermove untuk Canvas
         canvas.addEventListener('pointerdown', (e) => {
             if (isPanning) return;
             handlePointerDown(e.clientX, e.clientY, e.button);
         });
 
-        // LOGIKA DRAGGING KURSOR / TAP & HOLD
+        // LOGIKA DRAGGING KURSOR / TAP & MOVE
         function handlePointerMove(clientX, clientY) {
             let { x, y } = getTrueCoords(clientX, clientY);
             if (isDrawing && mode === 'wall' && currentLine) {
-                currentLine.end = getSnapped(x, y); draw2D();
+                currentLine.end = getSnapped(x, y); 
+                draw2D();
             }
             else if (isDraggingObject && selectedItem && selectedItem.lineIndex === undefined) {
                 selectedItem.x = x;
@@ -580,10 +589,12 @@
             const globalThick2D = parseFloat(inputWallT.value) / scale3D;
             ctx.lineWidth = Math.max(2, globalThick2D); 
             
+            // Gambar Garis Tembok Permanen
             ctx.strokeStyle = 'rgba(33, 150, 243, 0.45)';
             lines.forEach(l => { ctx.beginPath(); ctx.moveTo(l.start.x, l.start.y); ctx.lineTo(l.end.x, l.end.y); ctx.stroke(); });
 
-            if (currentLine) { 
+            // Gambar Garis Tembok Pratinjau (Rubber Band) - Hanya jika isDrawing = true
+            if (isDrawing && currentLine) { 
                 ctx.strokeStyle = 'rgba(244, 67, 54, 0.65)'; 
                 ctx.beginPath(); ctx.moveTo(currentLine.start.x, currentLine.start.y); ctx.lineTo(currentLine.end.x, currentLine.end.y); ctx.stroke(); 
             }
@@ -618,7 +629,7 @@
                 ctx.restore();
             });
 
-            // Draw Free Objects (Tangga & Mebel Baru)
+            // Draw Free Objects (Tangga & Mebel)
             freeObjects.forEach(obj => {
                 ctx.save();
                 ctx.translate(obj.x, obj.y);
@@ -672,7 +683,7 @@
                     panX = (panelWidth - (imgElement.width * scale)) / 2; panY = (panelHeight - (imgElement.height * scale)) / 2;
                     applyTransform();
                     scale3D = 20 / Math.max(canvas.width, canvas.height);
-                    lines = []; openings = []; freeObjects = []; undoStack = []; redoStack = []; closeEditPanel(); draw2D(); update3D();
+                    lines = []; openings = []; freeObjects = []; undoStack = []; redoStack = []; stopDrawing(); closeEditPanel(); draw2D(); update3D();
                 }
             };
             reader.readAsDataURL(file);
@@ -949,7 +960,7 @@
             arModal.style.display = 'none';
         });
 
-        document.getElementById('clearBtn').onclick = () => { saveState(); lines = []; openings = []; freeObjects = []; closeEditPanel(); draw2D(); update3D(); };
+        document.getElementById('clearBtn').onclick = () => { saveState(); lines = []; openings = []; freeObjects = []; stopDrawing(); closeEditPanel(); draw2D(); update3D(); };
         document.getElementById('exportBtn').onclick = () => {
             new THREE.GLTFExporter().parse(modelGroup, (gltf) => {
                 const link = document.createElement('a');
