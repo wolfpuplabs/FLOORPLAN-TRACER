@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Floor Plan Tracer</title>
+    <title>3D Floor Plan Tracer - Pro</title>
     <!-- Load Three.js dari CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <!-- Load OrbitControls untuk navigasi kamera 3D -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Load GLTF Exporter -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
     
     <style>
         body {
@@ -27,7 +28,22 @@
             z-index: 10;
             display: flex;
             align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
         }
+
+        button {
+            padding: 6px 12px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            background: #eee;
+            border-radius: 4px;
+        }
+
+        button:hover { background: #ddd; }
+        button:disabled { cursor: not-allowed; opacity: 0.5; }
+
+        .spacer { flex-grow: 1; }
 
         #main-container {
             display: flex;
@@ -52,10 +68,9 @@
             background-color: #222;
         }
 
-        /* Container untuk menggabungkan gambar dan canvas */
         #workspace {
             position: relative;
-            display: none; /* Sembunyi sampai gambar diupload */
+            display: none; 
             transform-origin: top left;
         }
 
@@ -63,7 +78,7 @@
             display: block;
             max-width: 100%;
             user-select: none;
-            pointer-events: none; /* Biar klik tembus ke canvas */
+            pointer-events: none;
         }
 
         #draw-canvas {
@@ -81,29 +96,27 @@
             color: white;
             padding: 15px;
             border-radius: 8px;
-            font-size: 14px;
+            font-size: 13px;
             pointer-events: none;
             z-index: 20;
             line-height: 1.5;
-        }
-
-        #instructions h4 {
-            margin: 0 0 10px 0;
-            font-size: 16px;
-        }
-
-        #instructions ol {
-            margin: 0;
-            padding-left: 20px;
         }
     </style>
 </head>
 <body>
 
     <div id="toolbar">
-        <label for="upload" style="font-weight: bold; margin-right: 10px;">Pilih Denah:</label>
+        <label for="upload" style="font-weight: bold;">Denah:</label>
         <input type="file" id="upload" accept="image/png, image/jpeg, image/jpg">
-        <button id="clearBtn" style="margin-left: auto; padding: 5px 15px; cursor: pointer;">Hapus Semua Garis</button>
+        
+        <div style="border-left: 1px solid #ccc; height: 20px; margin: 0 5px;"></div>
+        
+        <button id="undoBtn" disabled>Undo</button>
+        <button id="redoBtn" disabled>Redo</button>
+        <button id="clearBtn">Hapus Semua</button>
+        
+        <div class="spacer"></div>
+        <button id="exportBtn" style="background: #4CAF50; color: white; border: none;">Export to GLB</button>
     </div>
 
     <div id="main-container">
@@ -115,88 +128,143 @@
             </div>
             
             <div id="instructions">
-                <h4>Cara Kerja:</h4>
-                <ol>
-                    <li>Upload file (misal: denah.png)</li>
-                    <li>Klik kiri untuk mulai garis tembok</li>
-                    <li>Klik kiri lagi untuk mengakhiri garis</li>
-                    <li>View 3D di kanan akan otomatis update</li>
-                    <li>Gunakan mouse kiri di area 3D untuk putar kamera</li>
-                </ol>
+                <b>Tips Menggambar:</b><br>
+                - <b>Klik Kiri</b>: Mulai/akhiri garis<br>
+                - <b>Tahan SHIFT</b>: Snap ke Axis (Lurus 90°)<br>
+                - <b>Dekatkan ke ujung</b>: Otomatis Snap to Endpoint
             </div>
         </div>
 
         <!-- 3D View -->
-        <div id="right-panel">
-            <!-- Canvas Three.js akan digenerate di sini -->
-        </div>
+        <div id="right-panel"></div>
     </div>
 
     <script>
+        // === STATE MANAGEMENT (UNDO/REDO) ===
+        let lines = [];
+        let undoStack = [];
+        let redoStack = [];
+
+        const undoBtn = document.getElementById('undoBtn');
+        const redoBtn = document.getElementById('redoBtn');
+
+        function saveState() {
+            undoStack.push(JSON.parse(JSON.stringify(lines)));
+            redoStack = []; 
+            updateButtons();
+        }
+
+        function updateButtons() {
+            undoBtn.disabled = undoStack.length === 0;
+            redoBtn.disabled = redoStack.length === 0;
+        }
+
+        undoBtn.addEventListener('click', () => {
+            if (undoStack.length > 0) {
+                redoStack.push(JSON.parse(JSON.stringify(lines)));
+                lines = undoStack.pop();
+                updateButtons();
+                draw2D();
+                update3D();
+            }
+        });
+
+        redoBtn.addEventListener('click', () => {
+            if (redoStack.length > 0) {
+                undoStack.push(JSON.parse(JSON.stringify(lines)));
+                lines = redoStack.pop();
+                updateButtons();
+                draw2D();
+                update3D();
+            }
+        });
+
         // === KONFIGURASI 2D CANVAS ===
         const workspace = document.getElementById('workspace');
         const imgElement = document.getElementById('floorplan-img');
         const canvas = document.getElementById('draw-canvas');
         const ctx = canvas.getContext('2d');
-        const uploadInput = document.getElementById('upload');
-        const clearBtn = document.getElementById('clearBtn');
-
-        let lines = [];
+        
         let isDrawing = false;
         let currentLine = null;
-        let canvasScale = 1;
+        const SNAP_RADIUS = 15; // Jarak pixel untuk snap
 
-        // Handle Upload Gambar
-        uploadInput.addEventListener('change', (e) => {
+        // Handle Upload
+        document.getElementById('upload').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
             reader.onload = function(event) {
                 imgElement.src = event.target.result;
                 imgElement.onload = function() {
                     workspace.style.display = 'block';
-                    
-                    // Sesuaikan ukuran canvas dengan gambar
                     canvas.width = imgElement.width;
                     canvas.height = imgElement.height;
-                    
-                    lines = []; // Reset garis saat upload baru
-                    draw2D();
-                    update3D();
+                    lines = []; undoStack = []; redoStack = []; updateButtons();
+                    draw2D(); update3D();
                 }
             };
             reader.readAsDataURL(file);
         });
 
-        clearBtn.addEventListener('click', () => {
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            saveState();
             lines = [];
             isDrawing = false;
             currentLine = null;
-            draw2D();
-            update3D();
+            draw2D(); update3D();
         });
 
-        // Event Mouse untuk Menggambar di 2D Canvas
+        // Fungsi Snapping Logic
+        function getSnappedCoord(mouseX, mouseY, e) {
+            let snapX = mouseX;
+            let snapY = mouseY;
+            let snapped = false;
+
+            // 1. Snap to Endpoint (Cek titik-titik garis yang sudah ada)
+            for (let line of lines) {
+                if (Math.hypot(line.start.x - mouseX, line.start.y - mouseY) < SNAP_RADIUS) {
+                    snapX = line.start.x; snapY = line.start.y; snapped = true; break;
+                }
+                if (Math.hypot(line.end.x - mouseX, line.end.y - mouseY) < SNAP_RADIUS) {
+                    snapX = line.end.x; snapY = line.end.y; snapped = true; break;
+                }
+            }
+
+            // 2. Snap to Axis (Lurus) jika tombol SHIFT ditahan & sedang menggambar
+            if (e.shiftKey && isDrawing && currentLine && !snapped) {
+                const dx = Math.abs(mouseX - currentLine.start.x);
+                const dy = Math.abs(mouseY - currentLine.start.y);
+                if (dx > dy) {
+                    snapY = currentLine.start.y; // Kunci ke Horizontal
+                } else {
+                    snapX = currentLine.start.x; // Kunci ke Vertikal
+                }
+            }
+
+            return { x: snapX, y: snapY, snapped };
+        }
+
+        // Mouse Events
         canvas.addEventListener('mousedown', (e) => {
             const rect = canvas.getBoundingClientRect();
-            // Kalkulasi kordinat mouse disesuaikan dengan scale/zoom browser
             const scaleX = canvas.width / rect.width;
             const scaleY = canvas.height / rect.height;
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
+            const rawX = (e.clientX - rect.left) * scaleX;
+            const rawY = (e.clientY - rect.top) * scaleY;
+
+            const { x, y } = getSnappedCoord(rawX, rawY, e);
 
             if (!isDrawing) {
-                // Mulai garis baru
+                saveState(); // Simpan state sebelum menambah garis baru
                 isDrawing = true;
                 currentLine = { start: { x, y }, end: { x, y } };
             } else {
-                // Selesaikan garis
                 currentLine.end = { x, y };
-                lines.push({...currentLine}); // Simpan
+                lines.push({...currentLine});
                 isDrawing = false;
                 currentLine = null;
-                update3D(); // Update view 3D setiap selesai 1 garis
+                update3D();
             }
             draw2D();
         });
@@ -206,23 +274,24 @@
                 const rect = canvas.getBoundingClientRect();
                 const scaleX = canvas.width / rect.width;
                 const scaleY = canvas.height / rect.height;
-                currentLine.end = { 
-                    x: (e.clientX - rect.left) * scaleX, 
-                    y: (e.clientY - rect.top) * scaleY 
-                };
+                const rawX = (e.clientX - rect.left) * scaleX;
+                const rawY = (e.clientY - rect.top) * scaleY;
+
+                const coord = getSnappedCoord(rawX, rawY, e);
+                currentLine.end = { x: coord.x, y: coord.y };
+                currentLine.isSnapped = coord.snapped; // untuk penanda visual
+                
                 draw2D();
             }
         });
 
         function draw2D() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Setting style garis
             ctx.lineCap = 'round';
             ctx.lineWidth = 4;
             
-            // Gambar semua garis yang sudah fix
-            ctx.strokeStyle = 'red';
+            // Gambar garis fix
+            ctx.strokeStyle = '#f44336';
             lines.forEach(line => {
                 ctx.beginPath();
                 ctx.moveTo(line.start.x, line.start.y);
@@ -232,18 +301,24 @@
 
             // Gambar garis yang sedang di-drag
             if (currentLine) {
-                ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)'; // Transparan
+                ctx.strokeStyle = 'rgba(244, 67, 54, 0.5)';
                 ctx.beginPath();
                 ctx.moveTo(currentLine.start.x, currentLine.start.y);
                 ctx.lineTo(currentLine.end.x, currentLine.end.y);
                 ctx.stroke();
+
+                // Indikator visual saat snap berhasil
+                if (currentLine.isSnapped) {
+                    ctx.beginPath();
+                    ctx.arc(currentLine.end.x, currentLine.end.y, 6, 0, 2 * Math.PI);
+                    ctx.fillStyle = '#4CAF50';
+                    ctx.fill();
+                }
             }
         }
 
         // === KONFIGURASI 3D THREE.JS ===
         const rightPanel = document.getElementById('right-panel');
-        
-        // Scene, Camera, Renderer
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(45, rightPanel.clientWidth / rightPanel.clientHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -252,12 +327,7 @@
         renderer.setClearColor(0x2d2d2d);
         rightPanel.appendChild(renderer.domElement);
 
-        // OrbitControls (Biar bisa di-rotate, pan, zoom)
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
-
-        // Lighting
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         scene.add(ambientLight);
         
@@ -265,26 +335,20 @@
         dirLight.position.set(10, 20, 10);
         scene.add(dirLight);
 
-        // Grid (Lantai)
         const gridHelper = new THREE.GridHelper(50, 50, 0x555555, 0x444444);
         scene.add(gridHelper);
 
-        // Group untuk menampung semua tembok 3D
         const wallsGroup = new THREE.Group();
         scene.add(wallsGroup);
 
-        // Posisi awal kamera
         camera.position.set(0, 15, 15);
-        controls.update();
 
-        // Fungsi sinkronisasi ukuran panel jika window di-resize
         window.addEventListener('resize', () => {
             camera.aspect = rightPanel.clientWidth / rightPanel.clientHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(rightPanel.clientWidth, rightPanel.clientHeight);
         });
 
-        // Loop Render 3D
         function animate() {
             requestAnimationFrame(animate);
             controls.update();
@@ -292,56 +356,61 @@
         }
         animate();
 
-        // Fungsi merubah Garis 2D ke Tembok 3D
         function update3D() {
-            // Hapus semua tembok sebelumnya
             while(wallsGroup.children.length > 0){ 
                 wallsGroup.remove(wallsGroup.children[0]); 
             }
 
-            // Skala konversi pixel (2D) ke meter (3D Unit)
             const scale3D = 0.02;  
-            const wallHeight = 2.5; // Tinggi tembok
-            const wallThickness = 0.2; // Ketebalan tembok
-            
-            // Material tembok warna putih/abu terang
+            const wallHeight = 2.5; 
+            const wallThickness = 0.2; 
             const material = new THREE.MeshLambertMaterial({ color: 0xe0e0e0 });
 
             lines.forEach(line => {
                 const dx = line.end.x - line.start.x;
                 const dy = line.end.y - line.start.y;
-                
-                // Jarak/Panjang garis di 2D, lalu diskalakan ke 3D
                 const length = Math.sqrt(dx*dx + dy*dy) * scale3D;
-                // Sudut rotasi garis
                 const angle = Math.atan2(dy, dx);
                 
-                // Titik tengah garis (untuk penempatan posisi obyek di ThreeJS)
                 const midX = (line.start.x + line.end.x) / 2;
                 const midY = (line.start.y + line.end.y) / 2;
-
-                // Center koordinat: Geser kordinat agar titik tengah gambar ada di (0,0) pada 3D
                 const posX = (midX - canvas.width / 2) * scale3D;
                 const posZ = (midY - canvas.height / 2) * scale3D;
 
-                // Buat Box 3D
                 const geometry = new THREE.BoxGeometry(length, wallHeight, wallThickness);
                 const wallMesh = new THREE.Mesh(geometry, material);
-
-                // Set posisi dan rotasi
                 wallMesh.position.set(posX, wallHeight / 2, posZ);
-                // Di 3D Three.js, rotasi yang sejalan dengan Atan2 adalah di sumbu Y (negatif)
                 wallMesh.rotation.y = -angle;
 
-                // Tambahkan edge (garis luar tepi) agar batas tembok lebih terlihat
                 const edges = new THREE.EdgesGeometry(geometry);
                 const edgeMaterial = new THREE.LineBasicMaterial({ color: 0x333333, linewidth: 2 });
                 const edgeMesh = new THREE.LineSegments(edges, edgeMaterial);
-                wallMesh.add(edgeMesh); // attach garis tepi ke tembok
+                wallMesh.add(edgeMesh); 
 
                 wallsGroup.add(wallMesh);
             });
         }
+
+        // === FITUR EXPORT GLB ===
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            if (wallsGroup.children.length === 0) {
+                alert("Belum ada tembok untuk diexport!");
+                return;
+            }
+
+            const exporter = new THREE.GLTFExporter();
+            // Parse Group tembok (wallsGroup)
+            exporter.parse(wallsGroup, function (gltf) {
+                const blob = new Blob([gltf], { type: 'application/octet-stream' });
+                const link = document.createElement('a');
+                link.style.display = 'none';
+                link.href = URL.createObjectURL(blob);
+                link.download = 'denah_3d.glb'; // Nama file
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }, { binary: true }); // binary: true untuk GLB (file tunggal), false untuk GLTF
+        });
     </script>
 </body>
 </html>
