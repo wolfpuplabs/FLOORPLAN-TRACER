@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -182,65 +182,64 @@
         <div class="sidebar-header">
             <h3 id="txtTitle">BIM Architect</h3>
             <div class="lang-btn-group">
-                <button class="lang-btn active" id="btnLangID">ID</button>
-                <button class="lang-btn" id="btnLangEN">EN</button>
+                <button class="lang-btn" id="btnLangID">ID</button>
+                <button class="lang-btn active" id="btnLangEN">EN</button>
             </div>
         </div>
         
         <div class="sidebar-content">
             <div class="sidebar-section">
-                <h4 id="txtSec1">File & Sistem</h4>
-                <label id="txtLblUpload">Upload Denah:</label>
+                <h4 id="txtSec1">File & System</h4>
+                <label id="txtLblUpload">Upload Floorplan:</label>
                 <input type="file" id="upload" accept="image/*">
                 <div class="btn-row">
                     <button id="undoBtn" disabled style="flex:1;">Undo</button>
                     <button id="redoBtn" disabled style="flex:1;">Redo</button>
                 </div>
-                <button id="clearBtn" class="btn-danger">Reset Baru</button>
+                <button id="clearBtn" class="btn-danger">Reset Plan</button>
             </div>
 
             <div class="sidebar-section">
-                <h4 id="txtSec2">Alat Gambar</h4>
+                <h4 id="txtSec2">Draw Tools</h4>
                 
-                <!-- GRID ICON BARU -->
                 <div class="grid-2">
                     <button id="modeSelect" class="tool-btn">
                         <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path><path d="M13 13l6 6"></path></svg>
-                        <span id="txtModeSelect">Pilih / Edit</span>
+                        <span id="txtModeSelect">Select/Edit</span>
                     </button>
                     <button id="modeWall" class="tool-btn active">
                         <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"></path><path d="M4 8h16"></path><path d="M4 16h16"></path><path d="M10 4v4"></path><path d="M14 8v8"></path><path d="M8 16v4"></path><path d="M16 16v4"></path></svg>
-                        <span id="txtModeWall">Tembok</span>
+                        <span id="txtModeWall">Wall</span>
                     </button>
                     <button id="modeDoor" class="tool-btn">
                         <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16"></path><path d="M14 12v.01"></path></svg>
-                        <span id="txtModeDoor">Pintu</span>
+                        <span id="txtModeDoor">Door</span>
                     </button>
                     <button id="modeWindow" class="tool-btn">
                         <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><path d="M3 12h18"></path><path d="M12 3v18"></path></svg>
-                        <span id="txtModeWindow">Jendela</span>
+                        <span id="txtModeWindow">Window</span>
                     </button>
                     <button id="modeStairs" class="tool-btn-wide">
                         <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h5v-5h5v-5h5V6"></path></svg>
-                        <span id="txtModeStairs">Tangga</span>
+                        <span id="txtModeStairs">Stairs</span>
                     </button>
                 </div>
                 
                 <select id="furnitureSelect" style="margin-bottom: 12px; margin-top: 4px;">
-                    <option value="" id="txtOptDefault">+ Mebel...</option>
-                    <optgroup label="Ruang Utama" id="optGrp1">
-                        <option value="bed" id="optBed">Kasur</option>
+                    <option value="" id="txtOptDefault">+ Add Furniture...</option>
+                    <optgroup label="Living Area" id="optGrp1">
+                        <option value="bed" id="optBed">Bed</option>
                         <option value="sofa" id="optSofa">Sofa</option>
-                        <option value="table" id="optTable">Meja</option>
-                        <option value="chair" id="optChair">Kursi</option>
+                        <option value="table" id="optTable">Table</option>
+                        <option value="chair" id="optChair">Chair</option>
                     </optgroup>
-                    <optgroup label="Dapur" id="optGrp2">
+                    <optgroup label="Kitchen" id="optGrp2">
                         <option value="kitchen_set" id="optKitchen">Kitchen Set</option>
-                        <option value="stove" id="optStove">Kompor</option>
-                        <option value="fridge" id="optFridge">Kulkas</option>
+                        <option value="stove" id="optStove">Stove</option>
+                        <option value="fridge" id="optFridge">Fridge</option>
                     </optgroup>
-                    <optgroup label="Kamar Mandi" id="optGrp3">
-                        <option value="toilet" id="optToilet">Kloset / Toilet</option>
+                    <optgroup label="Bathroom" id="optGrp3">
+                        <option value="toilet" id="optToilet">Toilet/WC</option>
                         <option value="shower" id="optShower">Shower</option>
                         <option value="bathtub" id="optBathtub">Bathtub</option>
                     </optgroup>
@@ -252,55 +251,55 @@
                 </button>
 
                 <div style="display: flex; flex-direction: column; gap: 4px;">
-                    <label id="txtLblWallH" style="margin:0;">Tinggi Tembok (m)</label>
+                    <label id="txtLblWallH" style="margin:0;">Wall Height (m)</label>
                     <input type="number" id="valWallH" value="3.0" step="0.1">
                     
-                    <label id="txtLblWallT" style="margin-top: 4px; margin-bottom:0;">Tebal Tembok (m)</label>
+                    <label id="txtLblWallT" style="margin-top: 4px; margin-bottom:0;">Wall Thick (m)</label>
                     <input type="number" id="valWallT" value="0.15" step="0.05">
                 </div>
             </div>
 
             <div class="sidebar-section">
-                <h4 id="txtSec3">Properti Objek</h4>
-                <div id="emptySelectionMsg">Pilih objek di kanvas.</div>
+                <h4 id="txtSec3">Properties</h4>
+                <div id="emptySelectionMsg">Select object on canvas.</div>
                 
                 <div id="edit-panel-content" style="display: none;">
                     
                     <div id="wallLineControls" style="display: none;">
-                        <label style="margin-bottom:0; color:#2563eb;"><span id="txtLblWallLen">Panjang Tembok:</span> <span id="valWallLen">0</span> m</label>
+                        <label style="margin-bottom:0; color:#2563eb;"><span id="txtLblWallLen">Wall Length:</span> <span id="valWallLen">0</span> m</label>
                     </div>
 
                     <div id="wallObjectControls">
-                        <label><span id="txtLblPos">Geser Posisi:</span> <span id="valPos">50</span>%</label>
+                        <label><span id="txtLblPos">Slide Pos:</span> <span id="valPos">50</span>%</label>
                         <input type="range" id="editPos" min="0" max="100" step="1" value="50">
 
-                        <label><span id="txtLblWidth">Lebar:</span> <span id="valWidth">0.9</span> m</label>
+                        <label><span id="txtLblWidth">Width:</span> <span id="valWidth">0.9</span> m</label>
                         <input type="range" id="editWidth" min="0.4" max="4.0" step="0.1" value="0.9">
                         
                         <div id="doorControls">
-                            <label><span id="txtLblSwing">Rotasi:</span> <span id="valSwing">45</span>°</label>
+                            <label><span id="txtLblSwing">Rotation:</span> <span id="valSwing">45</span>°</label>
                             <input type="range" id="editSwing" min="-180" max="180" step="5" value="45">
-                            <button id="flipHingeBtn" class="edit-btn-secondary">Balik Engsel</button>
+                            <button id="flipHingeBtn" class="edit-btn-secondary">Flip Hinge</button>
                         </div>
                     </div>
 
                     <div id="freeObjectControls">
-                        <label><span id="txtLblRot">Rotasi:</span> <span id="valRot">0</span>°</label>
+                        <label><span id="txtLblRot">Rotation:</span> <span id="valRot">0</span>°</label>
                         <input type="range" id="editRot" min="0" max="360" step="5" value="0">
 
-                        <label><span id="txtLblScale">Skala:</span> <span id="valScale">1.0</span>x</label>
+                        <label><span id="txtLblScale">Scale:</span> <span id="valScale">1.0</span>x</label>
                         <input type="range" id="editScale" min="0.5" max="3.0" step="0.1" value="1.0">
 
                         <div id="stairsControls">
-                            <label><span id="txtLblSteps">Anak Tangga:</span> <span id="valSteps">14</span></label>
+                            <label><span id="txtLblSteps">Steps:</span> <span id="valSteps">14</span></label>
                             <input type="range" id="editSteps" min="5" max="25" step="1" value="14">
 
-                            <label><span id="txtLblStairW">Lebar Tangga:</span> <span id="valStairW">1.0</span> m</label>
+                            <label><span id="txtLblStairW">Stairs W:</span> <span id="valStairW">1.0</span> m</label>
                             <input type="range" id="editStairW" min="0.8" max="2.5" step="0.1" value="1.0">
                         </div>
                     </div>
 
-                    <button id="delObjBtn" class="btn-danger" style="margin-top: 5px;">Hapus</button>
+                    <button id="delObjBtn" class="btn-danger" style="margin-top: 5px;">Delete</button>
                 </div>
             </div>
 
@@ -324,11 +323,11 @@
             <div id="helpModal">
                 <div class="help-content">
                     <button class="close-help" id="closeHelpBtn">&times;</button>
-                    <h3 id="txtGuideTitle">Panduan Singkat</h3>
+                    <h3 id="txtGuideTitle">Quick Guide</h3>
                     <ul>
-                        <li id="txtGuide1"><b>Free Draw / Bebas:</b> Mulai gambar langsung! Tiap kotak (grid) = 1 meter.</li>
-                        <li id="txtGuide2"><b>Tembok:</b> Tap 1x titik awal, tap posisi lain. Tap 2x (atau ESC) untuk mengakhiri garis tembok.</li>
-                        <li id="txtGuide3"><b>Edit & Hapus Tembok:</b> Gunakan Mode "Pilih/Edit", klik garis tembok untuk menggeser posisinya atau menghapusnya.</li>
+                        <li id="txtGuide1"><b>Free Draw:</b> Start drawing right away! Each grid box = 1 meter.</li>
+                        <li id="txtGuide2"><b>Wall:</b> Tap 1x start point, tap other pos. Tap 2x (or ESC) to finish the wall line.</li>
+                        <li id="txtGuide3"><b>Edit & Delete Wall:</b> Use 'Select/Edit' mode, click any wall line to drag it around or delete it.</li>
                     </ul>
                 </div>
             </div>
@@ -340,14 +339,15 @@
         <button id="closeArBtn">Tutup AR</button>
         <model-viewer id="arViewer" ar ar-modes="webxr scene-viewer quick-look" camera-controls touch-action="pan-y" shadow-intensity="1" alt="Denah 3D AR">
             <button slot="ar-button" style="background-color: white; border-radius: 4px; border: none; position: absolute; top: 16px; left: 16px; padding: 12px; font-weight: bold; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
-                Lihat di Ruangan Nyata (AR)
+                View in AR
             </button>
         </model-viewer>
     </div>
 
     <script>
         // === TRANSLATION LOGIC ===
-        let currentLang = 'id';
+        let currentLang = 'en'; // <-- Default diubah ke EN
+        
         const texts = {
             id: {
                 title: "BIM Architect", sec1: "File & Sistem", sec2: "Alat Gambar", sec3: "Properti Objek", sec4: "Output",
@@ -418,6 +418,9 @@
             document.getElementById('txtGuideTitle').innerText = t.gTitle; document.getElementById('txtGuide1').innerHTML = t.g1;
             document.getElementById('txtGuide2').innerHTML = t.g2; document.getElementById('txtGuide3').innerHTML = t.g3;
         }
+
+        // Terapkan bahasa default secara instan saat skrip dimuat
+        setLanguage('en');
 
         document.getElementById('btnLangID').addEventListener('click', () => setLanguage('id'));
         document.getElementById('btnLangEN').addEventListener('click', () => setLanguage('en'));
