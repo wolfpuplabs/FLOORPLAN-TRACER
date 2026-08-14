@@ -773,6 +773,47 @@
             ctx.restore();
         }
 
+        // === FUNGSI BANTUAN TAMPILAN UKURAN PANJANG ===
+        function drawLineLengthLabel(p1, p2, text, color = '#2563eb') {
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const midX = (p1.x + p2.x) / 2;
+            const midY = (p1.y + p2.y) / 2;
+            
+            let angle = Math.atan2(dy, dx);
+            // Jaga agar teks tidak terbalik saat dibaca
+            if (angle > Math.PI / 2 || angle < -Math.PI / 2) {
+                angle += Math.PI;
+            }
+
+            ctx.save();
+            ctx.translate(midX, midY);
+            ctx.rotate(angle);
+
+            const fontSize = Math.max(12, Math.min(20, 14 / scale));
+            ctx.font = `bold ${fontSize}px sans-serif`;
+            
+            const textWidth = ctx.measureText(text).width;
+            const padding = 4;
+
+            // Background Badge Teks
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(-textWidth / 2 - padding, -fontSize / 2 - padding - 15, textWidth + padding * 2, fontSize + padding * 2, 4);
+            ctx.fill();
+            ctx.stroke();
+
+            // Teks Panjang
+            ctx.fillStyle = color;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, 0, -15);
+
+            ctx.restore();
+        }
+
         // === 2D RENDER ===
         function draw2D() {
             ctx.clearRect(0, 0, canvas.width, canvas.height); 
@@ -789,10 +830,29 @@
                     ctx.strokeStyle = 'rgba(37, 99, 235, 0.45)'; ctx.shadowBlur = 0;
                 }
                 ctx.stroke(); 
+
+                // Tampilkan ukuran pada semua tembok yang sudah tergambar
+                const dx = l.end.x - l.start.x;
+                const dy = l.end.y - l.start.y;
+                const distMeters = (Math.hypot(dx, dy) * scale3D).toFixed(2);
+                drawLineLengthLabel(l.start, l.end, `${distMeters} m`, selectedItem && selectedItem.isWall && selectedItem.index === idx ? '#2563eb' : '#475569');
             });
             ctx.shadowBlur = 0; 
 
-            if (isDrawing && currentLine) { ctx.strokeStyle = 'rgba(239, 68, 68, 0.65)'; ctx.beginPath(); ctx.moveTo(currentLine.start.x, currentLine.start.y); ctx.lineTo(currentLine.end.x, currentLine.end.y); ctx.stroke(); }
+            // Garis tembok yang sedang ditarik (Real-time)
+            if (isDrawing && currentLine) { 
+                ctx.strokeStyle = 'rgba(239, 68, 68, 0.65)'; 
+                ctx.beginPath(); 
+                ctx.moveTo(currentLine.start.x, currentLine.start.y); 
+                ctx.lineTo(currentLine.end.x, currentLine.end.y); 
+                ctx.stroke(); 
+
+                // Hitung & Tampilkan Indikator Panjang Secara Real-Time
+                const dx = currentLine.end.x - currentLine.start.x;
+                const dy = currentLine.end.y - currentLine.start.y;
+                const distMeters = (Math.hypot(dx, dy) * scale3D).toFixed(2);
+                drawLineLengthLabel(currentLine.start, currentLine.end, `${distMeters} m`, '#dc2626');
+            }
 
             openings.forEach(op => {
                 let l = lines[op.lineIndex]; if(!l) return;
