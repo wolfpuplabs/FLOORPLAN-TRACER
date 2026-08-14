@@ -266,6 +266,11 @@
                     
                     <label id="txtLblWallT" style="margin-top: 4px; margin-bottom:0;">Wall Thick (m)</label>
                     <input type="number" id="valWallT" value="0.15" step="0.05">
+
+                    <label style="margin-top: 8px; display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 11px; font-weight: 600; color: #3f3f46;">
+                        <input type="checkbox" id="chkShowRoof" style="margin:0; width: 14px; height: 14px; cursor: pointer;">
+                        <span id="txtLblRoof">Show Roof</span>
+                    </label>
                 </div>
             </div>
 
@@ -361,7 +366,6 @@
 
     <script>
         // === STATE & DATA INISIALISASI AWAL ===
-        // Harus didefinisikan sebelum dipanggil oleh sistem translasi
         let lines = []; let openings = []; let freeObjects = [];
         let mode = 'wall'; let scale3D = 0.02; 
         let isTracingMode = false;
@@ -397,7 +401,7 @@
                 bed: "Kasur", sofa: "Sofa", table: "Meja", chair: "Kursi", tv: "TV", buffet: "Bufet", wardrobe: "Lemari",
                 kitchen: "Kitchen Set", stove: "Kompor", fridge: "Kulkas", toilet: "Kloset / Toilet", shower: "Shower", bathtub: "Bathtub",
                 lamp: "Lampu Lantai", carpet: "Karpet", curtain: "Tirai", plant: "Tanaman Dalam", tree: "Pohon",
-                lblWallH: "Tinggi Tembok (m)", lblWallT: "Tebal Tembok (m)", emptyMsg: "Pilih objek di kanvas.",
+                lblWallH: "Tinggi Tembok (m)", lblWallT: "Tebal Tembok (m)", lblRoof: "Tampilkan Atap", emptyMsg: "Pilih objek di kanvas.",
                 lblVariant: "Tipe / Varian:", lblPos: "Geser Posisi:", lblWidth: "Lebar:", lblSwing: "Rotasi Pintu:", flipBtn: "Balik Engsel",
                 lblRot: "Rotasi:", lblScale: "Skala:", lblSteps: "Anak Tangga:", lblStairW: "Lebar Tangga:", lblWallLen: "Panjang Tembok:",
                 delBtn: "Hapus", arBtn: "View AR", exportBtn: "Export GLB",
@@ -415,7 +419,7 @@
                 bed: "Bed", sofa: "Sofa", table: "Table", chair: "Chair", tv: "TV", buffet: "Sideboard", wardrobe: "Wardrobe",
                 kitchen: "Kitchen Set", stove: "Stove", fridge: "Fridge", toilet: "Toilet/WC", shower: "Shower", bathtub: "Bathtub",
                 lamp: "Standing Lamp", carpet: "Carpet", curtain: "Curtain", plant: "Indoor Plant", tree: "Tree",
-                lblWallH: "Wall Height (m)", lblWallT: "Wall Thick (m)", emptyMsg: "Select object on canvas.",
+                lblWallH: "Wall Height (m)", lblWallT: "Wall Thick (m)", lblRoof: "Show Roof", emptyMsg: "Select object on canvas.",
                 lblVariant: "Style / Variant:", lblPos: "Slide Pos:", lblWidth: "Width:", lblSwing: "Door Swing:", flipBtn: "Flip Hinge",
                 lblRot: "Rotation:", lblScale: "Scale:", lblSteps: "Steps:", lblStairW: "Stairs W:", lblWallLen: "Wall Length:",
                 delBtn: "Delete", arBtn: "View AR", exportBtn: "Export GLB",
@@ -461,6 +465,7 @@
             document.getElementById('optPlant').innerText = t.plant; document.getElementById('optTree').innerText = t.tree;
 
             document.getElementById('txtLblWallH').innerText = t.lblWallH; document.getElementById('txtLblWallT').innerText = t.lblWallT;
+            document.getElementById('txtLblRoof').innerText = t.lblRoof;
             document.getElementById('emptySelectionMsg').innerText = t.emptyMsg; 
             document.getElementById('txtLblVariant').innerText = t.lblVariant;
             document.getElementById('txtLblPos').innerText = t.lblPos;
@@ -507,6 +512,7 @@
         
         const inputWallH = document.getElementById('valWallH');
         const inputWallT = document.getElementById('valWallT');
+        const chkShowRoof = document.getElementById('chkShowRoof');
         const furnitureSelect = document.getElementById('furnitureSelect');
         const btnSnap = document.getElementById('btnSnap');
 
@@ -519,6 +525,7 @@
 
         inputWallH.addEventListener('change', () => { saveState(); update3D(); });
         inputWallT.addEventListener('change', () => { saveState(); update3D(); draw2D(); });
+        chkShowRoof.addEventListener('change', () => { update3D(); });
 
         let scale = 1; let panX = 0, panY = 0; let startPanX = 0, startPanY = 0;
 
@@ -1153,8 +1160,23 @@
             lines.forEach(l => { minX = Math.min(minX, l.start.x, l.end.x); maxX = Math.max(maxX, l.start.x, l.end.x); minY = Math.min(minY, l.start.y, l.end.y); maxY = Math.max(maxY, l.start.y, l.end.y); });
             freeObjects.forEach(o => { minX = Math.min(minX, o.x); maxX = Math.max(maxX, o.x); minY = Math.min(minY, o.y); maxY = Math.max(maxY, o.y); });
             const center2DX = (minX === Infinity) ? 0 : (minX + maxX) / 2; const center2DY = (minY === Infinity) ? 0 : (minY + maxY) / 2;
-            const matWall = new THREE.MeshLambertMaterial({ color: 0xefefef }); const matDoor = new THREE.MeshLambertMaterial({ color: 0x5c4033 }); const matWindow = new THREE.MeshLambertMaterial({ color: 0x87CEEB, transparent: true, opacity: 0.5 }); const matFrame = new THREE.MeshLambertMaterial({ color: 0x3f3f46 }); const matFloor = new THREE.MeshLambertMaterial({ color: 0xd4d4d8, side: THREE.DoubleSide });
-            if (minX !== Infinity) { const floorW = (maxX - minX) * scale3D + 1.0; const floorH = (maxY - minY) * scale3D + 1.0; const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(floorW, floorH), matFloor); floorMesh.rotation.x = -Math.PI / 2; floorMesh.position.set(0, 0.001, 0); modelGroup.add(floorMesh); }
+            const matWall = new THREE.MeshLambertMaterial({ color: 0xefefef }); const matDoor = new THREE.MeshLambertMaterial({ color: 0x5c4033 }); const matWindow = new THREE.MeshLambertMaterial({ color: 0x87CEEB, transparent: true, opacity: 0.5 }); const matFrame = new THREE.MeshLambertMaterial({ color: 0x3f3f46 }); const matFloor = new THREE.MeshLambertMaterial({ color: 0xd4d4d8, side: THREE.DoubleSide }); const matRoof = new THREE.MeshLambertMaterial({ color: 0xe4e4e7, side: THREE.DoubleSide });
+            if (minX !== Infinity) { 
+                const floorW = (maxX - minX) * scale3D + 1.0; 
+                const floorH = (maxY - minY) * scale3D + 1.0; 
+                
+                const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(floorW, floorH), matFloor); 
+                floorMesh.rotation.x = -Math.PI / 2; 
+                floorMesh.position.set(0, 0.001, 0); 
+                modelGroup.add(floorMesh); 
+                
+                if (document.getElementById('chkShowRoof').checked) {
+                    const roofMesh = new THREE.Mesh(new THREE.PlaneGeometry(floorW, floorH), matRoof);
+                    roofMesh.rotation.x = -Math.PI / 2;
+                    roofMesh.position.set(0, heightWall, 0);
+                    modelGroup.add(roofMesh);
+                }
+            }
 
             lines.forEach((line, index) => {
                 const dx = line.end.x - line.start.x; const dy = line.end.y - line.start.y; const length = Math.sqrt(dx*dx + dy*dy) * scale3D; const angle = Math.atan2(dy, dx); const midX = (line.start.x + line.end.x) / 2; const midY = (line.start.y + line.end.y) / 2; const posX = (midX - center2DX) * scale3D; const posZ = (midY - center2DY) * scale3D;
