@@ -434,7 +434,6 @@
         
         const variantData = {
             door: { id: ["Single (Biasa)", "Double (Kupu-kupu)", "Sliding (Geser)"], en: ["Single", "Double", "Sliding"] },
-            // DITAMBAHKAN VARIAN BARU JENDELA MELENGKUNG 
             window: { id: ["Standar", "Kaca Full", "Bergaris (Mullions)", "Melengkung Atas"], en: ["Standard", "Full Glass", "Mullions", "Arched Top"] },
             table: { id: ["Persegi", "Bundar"], en: ["Rectangular", "Round"] },
             chair: { id: ["Standar", "Bangku (Stool)", "Armchair"], en: ["Standard", "Stool", "Armchair"] },
@@ -457,7 +456,6 @@
                 lamp: "Lampu Lantai", carpet: "Karpet", curtain: "Tirai", plant: "Tanaman Dalam", tree: "Pohon",
                 lblWallH: "Tinggi Tembok (m)", lblWallT: "Tebal Tembok (m)", lblRoof: "Tampilkan Atap", emptyMsg: "Pilih objek di kanvas.",
                 lblVariant: "Tipe / Varian:", lblPos: "Geser Posisi:", lblWidth: "Lebar:", 
-                // TAMBAHAN TRANSLASI TINGGI & ELEVASI
                 lblHeight: "Tinggi:", lblElev: "Elevasi (Tinggi dr Lantai):",
                 lblSwing: "Rotasi Pintu:", flipBtn: "Balik Engsel",
                 lblRot: "Rotasi:", lblScale: "Skala:", lblSteps: "Anak Tangga:", lblStairW: "Lebar Tangga:", lblWallLen: "Panjang Tembok:",
@@ -478,7 +476,6 @@
                 lamp: "Standing Lamp", carpet: "Carpet", curtain: "Curtain", plant: "Indoor Plant", tree: "Tree",
                 lblWallH: "Wall Height (m)", lblWallT: "Wall Thick (m)", lblRoof: "Show Roof", emptyMsg: "Select object on canvas.",
                 lblVariant: "Style / Variant:", lblPos: "Slide Pos:", lblWidth: "Width:", 
-                // TAMBAHAN TRANSLASI TINGGI & ELEVASI
                 lblHeight: "Height:", lblElev: "Elevation (from floor):",
                 lblSwing: "Door Swing:", flipBtn: "Flip Hinge",
                 lblRot: "Rotation:", lblScale: "Scale:", lblSteps: "Steps:", lblStairW: "Stairs W:", lblWallLen: "Wall Length:",
@@ -535,7 +532,6 @@
             document.getElementById('txtLblPos').innerText = t.lblPos;
             document.getElementById('txtLblWidth').innerText = t.lblWidth; 
             
-            // TRANSLASI TINGGI & ELEVASI
             document.getElementById('txtLblHeight').innerText = t.lblHeight; 
             document.getElementById('txtLblElev').innerText = t.lblElev;
 
@@ -835,7 +831,6 @@
         const stairsControls = document.getElementById('stairsControls'); const editPos = document.getElementById('editPos'); 
         const editWidth = document.getElementById('editWidth'); const editSwing = document.getElementById('editSwing'); 
         
-        // ELEMENT TINGGI & ELEVASI
         const heightElevControls = document.getElementById('heightElevControls');
         const editHeight = document.getElementById('editHeight'); 
         const editElev = document.getElementById('editElev');
@@ -876,7 +871,6 @@
                 editPos.value = Math.round(item.ratio * 100); document.getElementById('valPos').innerText = Math.round(item.ratio * 100);
                 editWidth.value = item.width3D; document.getElementById('valWidth').innerText = item.width3D;
                 
-                // TAMPILKAN PENGATURAN TINGGI DAN ELEVASI UNTUK JENDELA/PINTU
                 heightElevControls.style.display = 'block';
                 editHeight.value = item.height3D; document.getElementById('valHeight').innerText = item.height3D;
                 editElev.value = item.elevation; document.getElementById('valElev').innerText = item.elevation;
@@ -915,7 +909,6 @@
         editWidth.addEventListener('input', (e) => { if (selectedItem && selectedItem.lineIndex !== undefined) { selectedItem.width3D = parseFloat(e.target.value); document.getElementById('valWidth').innerText = selectedItem.width3D; update3D(); draw2D(); } });
         editWidth.addEventListener('change', () => saveState());
         
-        // EVENT LISTENER TINGGI & ELEVASI
         editHeight.addEventListener('input', (e) => { if (selectedItem && selectedItem.lineIndex !== undefined) { selectedItem.height3D = parseFloat(e.target.value); document.getElementById('valHeight').innerText = selectedItem.height3D; update3D(); draw2D(); } });
         editHeight.addEventListener('change', () => saveState());
         editElev.addEventListener('input', (e) => { if (selectedItem && selectedItem.lineIndex !== undefined) { selectedItem.elevation = parseFloat(e.target.value); document.getElementById('valElev').innerText = selectedItem.elevation; update3D(); draw2D(); } });
@@ -1033,51 +1026,68 @@
 
             openings.forEach(op => {
                 let l = lines[op.lineIndex]; if(!l) return;
-                const angle = Math.atan2(l.end.y - l.start.y, l.end.x - l.start.x); const cx = l.start.x + (l.end.x - l.start.x) * op.ratio; const cy = l.start.y + (l.end.y - l.start.y) * op.ratio; const opWidth2D = op.width3D / scale3D; 
+                
+                const dx = l.end.x - l.start.x; const dy = l.end.y - l.start.y;
+                const lineLen = Math.hypot(dx, dy);
+                
+                // LOGIKA CEGAH TEMBUS DI KANVAS 2D 
+                let opW = op.width3D / scale3D;
+                if (opW > lineLen) opW = lineLen;
+                
+                let opCenter = lineLen * op.ratio;
+                if (opCenter - opW/2 < 0) opCenter = opW/2;
+                if (opCenter + opW/2 > lineLen) opCenter = lineLen - opW/2;
+                
+                let safeRatio = opCenter / lineLen;
+                
+                const angle = Math.atan2(dy, dx); 
+                const cx = l.start.x + dx * safeRatio; 
+                const cy = l.start.y + dy * safeRatio; 
+                
                 ctx.save(); ctx.translate(cx, cy); ctx.rotate(angle); if (op.flipHinge) { ctx.scale(-1, 1); }
-                if (op === selectedItem) { ctx.shadowColor = '#2563eb'; ctx.shadowBlur = 15; ctx.fillStyle = 'rgba(37, 99, 235, 0.4)'; ctx.fillRect(-opWidth2D/2, -ctx.lineWidth, opWidth2D, ctx.lineWidth*2); }
+                if (op === selectedItem) { ctx.shadowColor = '#2563eb'; ctx.shadowBlur = 15; ctx.fillStyle = 'rgba(37, 99, 235, 0.4)'; ctx.fillRect(-opW/2, -ctx.lineWidth, opW, ctx.lineWidth*2); }
                 
                 if (op.type === 'door') { 
-                    ctx.clearRect(-opWidth2D/2, -ctx.lineWidth, opWidth2D, ctx.lineWidth * 2); 
+                    ctx.clearRect(-opW/2, -ctx.lineWidth, opW, ctx.lineWidth * 2); 
                     ctx.lineWidth = Math.max(2, canvas.width * 0.002); 
                     
                     if (op.variant === 1) { // Double
                         let swingDir = op.swing >= 0 ? -1 : 1;
-                        ctx.beginPath(); ctx.moveTo(-opWidth2D/2, 0); ctx.lineTo(-opWidth2D/2, (opWidth2D/2) * swingDir); 
-                        ctx.moveTo(opWidth2D/2, 0); ctx.lineTo(opWidth2D/2, (opWidth2D/2) * swingDir);
+                        ctx.beginPath(); ctx.moveTo(-opW/2, 0); ctx.lineTo(-opW/2, (opW/2) * swingDir); 
+                        ctx.moveTo(opW/2, 0); ctx.lineTo(opW/2, (opW/2) * swingDir);
                         ctx.strokeStyle = '#8B4513'; ctx.stroke(); 
                         
-                        ctx.beginPath(); ctx.arc(-opWidth2D/2, 0, opWidth2D/2, swingDir < 0 ? -Math.PI/2 : 0, swingDir < 0 ? 0 : Math.PI/2);
+                        ctx.beginPath(); ctx.arc(-opW/2, 0, opW/2, swingDir < 0 ? -Math.PI/2 : 0, swingDir < 0 ? 0 : Math.PI/2);
                         ctx.stroke();
-                        ctx.beginPath(); ctx.arc(opWidth2D/2, 0, opWidth2D/2, swingDir < 0 ? Math.PI : Math.PI/2, swingDir < 0 ? Math.PI/2 : Math.PI, true);
+                        ctx.beginPath(); ctx.arc(opW/2, 0, opW/2, swingDir < 0 ? Math.PI : Math.PI/2, swingDir < 0 ? Math.PI/2 : Math.PI, true);
                         ctx.strokeStyle = 'rgba(139, 69, 19, 0.6)'; ctx.stroke();
                     } 
                     else if (op.variant === 2) { // Sliding
                         ctx.beginPath();
-                        ctx.moveTo(-opWidth2D/2, -ctx.lineWidth/2); ctx.lineTo(0, -ctx.lineWidth/2);
-                        ctx.moveTo(0, ctx.lineWidth/2); ctx.lineTo(opWidth2D/2, ctx.lineWidth/2);
+                        ctx.moveTo(-opW/2, -ctx.lineWidth/2); ctx.lineTo(0, -ctx.lineWidth/2);
+                        ctx.moveTo(0, ctx.lineWidth/2); ctx.lineTo(opW/2, ctx.lineWidth/2);
                         ctx.strokeStyle = '#8B4513'; ctx.stroke(); 
                     } 
                     else { // Single
                         let swingDir = op.swing >= 0 ? -1 : 1; 
-                        ctx.beginPath(); ctx.moveTo(-opWidth2D/2, 0); ctx.lineTo(-opWidth2D/2, opWidth2D * swingDir); ctx.strokeStyle = '#8B4513'; ctx.stroke(); 
-                        ctx.beginPath(); ctx.arc(-opWidth2D/2, 0, opWidth2D, swingDir < 0 ? -Math.PI/2 : 0, swingDir < 0 ? 0 : Math.PI/2); ctx.strokeStyle = 'rgba(139, 69, 19, 0.6)'; ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(-opW/2, 0); ctx.lineTo(-opW/2, opW * swingDir); ctx.strokeStyle = '#8B4513'; ctx.stroke(); 
+                        ctx.beginPath(); ctx.arc(-opW/2, 0, opW, swingDir < 0 ? -Math.PI/2 : 0, swingDir < 0 ? 0 : Math.PI/2); ctx.strokeStyle = 'rgba(139, 69, 19, 0.6)'; ctx.stroke();
                     }
                 } 
                 else { // Window
                     ctx.fillStyle = 'rgba(14, 165, 233, 0.8)'; const th = ctx.lineWidth * 1.5; 
-                    ctx.fillRect(-opWidth2D/2, -th/2, opWidth2D, th); ctx.strokeStyle = '#333'; ctx.lineWidth = 1; 
-                    ctx.strokeRect(-opWidth2D/2, -th/2, opWidth2D, th);
+                    ctx.fillRect(-opW/2, -th/2, opW, th); ctx.strokeStyle = '#333'; ctx.lineWidth = 1; 
+                    ctx.strokeRect(-opW/2, -th/2, opW, th);
                     
-                    if (op.variant === 2) { // Mullions 2D Dinamis
+                    if (op.variant === 2 || op.variant === 3) { 
                         ctx.beginPath();
-                        const numV = Math.max(1, Math.floor(op.width3D / 0.6));
-                        const spaceV = opWidth2D / (numV + 1);
+                        const numV = Math.max(1, Math.floor(opW*scale3D / 0.6));
+                        const spaceV = opW / (numV + 1);
                         for(let i = 1; i <= numV; i++) {
-                            const xOff = -opWidth2D/2 + (i * spaceV);
+                            const xOff = -opW/2 + (i * spaceV);
                             ctx.moveTo(xOff, -th/2); ctx.lineTo(xOff, th/2);
                         }
-                        ctx.moveTo(-opWidth2D/2, 0); ctx.lineTo(opWidth2D/2, 0);
+                        ctx.moveTo(-opW/2, 0); ctx.lineTo(opW/2, 0);
                         ctx.stroke();
                     }
                 }
@@ -1289,19 +1299,35 @@
                 const dx = line.end.x - line.start.x; const dy = line.end.y - line.start.y; const length = Math.sqrt(dx*dx + dy*dy) * scale3D; const angle = Math.atan2(dy, dx); const midX = (line.start.x + line.end.x) / 2; const midY = (line.start.y + line.end.y) / 2; const posX = (midX - center2DX) * scale3D; const posZ = (midY - center2DY) * scale3D;
                 const wallObj = new THREE.Group(); const wallShape = new THREE.Shape(); wallShape.moveTo(0, 0); wallShape.lineTo(length, 0); wallShape.lineTo(length, heightWall); wallShape.lineTo(0, heightWall); wallShape.lineTo(0, 0);
                 let ops = openings.filter(o => o.lineIndex === index).sort((a,b) => a.ratio - b.ratio);
+                
                 ops.forEach(op => {
-                    const opCenter = length * op.ratio; const opStart = opCenter - op.width3D/2; const opEnd = opCenter + op.width3D/2; const hole = new THREE.Path();
+                    let opW = op.width3D;
+                    if (opW > length) opW = length; // cegah lebar lebih dari tembok
+                    
+                    let opCenter = length * op.ratio;
+                    if (opCenter - opW/2 < 0) opCenter = opW/2; // cegah tembus kiri
+                    if (opCenter + opW/2 > length) opCenter = length - opW/2; // cegah tembus kanan
+                    
+                    const opStart = opCenter - opW/2; 
+                    const opEnd = opCenter + opW/2; 
+                    const hole = new THREE.Path();
+                    
                     let e = op.elevation; let h = op.height3D;
                     
                     if (op.type === 'window' && op.variant === 1) { // Kaca Full
                         e = 0.1; h = heightWall - 0.2;
                     }
 
+                    // CEGAH TEMBUS ATAS/BAWAH
+                    if (e < 0) e = 0;
+                    if (e > heightWall - 0.1) e = heightWall - 0.1; 
+                    if (e + h > heightWall) h = heightWall - e;
+
                     // MEMBUAT LUBANG DI TEMBOK
                     if (op.type === 'window' && op.variant === 3) { // Jendela Melengkung Atas
-                        let archR = op.width3D / 2;
+                        let archR = opW / 2;
                         let straightH = h - archR;
-                        if(straightH < 0) { straightH = 0; archR = h; } // Pencegahan kalau jendela terlalu pendek
+                        if(straightH < 0) { straightH = 0; archR = h; } 
                         
                         hole.moveTo(opStart, e);
                         hole.lineTo(opEnd, e);
@@ -1314,55 +1340,55 @@
                     
                     if (op.type === 'door') { 
                         if (op.variant === 1) { // Double Door
-                            const lW = op.width3D / 2;
+                            const lW = opW / 2;
                             const geom1 = new THREE.BoxGeometry(lW, h, 0.04); geom1.translate(lW/2, h/2, 0);
                             const door1 = new THREE.Mesh(geom1, matDoor); door1.position.set(opStart - length/2, e, 0); door1.rotation.y = THREE.MathUtils.degToRad(op.swing);
                             const geom2 = new THREE.BoxGeometry(lW, h, 0.04); geom2.translate(-lW/2, h/2, 0);
                             const door2 = new THREE.Mesh(geom2, matDoor); door2.position.set(opEnd - length/2, e, 0); door2.rotation.y = THREE.MathUtils.degToRad(-op.swing);
                             wallObj.add(door1); wallObj.add(door2);
                         } else if (op.variant === 2) { // Sliding Door
-                            const geom1 = new THREE.BoxGeometry(op.width3D/2, h, 0.04); geom1.translate(0, h/2, 0);
-                            const door1 = new THREE.Mesh(geom1, matDoor); door1.position.set(opCenter - length/2 - op.width3D/4, e, -0.025); 
-                            const door2 = new THREE.Mesh(geom1, matDoor); door2.position.set(opCenter - length/2 + op.width3D/4, e, 0.025); 
+                            const geom1 = new THREE.BoxGeometry(opW/2, h, 0.04); geom1.translate(0, h/2, 0);
+                            const door1 = new THREE.Mesh(geom1, matDoor); door1.position.set(opCenter - length/2 - opW/4, e, -0.025); 
+                            const door2 = new THREE.Mesh(geom1, matDoor); door2.position.set(opCenter - length/2 + opW/4, e, 0.025); 
                             wallObj.add(door1); wallObj.add(door2);
                         } else { // Single Door
-                            const leafGeom = new THREE.BoxGeometry(op.width3D, h, 0.04); 
-                            if (op.flipHinge) { leafGeom.translate(-op.width3D/2, h/2, 0); const doorMesh = new THREE.Mesh(leafGeom, matDoor); doorMesh.position.set((opEnd) - length/2, e, 0); doorMesh.rotation.y = THREE.MathUtils.degToRad(-op.swing); wallObj.add(doorMesh); } 
-                            else { leafGeom.translate(op.width3D/2, h/2, 0); const doorMesh = new THREE.Mesh(leafGeom, matDoor); doorMesh.position.set((opStart) - length/2, e, 0); doorMesh.rotation.y = THREE.MathUtils.degToRad(op.swing); wallObj.add(doorMesh); } 
+                            const leafGeom = new THREE.BoxGeometry(opW, h, 0.04); 
+                            if (op.flipHinge) { leafGeom.translate(-opW/2, h/2, 0); const doorMesh = new THREE.Mesh(leafGeom, matDoor); doorMesh.position.set((opEnd) - length/2, e, 0); doorMesh.rotation.y = THREE.MathUtils.degToRad(-op.swing); wallObj.add(doorMesh); } 
+                            else { leafGeom.translate(opW/2, h/2, 0); const doorMesh = new THREE.Mesh(leafGeom, matDoor); doorMesh.position.set((opStart) - length/2, e, 0); doorMesh.rotation.y = THREE.MathUtils.degToRad(op.swing); wallObj.add(doorMesh); } 
                         }
                     } 
                     else if (op.type === 'window') { 
                         if (op.variant === 3) {
                             // MESH KHUSUS JENDELA MELENGKUNG (Arched Window)
-                            let archR = op.width3D / 2;
+                            let archR = opW / 2;
                             let straightH = h - archR;
                             if(straightH < 0) { straightH = 0; archR = h; } 
                             
                             // 1. Kaca Melengkung
                             const winShape = new THREE.Shape();
-                            winShape.moveTo(-op.width3D/2, -h/2);
-                            winShape.lineTo(op.width3D/2, -h/2);
-                            winShape.lineTo(op.width3D/2, -h/2 + straightH);
+                            winShape.moveTo(-opW/2, -h/2);
+                            winShape.lineTo(opW/2, -h/2);
+                            winShape.lineTo(opW/2, -h/2 + straightH);
                             if(straightH > 0) winShape.absarc(0, -h/2 + straightH, archR, 0, Math.PI, false);
-                            winShape.lineTo(-op.width3D/2, -h/2);
+                            winShape.lineTo(-opW/2, -h/2);
                             
                             const winMesh = new THREE.Mesh(new THREE.ExtrudeGeometry(winShape, { depth: 0.02, bevelEnabled: false }), matWindow);
                             winMesh.position.set(opCenter - length/2, e + h/2, -0.01);
                             wallObj.add(winMesh);
 
-                            // 2. Bingkai (Frame)
+                            // 2. Bingkai Keliling
                             const frameThickness = thickWall + 0.02;
-                            const baseF = new THREE.Mesh(new THREE.BoxGeometry(op.width3D, 0.05, frameThickness), matFrame);
+                            const baseF = new THREE.Mesh(new THREE.BoxGeometry(opW, 0.05, frameThickness), matFrame);
                             baseF.position.set(opCenter - length/2, e + 0.025, 0);
                             wallObj.add(baseF);
                             
                             if(straightH > 0) {
                                 const sideL = new THREE.Mesh(new THREE.BoxGeometry(0.05, straightH, frameThickness), matFrame);
-                                sideL.position.set(opCenter - length/2 - op.width3D/2 + 0.025, e + straightH/2, 0);
+                                sideL.position.set(opCenter - length/2 - opW/2 + 0.025, e + straightH/2, 0);
                                 wallObj.add(sideL);
                                 
                                 const sideR = new THREE.Mesh(new THREE.BoxGeometry(0.05, straightH, frameThickness), matFrame);
-                                sideR.position.set(opCenter - length/2 + op.width3D/2 - 0.025, e + straightH/2, 0);
+                                sideR.position.set(opCenter - length/2 + opW/2 - 0.025, e + straightH/2, 0);
                                 wallObj.add(sideR);
                                 
                                 const archShape = new THREE.Shape();
@@ -1374,16 +1400,26 @@
                             }
                         } else {
                             // JENDELA STANDAR / MULLIONS / KACA FULL
-                            const winMesh = new THREE.Mesh(new THREE.BoxGeometry(op.width3D, h, 0.02), matWindow); winMesh.position.set(opCenter - length/2, e + h/2, 0); wallObj.add(winMesh); 
-                            const frame1 = new THREE.Mesh(new THREE.BoxGeometry(op.width3D, 0.05, thickWall + 0.02), matFrame); frame1.position.set(opCenter - length/2, e + 0.025, 0); 
-                            const frame2 = frame1.clone(); frame2.position.set(opCenter - length/2, e + h - 0.025, 0); 
-                            wallObj.add(frame1); wallObj.add(frame2);
+                            const winMesh = new THREE.Mesh(new THREE.BoxGeometry(opW, h, 0.02), matWindow); winMesh.position.set(opCenter - length/2, e + h/2, 0); wallObj.add(winMesh); 
+                            
+                            // TAMBAHAN FRAME KELILING (4 Sisi)
+                            const frameThickness = thickWall + 0.02;
+                            const frame1 = new THREE.Mesh(new THREE.BoxGeometry(opW, 0.05, frameThickness), matFrame); 
+                            frame1.position.set(opCenter - length/2, e + 0.025, 0); 
+                            const frame2 = frame1.clone(); 
+                            frame2.position.set(opCenter - length/2, e + h - 0.025, 0); 
+                            const frame3 = new THREE.Mesh(new THREE.BoxGeometry(0.05, h, frameThickness), matFrame); 
+                            frame3.position.set(opCenter - length/2 - opW/2 + 0.025, e + h/2, 0);
+                            const frame4 = frame3.clone(); 
+                            frame4.position.set(opCenter - length/2 + opW/2 - 0.025, e + h/2, 0);
+                            
+                            wallObj.add(frame1); wallObj.add(frame2); wallObj.add(frame3); wallObj.add(frame4);
                             
                             if (op.variant === 2) { // Mullions 3D Dinamis
-                                const numV = Math.max(1, Math.floor(op.width3D / 0.6));
-                                const spaceV = op.width3D / (numV + 1);
+                                const numV = Math.max(1, Math.floor(opW / 0.6));
+                                const spaceV = opW / (numV + 1);
                                 for(let i = 1; i <= numV; i++) {
-                                    const xOffset = -op.width3D/2 + (i * spaceV);
+                                    const xOffset = -opW/2 + (i * spaceV);
                                     const mulV = new THREE.Mesh(new THREE.BoxGeometry(0.04, h, 0.03), matFrame);
                                     mulV.position.set(opCenter - length/2 + xOffset, e + h/2, 0);
                                     wallObj.add(mulV);
@@ -1392,7 +1428,7 @@
                                 const spaceH = h / (numH + 1);
                                 for(let i = 1; i <= numH; i++) {
                                     const yOffset = i * spaceH;
-                                    const mulH = new THREE.Mesh(new THREE.BoxGeometry(op.width3D, 0.04, 0.03), matFrame);
+                                    const mulH = new THREE.Mesh(new THREE.BoxGeometry(opW, 0.04, 0.03), matFrame);
                                     mulH.position.set(opCenter - length/2, e + yOffset, 0);
                                     wallObj.add(mulH);
                                 }
@@ -1401,6 +1437,7 @@
                     } 
                     wallShape.holes.push(hole);
                 });
+                
                 const wallMesh = new THREE.Mesh(new THREE.ExtrudeGeometry(wallShape, { depth: thickWall, bevelEnabled: false }), matWall); wallMesh.position.set(-length/2, 0, -thickWall/2); wallObj.add(wallMesh); wallObj.position.set(posX, 0, posZ); wallObj.rotation.y = -angle; modelGroup.add(wallObj);
             });
             const cornerGeom = new THREE.CylinderGeometry(thickWall/2, thickWall/2, heightWall, 16); let uniqueVertices = []; lines.forEach(l => { [l.start, l.end].forEach(pt => { if(!uniqueVertices.some(v => Math.hypot(v.x - pt.x, v.y - pt.y) < 1)) uniqueVertices.push(pt); }); });
