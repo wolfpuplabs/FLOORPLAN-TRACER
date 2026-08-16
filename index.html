@@ -233,14 +233,13 @@
             <div class="sidebar-section">
                 <h4 id="txtSec1">File & System</h4>
                 <label id="txtLblUpload">Upload Floorplan:</label>
-                <input type="file" id="upload" accept="image/*" style="margin-bottom: 12px;">
+                <input type="file" id="upload" accept="image/*">
                 
-                <!-- TOMBOL SAVE / LOAD PROJECT -->
                 <button id="saveProjBtn" style="margin-bottom: 8px; font-weight: bold; background: #e0f2fe; color: #0369a1; border-color: #7dd3fc;">Save Project (.json)</button>
                 <label id="txtLblLoadProj" style="margin-top: 4px;">Load Project:</label>
-                <input type="file" id="loadProj" accept=".json">
+                <input type="file" id="loadProj" accept=".json" style="margin-bottom: 12px;">
 
-                <div class="btn-row" style="margin-top: 4px;">
+                <div class="btn-row">
                     <button id="undoBtn" disabled style="flex:1;">Undo</button>
                     <button id="redoBtn" disabled style="flex:1;">Redo</button>
                 </div>
@@ -442,8 +441,7 @@
         const texts = {
             id: {
                 title: "Floorplan Tracer", sec1: "File & Sistem", sec2: "Alat Gambar", sec3: "Properti Objek", sec4: "Output",
-                lblUpload: "Upload Denah:", undo: "Undo", redo: "Redo", clear: "Reset Baru",
-                saveProj: "Simpan Proyek (.json)", loadProj: "Muat Proyek:",
+                lblUpload: "Upload Denah:", saveProj: "Simpan Proyek (.json)", loadProj: "Muat Proyek:", undo: "Undo", redo: "Redo", clear: "Reset Baru",
                 sel: "Pilih / Edit", wall: "Tembok", door: "Pintu", win: "Jendela", stairs: "Tangga",
                 optDef: "+ Tambah Mebel...", grp1: "Ruang Utama", grp2: "Dapur", grp3: "Kamar Mandi", grp4: "Dekorasi & Tanaman",
                 snapBtn: "Snap (Magnet)",
@@ -461,8 +459,7 @@
             },
             en: {
                 title: "Floorplan Tracer", sec1: "File & System", sec2: "Draw Tools", sec3: "Properties", sec4: "Output",
-                lblUpload: "Upload Floorplan:", undo: "Undo", redo: "Redo", clear: "Reset Plan",
-                saveProj: "Save Project (.json)", loadProj: "Load Project:",
+                lblUpload: "Upload Floorplan:", saveProj: "Save Project (.json)", loadProj: "Load Project:", undo: "Undo", redo: "Redo", clear: "Reset Plan",
                 sel: "Select/Edit", wall: "Wall", door: "Door", win: "Window", stairs: "Stairs",
                 optDef: "+ Add Furniture...", grp1: "Living Area", grp2: "Kitchen", grp3: "Bathroom", grp4: "Decor & Plants",
                 snapBtn: "Snap (Magnet)",
@@ -487,12 +484,11 @@
 
             document.getElementById('txtTitle').innerText = t.title; document.getElementById('txtSec1').innerText = t.sec1;
             document.getElementById('txtSec2').innerText = t.sec2; document.getElementById('txtSec3').innerText = t.sec3;
-            document.getElementById('txtSec4').innerText = t.sec4; document.getElementById('txtLblUpload').innerText = t.lblUpload;
-            
-            // Teks terjemahan Save/Load Project baru
-            document.getElementById('saveProjBtn').innerText = t.saveProj; 
+            document.getElementById('txtSec4').innerText = t.sec4; 
+            document.getElementById('txtLblUpload').innerText = t.lblUpload;
+            document.getElementById('saveProjBtn').innerText = t.saveProj;
             document.getElementById('txtLblLoadProj').innerText = t.loadProj;
-
+            
             document.getElementById('undoBtn').innerText = t.undo; document.getElementById('redoBtn').innerText = t.redo;
             document.getElementById('clearBtn').innerText = t.clear; 
             
@@ -1346,13 +1342,11 @@
                     
                     alert(currentLang === 'id' ? "Proyek berhasil dimuat!" : "Project loaded successfully!");
                 } catch (err) {
-                    alert(currentLang === 'id' ? "Gagal memuat file! Pastikan itu file .json dari aplikasi ini." : "Failed to load! Make sure it's a valid .json project file.");
+                    alert(currentLang === 'id' ? "Gagal memuat file! Pastikan itu adalah file .json dari aplikasi ini." : "Failed to load! Make sure it's a valid .json project file.");
                 }
             };
             reader.readAsText(file);
-            
-            // Reset agar bisa memuat file yang sama 2x jika mau
-            e.target.value = "";
+            e.target.value = ""; // Reset input file agar bisa memuat file yang sama lagi
         });
     </script>
 </body>
