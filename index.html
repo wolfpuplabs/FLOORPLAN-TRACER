@@ -233,8 +233,14 @@
             <div class="sidebar-section">
                 <h4 id="txtSec1">File & System</h4>
                 <label id="txtLblUpload">Upload Floorplan:</label>
-                <input type="file" id="upload" accept="image/*">
-                <div class="btn-row">
+                <input type="file" id="upload" accept="image/*" style="margin-bottom: 12px;">
+                
+                <!-- TOMBOL SAVE / LOAD PROJECT -->
+                <button id="saveProjBtn" style="margin-bottom: 8px; font-weight: bold; background: #e0f2fe; color: #0369a1; border-color: #7dd3fc;">Save Project (.json)</button>
+                <label id="txtLblLoadProj" style="margin-top: 4px;">Load Project:</label>
+                <input type="file" id="loadProj" accept=".json">
+
+                <div class="btn-row" style="margin-top: 4px;">
                     <button id="undoBtn" disabled style="flex:1;">Undo</button>
                     <button id="redoBtn" disabled style="flex:1;">Redo</button>
                 </div>
@@ -437,6 +443,7 @@
             id: {
                 title: "Floorplan Tracer", sec1: "File & Sistem", sec2: "Alat Gambar", sec3: "Properti Objek", sec4: "Output",
                 lblUpload: "Upload Denah:", undo: "Undo", redo: "Redo", clear: "Reset Baru",
+                saveProj: "Simpan Proyek (.json)", loadProj: "Muat Proyek:",
                 sel: "Pilih / Edit", wall: "Tembok", door: "Pintu", win: "Jendela", stairs: "Tangga",
                 optDef: "+ Tambah Mebel...", grp1: "Ruang Utama", grp2: "Dapur", grp3: "Kamar Mandi", grp4: "Dekorasi & Tanaman",
                 snapBtn: "Snap (Magnet)",
@@ -455,6 +462,7 @@
             en: {
                 title: "Floorplan Tracer", sec1: "File & System", sec2: "Draw Tools", sec3: "Properties", sec4: "Output",
                 lblUpload: "Upload Floorplan:", undo: "Undo", redo: "Redo", clear: "Reset Plan",
+                saveProj: "Save Project (.json)", loadProj: "Load Project:",
                 sel: "Select/Edit", wall: "Wall", door: "Door", win: "Window", stairs: "Stairs",
                 optDef: "+ Add Furniture...", grp1: "Living Area", grp2: "Kitchen", grp3: "Bathroom", grp4: "Decor & Plants",
                 snapBtn: "Snap (Magnet)",
@@ -480,6 +488,11 @@
             document.getElementById('txtTitle').innerText = t.title; document.getElementById('txtSec1').innerText = t.sec1;
             document.getElementById('txtSec2').innerText = t.sec2; document.getElementById('txtSec3').innerText = t.sec3;
             document.getElementById('txtSec4').innerText = t.sec4; document.getElementById('txtLblUpload').innerText = t.lblUpload;
+            
+            // Teks terjemahan Save/Load Project baru
+            document.getElementById('saveProjBtn').innerText = t.saveProj; 
+            document.getElementById('txtLblLoadProj').innerText = t.loadProj;
+
             document.getElementById('undoBtn').innerText = t.undo; document.getElementById('redoBtn').innerText = t.redo;
             document.getElementById('clearBtn').innerText = t.clear; 
             
@@ -1283,6 +1296,64 @@
         document.getElementById('arBtn').addEventListener('click', () => { if (lines.length === 0 && freeObjects.length === 0) return alert(currentLang==='id'?"Buat denah terlebih dahulu sebelum melihat dalam AR!":"Create a floorplan first before viewing in AR!"); new THREE.GLTFExporter().parse(modelGroup, (gltf) => { document.getElementById('arViewer').src = URL.createObjectURL(new Blob([gltf], { type: 'model/gltf-binary' })); arModal.style.display = 'flex'; }, { binary: true }); });
         document.getElementById('closeArBtn').addEventListener('click', () => arModal.style.display = 'none');
         document.getElementById('exportBtn').onclick = () => { new THREE.GLTFExporter().parse(modelGroup, (gltf) => { const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([gltf], { type: 'application/octet-stream' })); link.download = 'denah_3d_architect.glb'; link.click(); }, { binary: true }); };
+
+        // === SAVE & LOAD PROJECT (.JSON) ===
+        document.getElementById('saveProjBtn').addEventListener('click', () => {
+            if (lines.length === 0 && freeObjects.length === 0) {
+                alert(currentLang === 'id' ? "Denah masih kosong!" : "Floorplan is empty!");
+                return;
+            }
+            
+            const projectData = {
+                lines: lines,
+                openings: openings,
+                freeObjects: freeObjects,
+                wallHeight: inputWallH.value,
+                wallThick: inputWallT.value
+            };
+            
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(projectData));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "floorplan_project.json");
+            document.body.appendChild(downloadAnchorNode); 
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        });
+
+        document.getElementById('loadProj').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const loadedData = JSON.parse(event.target.result);
+                    
+                    lines = loadedData.lines || [];
+                    openings = loadedData.openings || [];
+                    freeObjects = loadedData.freeObjects || [];
+                    
+                    if(loadedData.wallHeight) inputWallH.value = loadedData.wallHeight;
+                    if(loadedData.wallThick) inputWallT.value = loadedData.wallThick;
+                    
+                    undoStack = []; redoStack = [];
+                    stopDrawing(); 
+                    closeEditPanel(); 
+                    
+                    draw2D(); 
+                    update3D();
+                    
+                    alert(currentLang === 'id' ? "Proyek berhasil dimuat!" : "Project loaded successfully!");
+                } catch (err) {
+                    alert(currentLang === 'id' ? "Gagal memuat file! Pastikan itu file .json dari aplikasi ini." : "Failed to load! Make sure it's a valid .json project file.");
+                }
+            };
+            reader.readAsText(file);
+            
+            // Reset agar bisa memuat file yang sama 2x jika mau
+            e.target.value = "";
+        });
     </script>
 </body>
 </html>
