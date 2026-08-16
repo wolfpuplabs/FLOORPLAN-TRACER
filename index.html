@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Floor Plan & Free Drawing - BIM Architect</title>
+    <title>Floorplan Tracer - 3D Free Drawing</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -72,7 +72,14 @@
             display: flex; flex-direction: column; gap: 8px; align-items: flex-start; background: #fafafa;
         }
 
-        .sidebar-header h3 { margin: 0; font-size: 14px; color: #18181b; line-height: 1.2; }
+        .app-brand {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            width: 100%;
+        }
+
+        .app-brand h3 { margin: 0; font-size: 13px; color: #18181b; line-height: 1.2; word-wrap: break-word;}
 
         .lang-btn-group {
             display: flex; width: 100%; border: 1px solid #d4d4d8; border-radius: 6px; overflow: hidden; background: #e4e4e7;
@@ -180,7 +187,35 @@
         <button id="sidebarToggleBtn" title="Toggle Sidebar">&lt;</button>
         
         <div class="sidebar-header">
-            <h3 id="txtTitle">BIM Architect</h3>
+            <!-- HEADER LOGO BERSAMA NAMA APP -->
+            <div class="app-brand">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="32" height="32" style="flex-shrink: 0; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 136, 255, 0.25);">
+                    <defs>
+                      <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#40C4FF"/>
+                        <stop offset="100%" stop-color="#0088FF"/>
+                      </linearGradient>
+                      <linearGradient id="tracerGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#FFEA00"/>
+                        <stop offset="100%" stop-color="#FFB300"/>
+                      </linearGradient>
+                    </defs>
+                    <rect width="512" height="512" rx="120" fill="url(#bgGradient)"/>
+                    <path d="M 160 220 L 160 380 C 160 395 170 405 185 405 L 327 405 C 342 405 352 395 352 380 L 352 220"
+                          fill="none" stroke="#ffffff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M 110 240 L 256 110 L 402 240"
+                          fill="none" stroke="#ffffff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M 160 195 L 160 110 L 200 110 L 200 155"
+                          fill="none" stroke="#ffffff" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M 216 405 L 216 320 C 216 305 226 295 241 295 L 271 295 C 286 295 296 305 296 320 L 296 405"
+                          fill="none" stroke="#ffffff" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M 70 330 C 120 380 180 340 210 260 C 240 180 320 220 370 280 C 400 316 440 290 440 290"
+                          fill="none" stroke="url(#tracerGradient)" stroke-width="24" stroke-dasharray="0 40" stroke-linecap="round"/>
+                    <path d="M 415 255 L 465 285 L 425 325 Z" fill="#FFB300" stroke="#FFB300" stroke-width="8" stroke-linejoin="round"/>
+                </svg>
+                <h3 id="txtTitle">Floorplan Tracer</h3>
+            </div>
+            
             <div class="lang-btn-group">
                 <button class="lang-btn" id="btnLangID">ID</button>
                 <button class="lang-btn active" id="btnLangEN">EN</button>
@@ -393,7 +428,7 @@
 
         const texts = {
             id: {
-                title: "BIM Architect", sec1: "File & Sistem", sec2: "Alat Gambar", sec3: "Properti Objek", sec4: "Output",
+                title: "Floorplan Tracer", sec1: "File & Sistem", sec2: "Alat Gambar", sec3: "Properti Objek", sec4: "Output",
                 lblUpload: "Upload Denah:", undo: "Undo", redo: "Redo", clear: "Reset Baru",
                 sel: "Pilih / Edit", wall: "Tembok", door: "Pintu", win: "Jendela", stairs: "Tangga",
                 optDef: "+ Tambah Mebel...", grp1: "Ruang Utama", grp2: "Dapur", grp3: "Kamar Mandi", grp4: "Dekorasi & Tanaman",
@@ -411,7 +446,7 @@
                 g3: "<b>Edit & Hapus Tembok:</b> Gunakan Mode 'Pilih/Edit', klik garis tembok untuk menggeser posisinya atau menghapusnya."
             },
             en: {
-                title: "BIM Architect", sec1: "File & System", sec2: "Draw Tools", sec3: "Properties", sec4: "Output",
+                title: "Floorplan Tracer", sec1: "File & System", sec2: "Draw Tools", sec3: "Properties", sec4: "Output",
                 lblUpload: "Upload Floorplan:", undo: "Undo", redo: "Redo", clear: "Reset Plan",
                 sel: "Select/Edit", wall: "Wall", door: "Door", win: "Window", stairs: "Stairs",
                 optDef: "+ Add Furniture...", grp1: "Living Area", grp2: "Kitchen", grp3: "Bathroom", grp4: "Decor & Plants",
