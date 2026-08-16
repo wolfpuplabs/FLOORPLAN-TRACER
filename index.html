@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Floorplan Tracer - 3D Free Drawing</title>
     
+    <!-- KONFIGURASI ICON & WEB APP APPLE (iOS/iPadOS) -->
     <link rel="apple-touch-icon" sizes="180x180" href="/logo-icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
@@ -193,6 +194,7 @@
         <button id="sidebarToggleBtn" title="Toggle Sidebar">&lt;</button>
         
         <div class="sidebar-header">
+            <!-- HEADER LOGO BERSAMA NAMA APP -->
             <div class="app-brand">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="32" height="32" style="flex-shrink: 0; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 136, 255, 0.25);">
                     <defs>
@@ -341,6 +343,7 @@
                         <label><span id="txtLblWidth">Width:</span> <span id="valWidth">0.9</span> m</label>
                         <input type="range" id="editWidth" min="0.4" max="4.0" step="0.1" value="0.9">
                         
+                        <!-- CONTROLS TINGGI & ELEVASI BARU -->
                         <div id="heightElevControls" style="display: none;">
                             <label><span id="txtLblHeight">Height:</span> <span id="valHeight">1.2</span> m</label>
                             <input type="range" id="editHeight" min="0.4" max="3.0" step="0.1" value="1.2">
@@ -428,6 +431,22 @@
         let selectedItem = null; let isDraggingObject = false; let isDraggingCanvas = false;
         let isPinchZooming = false;
         let undoStack = []; let redoStack = [];
+
+        // === AUTOSAVE LOGIC ===
+        let autosaveTimeout;
+        function triggerAutosave() {
+            clearTimeout(autosaveTimeout);
+            autosaveTimeout = setTimeout(() => {
+                const projectData = {
+                    lines: lines,
+                    openings: openings,
+                    freeObjects: freeObjects,
+                    wallHeight: inputWallH.value,
+                    wallThick: inputWallT.value
+                };
+                localStorage.setItem('floorplan_autosave', JSON.stringify(projectData));
+            }, 1500); // 1.5 detik delay untuk efisiensi render
+        }
 
         // === TRANSLATION & VARIANTS LOGIC ===
         let currentLang = 'en';
@@ -589,7 +608,7 @@
             draw2D();
         });
 
-        inputWallH.addEventListener('change', () => { saveState(); update3D(); });
+        inputWallH.addEventListener('change', () => { saveState(); update3D(); draw2D(); });
         inputWallT.addEventListener('change', () => { saveState(); update3D(); draw2D(); });
         chkShowRoof.addEventListener('change', () => { update3D(); });
 
@@ -606,7 +625,33 @@
                 applyTransform(); draw2D();
             }, 50);
         }
-        window.addEventListener('load', () => { initDefaultCanvas(); });
+        
+        // Cek dan Load LocalStorage pada saat startup
+        window.addEventListener('load', () => { 
+            initDefaultCanvas(); 
+            
+            const saved = localStorage.getItem('floorplan_autosave');
+            if (saved) {
+                try {
+                    const loadedData = JSON.parse(saved);
+                    // Validasi minimal ada garis atau objek untuk di restore
+                    if (loadedData.lines && (loadedData.lines.length > 0 || loadedData.freeObjects.length > 0)) {
+                        lines = loadedData.lines || [];
+                        openings = loadedData.openings || [];
+                        freeObjects = loadedData.freeObjects || [];
+                        
+                        if(loadedData.wallHeight) inputWallH.value = loadedData.wallHeight;
+                        if(loadedData.wallThick) inputWallT.value = loadedData.wallThick;
+                        
+                        update3D();
+                        draw2D();
+                    }
+                } catch (err) {
+                    console.error("Autosave load error:", err);
+                }
+            }
+        });
+        
         function applyTransform() { workspace.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`; }
 
         // === UNDO / REDO ===
@@ -1130,6 +1175,9 @@
                 }
                 ctx.restore();
             });
+            
+            // Panggil trigger autosave setiap kali kanvas diupdate
+            triggerAutosave();
         }
 
         // === SMART TRACING ===
@@ -1148,7 +1196,14 @@
                 }
             }; reader.readAsDataURL(file);
         });
-        document.getElementById('clearBtn').onclick = () => { initDefaultCanvas(); lines = []; openings = []; freeObjects = []; undoStack = []; redoStack = []; stopDrawing(); closeEditPanel(); update3D(); };
+        
+        document.getElementById('clearBtn').onclick = () => { 
+            // Tambah konfirmasi agar tidak langsung hapus
+            if (confirm(currentLang === 'id' ? "Yakin ingin menghapus semua denah dan reset dari awal?" : "Are you sure you want to clear all floorplan and reset?")) {
+                initDefaultCanvas(); lines = []; openings = []; freeObjects = []; undoStack = []; redoStack = []; stopDrawing(); closeEditPanel(); update3D(); draw2D(); 
+                localStorage.removeItem('floorplan_autosave');
+            }
+        };
 
         // === 3D ENGINE ===
         const scene = new THREE.Scene();
