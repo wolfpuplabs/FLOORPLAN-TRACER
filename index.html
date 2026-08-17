@@ -404,6 +404,7 @@
                         <li id="txtGuide1"><b>Free Draw:</b> Start drawing right away! Each grid box = 1 meter.</li>
                         <li id="txtGuide2"><b>Wall:</b> Tap 1x start point, tap other pos. Tap 2x (or ESC) to finish the wall line.</li>
                         <li id="txtGuide3"><b>Edit & Delete Wall:</b> Use 'Select/Edit' mode, click any wall line to drag it around or delete it.</li>
+                        <li id="txtGuide4"><b>Touch Gestures:</b> 2-finger single tap to Undo, 2-finger double tap to Redo.</li>
                     </ul>
                 </div>
             </div>
@@ -482,7 +483,8 @@
                 gTitle: "Panduan Singkat", 
                 g1: "<b>Free Draw / Bebas:</b> Mulai gambar langsung! Tiap kotak (grid) = 1 meter.",
                 g2: "<b>Tembok:</b> Tap 1x titik awal, tap posisi lain. Tap 2x (atau ESC) untuk mengakhiri garis tembok.",
-                g3: "<b>Edit & Hapus Tembok:</b> Gunakan Mode 'Pilih/Edit', klik garis tembok untuk menggeser posisinya atau menghapusnya."
+                g3: "<b>Edit & Hapus Tembok:</b> Gunakan Mode 'Pilih/Edit', klik garis tembok untuk menggeser posisinya atau menghapusnya.",
+                g4: "<b>Gesture Sentuhan:</b> Tap 2 jari 1x untuk Undo, tap 2 jari 2x cepat untuk Redo."
             },
             en: {
                 title: "Floorplan Tracer", sec1: "File & System", sec2: "Draw Tools", sec3: "Properties", sec4: "Output",
@@ -502,7 +504,8 @@
                 gTitle: "Quick Guide", 
                 g1: "<b>Free Draw:</b> Start drawing right away! Each grid box = 1 meter.",
                 g2: "<b>Wall:</b> Tap 1x start point, tap other pos. Tap 2x (or ESC) to finish the wall line.",
-                g3: "<b>Edit & Delete Wall:</b> Use 'Select/Edit' mode, click any wall line to drag it around or delete it."
+                g3: "<b>Edit & Delete Wall:</b> Use 'Select/Edit' mode, click any wall line to drag it around or delete it.",
+                g4: "<b>Touch Gestures:</b> 2-finger single tap to Undo, 2-finger double tap to Redo."
             }
         };
 
@@ -664,9 +667,11 @@
             stopDrawing();
             const current = { lines: JSON.parse(JSON.stringify(lines)), openings: JSON.parse(JSON.stringify(openings)), freeObjects: JSON.parse(JSON.stringify(freeObjects)) };
             if (isUndo) {
+                if (undoStack.length === 0) return;
                 redoStack.push(current); const prev = undoStack.pop();
                 lines = prev.lines; openings = prev.openings; freeObjects = prev.freeObjects || [];
             } else {
+                if (redoStack.length === 0) return;
                 undoStack.push(current); const next = redoStack.pop();
                 lines = next.lines; openings = next.openings; freeObjects = next.freeObjects || [];
             }
@@ -690,19 +695,42 @@
 
         let lastMidX = 0, lastMidY = 0, lastDist = 0;
 
+        // --- GESTURE DUA JARI UNDO / REDO VARIABLE ---
+        let twoFingerTouchTime = 0;
+        let twoFingerTouchStartDist = 0;
+        let twoFingerMoved = false;
+        let lastTwoFingerTapTime = 0;
+        let twoFingerTapTimer = null;
+
         workspaceContainer.addEventListener('touchstart', (e) => {
-            if (e.touches.length >= 2) {
+            if (e.touches.length === 2) {
                 isPinchZooming = true; stopDrawing(); isDraggingObject = false; isDraggingCanvas = false; 
-                lastDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-                lastMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2; lastMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                
+                twoFingerTouchTime = Date.now();
+                twoFingerMoved = false;
+                
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                twoFingerTouchStartDist = Math.hypot(dx, dy);
+
+                lastDist = twoFingerTouchStartDist;
+                lastMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2; 
+                lastMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
             }
         }, { passive: false });
 
         workspaceContainer.addEventListener('touchmove', (e) => {
-            if (e.touches.length >= 2 && isPinchZooming) {
+            if (e.touches.length === 2 && isPinchZooming) {
                 e.preventDefault(); 
                 const currentDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-                const currentMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2; const currentMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                const currentMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2; 
+                const currentMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+
+                // Cek Pergerakan untuk membedakan Pinch/Pan dengan Pure Tap
+                if (Math.abs(currentDist - twoFingerTouchStartDist) > 12 || Math.hypot(currentMidX - lastMidX, currentMidY - lastMidY) > 12) {
+                    twoFingerMoved = true;
+                }
+
                 panX += (currentMidX - lastMidX); panY += (currentMidY - lastMidY);
                 if (lastDist > 0) {
                     const zoomFactor = currentDist / lastDist;
@@ -716,7 +744,33 @@
             }
         }, { passive: false });
 
-        window.addEventListener('touchend', (e) => { if (e.touches.length < 2) isPinchZooming = false; });
+        window.addEventListener('touchend', (e) => { 
+            if (isPinchZooming && e.touches.length < 2) {
+                const touchDuration = Date.now() - twoFingerTouchTime;
+                
+                // Deteksi jika 2 jari menyentuh layar tanpa geser (Tap singkat < 300ms)
+                if (touchDuration < 300 && !twoFingerMoved) {
+                    const now = Date.now();
+                    if (now - lastTwoFingerTapTime < 300) {
+                        // DOUBLE TAP DUA JARI -> REDO
+                        if (twoFingerTapTimer) {
+                            clearTimeout(twoFingerTapTimer);
+                            twoFingerTapTimer = null;
+                        }
+                        restoreState(false); // Redo
+                        lastTwoFingerTapTime = 0;
+                    } else {
+                        // SINGLE TAP DUA JARI -> UNDO (Dengan timer kecil penentu)
+                        lastTwoFingerTapTime = now;
+                        twoFingerTapTimer = setTimeout(() => {
+                            restoreState(true); // Undo
+                            twoFingerTapTimer = null;
+                        }, 280);
+                    }
+                }
+                isPinchZooming = false; 
+            }
+        });
 
         canvas.addEventListener('pointerdown', (e) => {
             if (isPinchZooming) return; 
@@ -1198,7 +1252,6 @@
         });
         
         document.getElementById('clearBtn').onclick = () => { 
-            // Tambah konfirmasi agar tidak langsung hapus
             if (confirm(currentLang === 'id' ? "Yakin ingin menghapus semua denah dan reset dari awal?" : "Are you sure you want to clear all floorplan and reset?")) {
                 initDefaultCanvas(); lines = []; openings = []; freeObjects = []; undoStack = []; redoStack = []; stopDrawing(); closeEditPanel(); update3D(); draw2D(); 
                 localStorage.removeItem('floorplan_autosave');
