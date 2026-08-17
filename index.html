@@ -103,7 +103,7 @@
 
         button, select, input[type="number"], input[type="file"]::file-selector-button { 
             padding: 6px 8px; cursor: pointer; border: 1px solid #d4d4d8; background: #ffffff; 
-            border-radius: 4px; font-size: 11px; color: #3f3f46; transition: 0.15s; width: 100%;
+            border-radius: 4px; font-size: 11px; color: #3f3f46; transition: background-color 0.15s, color 0.15s; width: 100%;
         }
         input[type="file"] { width: 100%; font-size: 10px; margin-bottom: 8px; }
         input[type="file"]::file-selector-button { background: #f4f4f5; width: auto; margin-right: 6px; padding: 4px 6px;}
@@ -114,7 +114,6 @@
         button:disabled { cursor: not-allowed; opacity: 0.4; }
         button.active { background: #2563eb; color: white; border-color: #1d4ed8; font-weight: 600; }
         
-        /* STYLE KHUSUS TOMBOL ALAT GAMBAR (ICONS) */
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
         .tool-btn {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -194,7 +193,6 @@
         <button id="sidebarToggleBtn" title="Toggle Sidebar">&lt;</button>
         
         <div class="sidebar-header">
-            <!-- HEADER LOGO BERSAMA NAMA APP -->
             <div class="app-brand">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="32" height="32" style="flex-shrink: 0; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 136, 255, 0.25);">
                     <defs>
@@ -343,7 +341,6 @@
                         <label><span id="txtLblWidth">Width:</span> <span id="valWidth">0.9</span> m</label>
                         <input type="range" id="editWidth" min="0.4" max="4.0" step="0.1" value="0.9">
                         
-                        <!-- CONTROLS TINGGI & ELEVASI BARU -->
                         <div id="heightElevControls" style="display: none;">
                             <label><span id="txtLblHeight">Height:</span> <span id="valHeight">1.2</span> m</label>
                             <input type="range" id="editHeight" min="0.4" max="3.0" step="0.1" value="1.2">
@@ -433,6 +430,9 @@
         let isPinchZooming = false;
         let undoStack = []; let redoStack = [];
 
+        // OPTIMASI: Batas maksimal undo/redo diset 30 langkah 
+        const MAX_HISTORY = 30;
+
         // === AUTOSAVE LOGIC ===
         let autosaveTimeout;
         function triggerAutosave() {
@@ -446,7 +446,7 @@
                     wallThick: inputWallT.value
                 };
                 localStorage.setItem('floorplan_autosave', JSON.stringify(projectData));
-            }, 1500); // 1.5 detik delay untuk efisiensi render
+            }, 1500); 
         }
 
         // === TRANSLATION & VARIANTS LOGIC ===
@@ -565,13 +565,11 @@
             document.getElementById('txtGuideTitle').innerText = t.gTitle; document.getElementById('txtGuide1').innerHTML = t.g1;
             document.getElementById('txtGuide2').innerHTML = t.g2; document.getElementById('txtGuide3').innerHTML = t.g3;
 
-            // Re-render select option jika sedang terbuka
             if (typeof selectedItem !== 'undefined' && selectedItem !== null) {
                 openEditPanel(selectedItem);
             }
         }
 
-        // Terapkan bahasa di awal
         setLanguage('en');
 
         document.getElementById('btnLangID').addEventListener('click', () => setLanguage('id'));
@@ -629,7 +627,6 @@
             }, 50);
         }
         
-        // Cek dan Load LocalStorage pada saat startup
         window.addEventListener('load', () => { 
             initDefaultCanvas(); 
             
@@ -637,7 +634,6 @@
             if (saved) {
                 try {
                     const loadedData = JSON.parse(saved);
-                    // Validasi minimal ada garis atau objek untuk di restore
                     if (loadedData.lines && (loadedData.lines.length > 0 || loadedData.freeObjects.length > 0)) {
                         lines = loadedData.lines || [];
                         openings = loadedData.openings || [];
@@ -660,7 +656,14 @@
         // === UNDO / REDO ===
         function saveState() {
             undoStack.push({ lines: JSON.parse(JSON.stringify(lines)), openings: JSON.parse(JSON.stringify(openings)), freeObjects: JSON.parse(JSON.stringify(freeObjects)) });
-            redoStack = []; document.getElementById('undoBtn').disabled = false; document.getElementById('redoBtn').disabled = true;
+            
+            if (undoStack.length > MAX_HISTORY) {
+                undoStack.shift(); 
+            }
+
+            redoStack = []; 
+            document.getElementById('undoBtn').disabled = false; 
+            document.getElementById('redoBtn').disabled = true;
         }
 
         function restoreState(isUndo) {
@@ -678,11 +681,30 @@
             document.getElementById('undoBtn').disabled = undoStack.length === 0; document.getElementById('redoBtn').disabled = redoStack.length === 0;
             selectedItem = null; closeEditPanel(); draw2D(); update3D();
         }
+
         document.getElementById('undoBtn').onclick = () => restoreState(true);
         document.getElementById('redoBtn').onclick = () => restoreState(false);
 
-        // === PAN, ZOOM & SELECTION ===
-        
+        // Visual flash trigger untuk sentuhan jari
+        function triggerUndo() {
+            restoreState(true);
+            const btn = document.getElementById('undoBtn');
+            if(!btn.disabled) {
+                btn.style.transition = 'none'; btn.style.backgroundColor = '#2563eb'; btn.style.color = 'white';
+                setTimeout(() => { btn.style.transition = '0.15s'; btn.style.backgroundColor = ''; btn.style.color = ''; }, 200);
+            }
+        }
+
+        function triggerRedo() {
+            restoreState(false);
+            const btn = document.getElementById('redoBtn');
+            if(!btn.disabled) {
+                btn.style.transition = 'none'; btn.style.backgroundColor = '#2563eb'; btn.style.color = 'white';
+                setTimeout(() => { btn.style.transition = '0.15s'; btn.style.backgroundColor = ''; btn.style.color = ''; }, 200);
+            }
+        }
+
+        // === PAN, ZOOM & GESTURES (PERBAIKAN LOGIC 2-JARI) ===
         workspaceContainer.addEventListener('wheel', (e) => {
             e.preventDefault(); 
             const zoomFactor = Math.exp(e.deltaY * -0.002);
@@ -693,42 +715,63 @@
             scale = newScale; applyTransform();
         }, { passive: false });
 
-        let lastMidX = 0, lastMidY = 0, lastDist = 0;
-
-        // --- GESTURE DUA JARI UNDO / REDO VARIABLE ---
-        let twoFingerTouchTime = 0;
-        let twoFingerTouchStartDist = 0;
-        let twoFingerMoved = false;
-        let lastTwoFingerTapTime = 0;
-        let twoFingerTapTimer = null;
+        let lastDist = 0, lastMidX = 0, lastMidY = 0;
+        
+        let maxTouches = 0;
+        let touchHasMoved = false;
+        let touchStartTime = 0;
+        let tapCount2Finger = 0;
+        let tapTimer2Finger = null;
+        let twoFingerStartX = 0, twoFingerStartY = 0;
+        let lastPointerDownTime = 0;
+        let finger1PushedState = false;
 
         workspaceContainer.addEventListener('touchstart', (e) => {
+            if (e.touches.length > maxTouches) {
+                maxTouches = e.touches.length;
+            }
+
             if (e.touches.length === 2) {
-                isPinchZooming = true; stopDrawing(); isDraggingObject = false; isDraggingCanvas = false; 
-                
-                twoFingerTouchTime = Date.now();
-                twoFingerMoved = false;
-                
+                isPinchZooming = true;
+                touchHasMoved = false;
+                touchStartTime = Date.now();
+
+                const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
                 const dx = e.touches[0].clientX - e.touches[1].clientX;
                 const dy = e.touches[0].clientY - e.touches[1].clientY;
-                twoFingerTouchStartDist = Math.hypot(dx, dy);
 
-                lastDist = twoFingerTouchStartDist;
-                lastMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2; 
-                lastMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                lastDist = Math.hypot(dx, dy);
+                lastMidX = midX;
+                lastMidY = midY;
+                twoFingerStartX = midX;
+                twoFingerStartY = midY;
+
+                // CEGAH KEBOCORAN SAVE STATE DARI JARI 1 (Auto-revert error sentuhan 1 jari)
+                if (Date.now() - lastPointerDownTime < 300 && finger1PushedState) {
+                    if (undoStack.length > 0) {
+                        undoStack.pop();
+                        document.getElementById('undoBtn').disabled = undoStack.length === 0;
+                    }
+                    if (isDrawing) { isDrawing = false; currentLine = null; }
+                    isDraggingObject = false;
+                    selectedItem = null;
+                    closeEditPanel();
+                    draw2D();
+                    finger1PushedState = false;
+                }
             }
         }, { passive: false });
 
         workspaceContainer.addEventListener('touchmove', (e) => {
-            if (e.touches.length === 2 && isPinchZooming) {
+            if (e.touches.length >= 2 && isPinchZooming) {
                 e.preventDefault(); 
                 const currentDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-                const currentMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2; 
+                const currentMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
                 const currentMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
 
-                // Cek Pergerakan untuk membedakan Pinch/Pan dengan Pure Tap
-                if (Math.abs(currentDist - twoFingerTouchStartDist) > 12 || Math.hypot(currentMidX - lastMidX, currentMidY - lastMidY) > 12) {
-                    twoFingerMoved = true;
+                if (Math.abs(currentDist - lastDist) > 15 || Math.hypot(currentMidX - twoFingerStartX, currentMidY - twoFingerStartY) > 15) {
+                    touchHasMoved = true;
                 }
 
                 panX += (currentMidX - lastMidX); panY += (currentMidY - lastMidY);
@@ -745,35 +788,40 @@
         }, { passive: false });
 
         window.addEventListener('touchend', (e) => { 
-            if (isPinchZooming && e.touches.length < 2) {
-                const touchDuration = Date.now() - twoFingerTouchTime;
-                
-                // Deteksi jika 2 jari menyentuh layar tanpa geser (Tap singkat < 300ms)
-                if (touchDuration < 300 && !twoFingerMoved) {
-                    const now = Date.now();
-                    if (now - lastTwoFingerTapTime < 300) {
-                        // DOUBLE TAP DUA JARI -> REDO
-                        if (twoFingerTapTimer) {
-                            clearTimeout(twoFingerTapTimer);
-                            twoFingerTapTimer = null;
+            // Evaluasi gesture saat jari terakhir diangkat (touches = 0)
+            if (e.touches.length === 0) {
+                if (maxTouches === 2) {
+                    const duration = Date.now() - touchStartTime;
+                    
+                    if (!touchHasMoved && duration < 300) {
+                        tapCount2Finger++;
+                        
+                        if (tapCount2Finger === 1) {
+                            tapTimer2Finger = setTimeout(() => {
+                                // SINGLE TAP = UNDO
+                                triggerUndo();
+                                tapCount2Finger = 0;
+                            }, 400); // 400ms menunggu jika ini ternyata tap kedua
+                        } else if (tapCount2Finger === 2) {
+                            // DOUBLE TAP = REDO
+                            clearTimeout(tapTimer2Finger);
+                            triggerRedo();
+                            tapCount2Finger = 0;
                         }
-                        restoreState(false); // Redo
-                        lastTwoFingerTapTime = 0;
-                    } else {
-                        // SINGLE TAP DUA JARI -> UNDO (Dengan timer kecil penentu)
-                        lastTwoFingerTapTime = now;
-                        twoFingerTapTimer = setTimeout(() => {
-                            restoreState(true); // Undo
-                            twoFingerTapTimer = null;
-                        }, 280);
                     }
                 }
-                isPinchZooming = false; 
+                isPinchZooming = false;
+                maxTouches = 0; // Reset pendeteksi interaksi maksimal
             }
         });
 
         canvas.addEventListener('pointerdown', (e) => {
-            if (isPinchZooming) return; 
+            // Abaikan klik jika sudah mendeteksi/sedang menggunakan multi-touch
+            if (isPinchZooming || maxTouches >= 2) return; 
+            
+            lastPointerDownTime = Date.now();
+            finger1PushedState = false;
+
             if (e.pointerType === 'touch' && !e.isPrimary) return; 
             if (e.button === 2 || e.button === 1) { 
                 isDraggingCanvas = true; startPanX = e.clientX - panX; startPanY = e.clientY - panY; workspaceContainer.style.cursor = 'grabbing'; stopDrawing(); return;
@@ -799,7 +847,7 @@
                     selectedItem = clickedItem; openEditPanel(selectedItem); 
                     isDraggingObject = true;
                     if (selectedItem.isWall) {
-                        saveState(); 
+                        saveState(); finger1PushedState = true;
                         selectedItem.dragStartX = x; selectedItem.dragStartY = y;
                         selectedItem.origStart = { ...lines[selectedItem.index].start };
                         selectedItem.origEnd = { ...lines[selectedItem.index].end };
@@ -812,15 +860,20 @@
             } 
             else if (mode === 'wall') {
                 let snap = getSnapped(x, y, isDrawing ? currentLine.start : null);
-                if (!isDrawing) { saveState(); isDrawing = true; currentLine = { start: snap, end: snap }; } 
-                else { const dist = Math.hypot(snap.x - currentLine.start.x, snap.y - currentLine.start.y);
-                    if (dist < 10 / scale) { stopDrawing(); } else { currentLine.end = snap; lines.push({...currentLine}); update3D(); currentLine = { start: snap, end: snap }; }
+                if (!isDrawing) { 
+                    saveState(); finger1PushedState = true;
+                    isDrawing = true; currentLine = { start: snap, end: snap }; 
+                } 
+                else { 
+                    const dist = Math.hypot(snap.x - currentLine.start.x, snap.y - currentLine.start.y);
+                    if (dist < 10 / scale) { stopDrawing(); } 
+                    else { currentLine.end = snap; lines.push({...currentLine}); update3D(); currentLine = { start: snap, end: snap }; }
                 } draw2D();
             } 
             else if (mode === 'door' || mode === 'window') {
                 let nearest = findNearestLine(x, y, 30 / scale);
                 if (nearest) { 
-                    saveState(); 
+                    saveState(); finger1PushedState = true;
                     openings.push({ 
                         id: Date.now(), type: mode, variant: 0, lineIndex: nearest.index, ratio: nearest.ratio, 
                         width3D: mode === 'door' ? 0.9 : 1.2, height3D: mode === 'door' ? 2.1 : 1.2, 
@@ -830,14 +883,15 @@
                 }
             }
             else { 
-                saveState(); let snapPos = getSnapped(x, y);
+                saveState(); finger1PushedState = true;
+                let snapPos = getSnapped(x, y);
                 freeObjects.push({ id: Date.now(), type: mode, variant: 0, x: snapPos.x, y: snapPos.y, rotation: 0, scaleVal: 1.0, steps: 14, width3D: mode === 'stairs' ? 1.0 : 1.0 });
                 furnitureSelect.value = ""; setMode('select', document.getElementById('modeSelect')); update3D(); draw2D();
             }
         });
 
         window.addEventListener('pointermove', (e) => { 
-            if (isPinchZooming) return; 
+            if (isPinchZooming || maxTouches >= 2) return; 
             if (isDraggingCanvas) { panX = e.clientX - startPanX; panY = e.clientY - startPanY; applyTransform(); }
             else {
                 let { x, y } = getTrueCoords(e.clientX, e.clientY);
@@ -940,7 +994,6 @@
         function openEditPanel(item) {
             emptySelectionMsg.style.display = 'none'; editPanelContent.style.display = 'block';
             
-            // Check Variants
             if (item.type && variantData[item.type]) {
                 variantControls.style.display = 'block';
                 editVariant.innerHTML = '';
@@ -974,7 +1027,7 @@
                 editHeight.value = item.height3D; document.getElementById('valHeight').innerText = item.height3D;
                 editElev.value = item.elevation; document.getElementById('valElev').innerText = item.elevation;
 
-                if (item.type === 'door' && (!item.variant || item.variant != 2)) { // if not sliding
+                if (item.type === 'door' && (!item.variant || item.variant != 2)) { 
                     document.getElementById('doorControls').style.display = 'block'; editSwing.value = item.swing; document.getElementById('valSwing').innerText = item.swing; 
                 } else { 
                     document.getElementById('doorControls').style.display = 'none'; 
@@ -1129,7 +1182,6 @@
                 const dx = l.end.x - l.start.x; const dy = l.end.y - l.start.y;
                 const lineLen = Math.hypot(dx, dy);
                 
-                // LOGIKA CEGAH TEMBUS DI KANVAS 2D 
                 let opW = op.width3D / scale3D;
                 if (opW > lineLen) opW = lineLen;
                 
@@ -1150,7 +1202,7 @@
                     ctx.clearRect(-opW/2, -ctx.lineWidth, opW, ctx.lineWidth * 2); 
                     ctx.lineWidth = Math.max(2, canvas.width * 0.002); 
                     
-                    if (op.variant === 1) { // Double
+                    if (op.variant === 1) { 
                         let swingDir = op.swing >= 0 ? -1 : 1;
                         ctx.beginPath(); ctx.moveTo(-opW/2, 0); ctx.lineTo(-opW/2, (opW/2) * swingDir); 
                         ctx.moveTo(opW/2, 0); ctx.lineTo(opW/2, (opW/2) * swingDir);
@@ -1161,13 +1213,13 @@
                         ctx.beginPath(); ctx.arc(opW/2, 0, opW/2, swingDir < 0 ? Math.PI : Math.PI/2, swingDir < 0 ? Math.PI/2 : Math.PI, true);
                         ctx.strokeStyle = 'rgba(139, 69, 19, 0.6)'; ctx.stroke();
                     } 
-                    else if (op.variant === 2) { // Sliding
+                    else if (op.variant === 2) { 
                         ctx.beginPath();
                         ctx.moveTo(-opW/2, -ctx.lineWidth/2); ctx.lineTo(0, -ctx.lineWidth/2);
                         ctx.moveTo(0, ctx.lineWidth/2); ctx.lineTo(opW/2, ctx.lineWidth/2);
                         ctx.strokeStyle = '#8B4513'; ctx.stroke(); 
                     } 
-                    else { // Single
+                    else { 
                         let swingDir = op.swing >= 0 ? -1 : 1; 
                         ctx.beginPath(); ctx.moveTo(-opW/2, 0); ctx.lineTo(-opW/2, opW * swingDir); ctx.strokeStyle = '#8B4513'; ctx.stroke(); 
                         ctx.beginPath(); ctx.arc(-opW/2, 0, opW, swingDir < 0 ? -Math.PI/2 : 0, swingDir < 0 ? 0 : Math.PI/2); ctx.strokeStyle = 'rgba(139, 69, 19, 0.6)'; ctx.stroke();
@@ -1204,7 +1256,7 @@
                 } 
                 else { 
                     const size = (30 / scale) * s; 
-                    let color = '#06b6d4'; // default
+                    let color = '#06b6d4'; 
                     if (['bed','sofa','table','chair','tv','buffet','wardrobe'].includes(obj.type)) color = '#f59e0b';
                     else if (['kitchen_set','stove','fridge'].includes(obj.type)) color = '#ec4899';
                     else if (['standing_lamp'].includes(obj.type)) color = '#eab308';
@@ -1214,7 +1266,6 @@
                     ctx.fillStyle = color; 
                     ctx.strokeStyle = '#27272a'; ctx.lineWidth = 1; 
 
-                    // Special shapes for 2D variants
                     if ((obj.type === 'table' || obj.type === 'carpet') && obj.variant === 1) {
                         ctx.beginPath(); ctx.arc(0, 0, size/2, 0, Math.PI*2); ctx.fill(); ctx.stroke();
                     } else if (obj.type === 'curtain') {
@@ -1230,7 +1281,6 @@
                 ctx.restore();
             });
             
-            // Panggil trigger autosave setiap kali kanvas diupdate
             triggerAutosave();
         }
 
@@ -1298,49 +1348,49 @@
             else if (type === 'sofa') { 
                 const base = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.3, 0.8), matFabric); base.position.y = 0.25; group.add(base); 
                 const back = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.6, 0.2), matFabric); back.position.set(0, 0.6, -0.3); group.add(back); 
-                if (variant === 1) { // L-Shape
+                if (variant === 1) { 
                     const lBase = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.3, 1.2), matFabric); lBase.position.set(-0.5, 0.25, 1.0); group.add(lBase);
                 }
             } 
             
             else if (type === 'table') { 
-                if (variant === 1) { // Round
+                if (variant === 1) { 
                     const top = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.05, 32), matWood); top.position.y = 0.75; group.add(top);
                     const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.72, 16), matWood); leg.position.y = 0.36; group.add(leg);
                     const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.05, 32), matWood); foot.position.y = 0.025; group.add(foot);
-                } else { // Rectangular
+                } else { 
                     const top = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.05, 0.8), matWood); top.position.y = 0.75; group.add(top); 
                     for(let x of [-0.5, 0.5]) { for(let z of [-0.3, 0.3]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.72, 0.06), matWood); leg.position.set(x, 0.36, z); group.add(leg); } }
                 }
             } 
             
             else if (type === 'chair') { 
-                if (variant === 1) { // Stool
+                if (variant === 1) { 
                     const seat = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.05, 16), matWood); seat.position.y = 0.75; group.add(seat);
                     const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.7, 8), matMetal); leg.position.y = 0.35; group.add(leg);
-                } else if (variant === 2) { // Armchair
+                } else if (variant === 2) { 
                     const seat = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.2, 0.6), matFabric); seat.position.y = 0.3; group.add(seat);
                     const back = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.5, 0.15), matFabric); back.position.set(0, 0.65, -0.225); group.add(back);
                     for(let x of [-0.25, 0.25]){ const arm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.4, 0.6), matFabric); arm.position.set(x, 0.5, 0); group.add(arm); }
-                } else { // Standard
+                } else { 
                     const seat = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.04, 0.45), matWood); seat.position.y = 0.45; group.add(seat); 
                     const back = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.45, 0.04), matWood); back.position.set(0, 0.68, -0.2); group.add(back); 
                 }
             } 
 
             else if (type === 'carpet') {
-                if (variant === 1) { // Round
+                if (variant === 1) { 
                     const carpet = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.0, 0.02, 32), matCarpet); carpet.position.y = 0.01; group.add(carpet);
-                } else { // Rect
+                } else { 
                     const carpet = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.02, 1.5), matCarpet); carpet.position.y = 0.01; group.add(carpet);
                 }
             }
 
             else if (type === 'curtain') {
                 const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 2.2, 8), matMetal); rail.rotation.z = Math.PI/2; rail.position.y = 2.4; group.add(rail);
-                if (variant === 1) { // Closed
+                if (variant === 1) { 
                     const fabric = new THREE.Mesh(new THREE.BoxGeometry(2.0, 2.3, 0.05), matCurtain); fabric.position.y = 1.25; group.add(fabric);
-                } else { // Open
+                } else { 
                     for (let x of [-0.8, 0.8]) { const fabric = new THREE.Mesh(new THREE.BoxGeometry(0.4, 2.3, 0.05), matCurtain); fabric.position.set(x, 1.25, 0); group.add(fabric); }
                 }
             }
@@ -1358,20 +1408,20 @@
             
             else if (type === 'plant') { 
                 const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.1, 0.3, 16), matWhite); pot.position.y = 0.15; group.add(pot); 
-                if (variant === 1) { // Cactus
+                if (variant === 1) { 
                     const cactus = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.5, 8), matGreen); cactus.position.y = 0.55; group.add(cactus);
                     const arm1 = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.2, 8), matGreen); arm1.rotation.z = Math.PI/4; arm1.position.set(0.1, 0.5, 0); group.add(arm1);
-                } else { // Standard
+                } else { 
                     const leaves = new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 8), matGreen); leaves.position.y = 0.5; group.add(leaves); 
                 }
             }
             
             else if (type === 'tree') { 
                 const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.15, 1.0, 8), matWoodDark); trunk.position.y = 0.5; group.add(trunk); 
-                if (variant === 1) { // Pine
+                if (variant === 1) { 
                     const leaves1 = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.2, 16), matGreen); leaves1.position.y = 1.2; group.add(leaves1);
                     const leaves2 = new THREE.Mesh(new THREE.ConeGeometry(0.6, 1.0, 16), matGreen); leaves2.position.y = 1.8; group.add(leaves2);
-                } else { // Leafy
+                } else { 
                     const leaves = new THREE.Mesh(new THREE.SphereGeometry(0.6, 8, 8), matGreen); leaves.position.y = 1.2; group.add(leaves); 
                 }
             }
@@ -1410,11 +1460,11 @@
                 
                 ops.forEach(op => {
                     let opW = op.width3D;
-                    if (opW > length) opW = length; // cegah lebar lebih dari tembok
+                    if (opW > length) opW = length;
                     
                     let opCenter = length * op.ratio;
-                    if (opCenter - opW/2 < 0) opCenter = opW/2; // cegah tembus kiri
-                    if (opCenter + opW/2 > length) opCenter = length - opW/2; // cegah tembus kanan
+                    if (opCenter - opW/2 < 0) opCenter = opW/2;
+                    if (opCenter + opW/2 > length) opCenter = length - opW/2;
                     
                     const opStart = opCenter - opW/2; 
                     const opEnd = opCenter + opW/2; 
@@ -1422,17 +1472,15 @@
                     
                     let e = op.elevation; let h = op.height3D;
                     
-                    if (op.type === 'window' && op.variant === 1) { // Kaca Full
+                    if (op.type === 'window' && op.variant === 1) { 
                         e = 0.1; h = heightWall - 0.2;
                     }
 
-                    // CEGAH TEMBUS ATAS/BAWAH
                     if (e < 0) e = 0;
                     if (e > heightWall - 0.1) e = heightWall - 0.1; 
                     if (e + h > heightWall) h = heightWall - e;
 
-                    // MEMBUAT LUBANG DI TEMBOK
-                    if (op.type === 'window' && op.variant === 3) { // Jendela Melengkung Atas
+                    if (op.type === 'window' && op.variant === 3) { 
                         let archR = opW / 2;
                         let straightH = h - archR;
                         if(straightH < 0) { straightH = 0; archR = h; } 
@@ -1447,19 +1495,19 @@
                     }
                     
                     if (op.type === 'door') { 
-                        if (op.variant === 1) { // Double Door
+                        if (op.variant === 1) { 
                             const lW = opW / 2;
                             const geom1 = new THREE.BoxGeometry(lW, h, 0.04); geom1.translate(lW/2, h/2, 0);
                             const door1 = new THREE.Mesh(geom1, matDoor); door1.position.set(opStart - length/2, e, 0); door1.rotation.y = THREE.MathUtils.degToRad(op.swing);
                             const geom2 = new THREE.BoxGeometry(lW, h, 0.04); geom2.translate(-lW/2, h/2, 0);
                             const door2 = new THREE.Mesh(geom2, matDoor); door2.position.set(opEnd - length/2, e, 0); door2.rotation.y = THREE.MathUtils.degToRad(-op.swing);
                             wallObj.add(door1); wallObj.add(door2);
-                        } else if (op.variant === 2) { // Sliding Door
+                        } else if (op.variant === 2) { 
                             const geom1 = new THREE.BoxGeometry(opW/2, h, 0.04); geom1.translate(0, h/2, 0);
                             const door1 = new THREE.Mesh(geom1, matDoor); door1.position.set(opCenter - length/2 - opW/4, e, -0.025); 
                             const door2 = new THREE.Mesh(geom1, matDoor); door2.position.set(opCenter - length/2 + opW/4, e, 0.025); 
                             wallObj.add(door1); wallObj.add(door2);
-                        } else { // Single Door
+                        } else { 
                             const leafGeom = new THREE.BoxGeometry(opW, h, 0.04); 
                             if (op.flipHinge) { leafGeom.translate(-opW/2, h/2, 0); const doorMesh = new THREE.Mesh(leafGeom, matDoor); doorMesh.position.set((opEnd) - length/2, e, 0); doorMesh.rotation.y = THREE.MathUtils.degToRad(-op.swing); wallObj.add(doorMesh); } 
                             else { leafGeom.translate(opW/2, h/2, 0); const doorMesh = new THREE.Mesh(leafGeom, matDoor); doorMesh.position.set((opStart) - length/2, e, 0); doorMesh.rotation.y = THREE.MathUtils.degToRad(op.swing); wallObj.add(doorMesh); } 
@@ -1467,12 +1515,10 @@
                     } 
                     else if (op.type === 'window') { 
                         if (op.variant === 3) {
-                            // MESH KHUSUS JENDELA MELENGKUNG (Arched Window)
                             let archR = opW / 2;
                             let straightH = h - archR;
                             if(straightH < 0) { straightH = 0; archR = h; } 
                             
-                            // 1. Kaca Melengkung
                             const winShape = new THREE.Shape();
                             winShape.moveTo(-opW/2, -h/2);
                             winShape.lineTo(opW/2, -h/2);
@@ -1484,7 +1530,6 @@
                             winMesh.position.set(opCenter - length/2, e + h/2, -0.01);
                             wallObj.add(winMesh);
 
-                            // 2. Bingkai Keliling
                             const frameThickness = thickWall + 0.02;
                             const baseF = new THREE.Mesh(new THREE.BoxGeometry(opW, 0.05, frameThickness), matFrame);
                             baseF.position.set(opCenter - length/2, e + 0.025, 0);
@@ -1507,10 +1552,8 @@
                                 wallObj.add(archF);
                             }
                         } else {
-                            // JENDELA STANDAR / MULLIONS / KACA FULL
                             const winMesh = new THREE.Mesh(new THREE.BoxGeometry(opW, h, 0.02), matWindow); winMesh.position.set(opCenter - length/2, e + h/2, 0); wallObj.add(winMesh); 
                             
-                            // TAMBAHAN FRAME KELILING (4 Sisi)
                             const frameThickness = thickWall + 0.02;
                             const frame1 = new THREE.Mesh(new THREE.BoxGeometry(opW, 0.05, frameThickness), matFrame); 
                             frame1.position.set(opCenter - length/2, e + 0.025, 0); 
@@ -1523,7 +1566,7 @@
                             
                             wallObj.add(frame1); wallObj.add(frame2); wallObj.add(frame3); wallObj.add(frame4);
                             
-                            if (op.variant === 2) { // Mullions 3D Dinamis
+                            if (op.variant === 2) { 
                                 const numV = Math.max(1, Math.floor(opW / 0.6));
                                 const spaceV = opW / (numV + 1);
                                 for(let i = 1; i <= numV; i++) {
@@ -1579,7 +1622,6 @@
                 wallThick: inputWallT.value
             };
             
-            // Ubah tipe data menjadi octet-stream agar Safari 'terpaksa' mengunduh filenya
             const jsonString = JSON.stringify(projectData);
             const blob = new Blob([jsonString], { type: "application/octet-stream" });
             const url = URL.createObjectURL(blob);
@@ -1625,7 +1667,7 @@
                 }
             };
             reader.readAsText(file);
-            e.target.value = ""; // Reset input file agar bisa memuat file yang sama lagi
+            e.target.value = ""; 
         });
     </script>
 </body>
