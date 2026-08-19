@@ -15,6 +15,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/OBJExporter.js"></script>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
     
     <style>
@@ -382,7 +383,8 @@
             <div class="sidebar-section" style="border-bottom: none;">
                 <h4 id="txtSec4">Output</h4>
                 <button id="arBtn" class="btn-purple" style="margin-bottom: 8px;">View AR</button>
-                <button id="exportBtn" class="btn-primary">Export GLB</button>
+                <button id="exportBtn" class="btn-primary" style="margin-bottom: 8px;">Export GLB</button>
+                <button id="exportObjBtn" class="btn-primary" style="background: #f59e0b; border-color: #d97706;">Export OBJ</button>
             </div>
         </div>
     </div>
@@ -478,7 +480,7 @@
                 lblHeight: "Tinggi:", lblElev: "Elevasi (Tinggi dr Lantai):",
                 lblSwing: "Rotasi Pintu:", flipBtn: "Balik Engsel",
                 lblRot: "Rotasi:", lblScale: "Skala:", lblSteps: "Anak Tangga:", lblStairW: "Lebar Tangga:", lblWallLen: "Panjang Tembok:",
-                delBtn: "Hapus", arBtn: "View AR", exportBtn: "Export GLB",
+                delBtn: "Hapus", arBtn: "View AR", exportBtn: "Export GLB", exportObjBtn: "Export OBJ",
                 gTitle: "Panduan Singkat", 
                 g1: "<b>Free Draw / Bebas:</b> Mulai gambar langsung! Tiap kotak (grid) = 1 meter.",
                 g2: "<b>Tembok:</b> Tap 1x titik awal, tap posisi lain. Tap 2x (atau ESC) untuk mengakhiri garis tembok.",
@@ -498,7 +500,7 @@
                 lblHeight: "Height:", lblElev: "Elevation (from floor):",
                 lblSwing: "Door Swing:", flipBtn: "Flip Hinge",
                 lblRot: "Rotation:", lblScale: "Scale:", lblSteps: "Steps:", lblStairW: "Stairs W:", lblWallLen: "Wall Length:",
-                delBtn: "Delete", arBtn: "View AR", exportBtn: "Export GLB",
+                delBtn: "Delete", arBtn: "View AR", exportBtn: "Export GLB", exportObjBtn: "Export OBJ",
                 gTitle: "Quick Guide", 
                 g1: "<b>Free Draw:</b> Start drawing right away! Each grid box = 1 meter.",
                 g2: "<b>Wall:</b> Tap 1x start point, tap other pos. Tap 2x (or ESC) to finish the wall line.",
@@ -559,6 +561,7 @@
             document.getElementById('txtLblScale').innerText = t.lblScale; document.getElementById('txtLblSteps').innerText = t.lblSteps;
             document.getElementById('txtLblStairW').innerText = t.lblStairW; document.getElementById('delObjBtn').innerText = t.delBtn;
             document.getElementById('arBtn').innerText = t.arBtn; document.getElementById('exportBtn').innerText = t.exportBtn;
+            if (document.getElementById('exportObjBtn')) document.getElementById('exportObjBtn').innerText = t.exportObjBtn;
             document.getElementById('txtGuideTitle').innerText = t.gTitle; document.getElementById('txtGuide1').innerHTML = t.g1;
             document.getElementById('txtGuide2').innerHTML = t.g2; document.getElementById('txtGuide3').innerHTML = t.g3;
 
@@ -1510,6 +1513,29 @@
         document.getElementById('arBtn').addEventListener('click', () => { if (lines.length === 0 && freeObjects.length === 0) return alert(currentLang==='id'?"Buat denah terlebih dahulu sebelum melihat dalam AR!":"Create a floorplan first before viewing in AR!"); new THREE.GLTFExporter().parse(modelGroup, (gltf) => { document.getElementById('arViewer').src = URL.createObjectURL(new Blob([gltf], { type: 'model/gltf-binary' })); arModal.style.display = 'flex'; }, { binary: true }); });
         document.getElementById('closeArBtn').addEventListener('click', () => arModal.style.display = 'none');
         document.getElementById('exportBtn').onclick = () => { new THREE.GLTFExporter().parse(modelGroup, (gltf) => { const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([gltf], { type: 'application/octet-stream' })); link.download = 'denah_3d_architect.glb'; link.click(); }, { binary: true }); };
+
+        // FITUR EXPORT OBJ
+        document.getElementById('exportObjBtn').onclick = () => { 
+            if (lines.length === 0 && freeObjects.length === 0) {
+                alert(currentLang === 'id' ? "Denah masih kosong!" : "Floorplan is empty!");
+                return;
+            }
+            const exporter = new THREE.OBJExporter();
+            const result = exporter.parse(modelGroup);
+            
+            const blob = new Blob([result], { type: 'text/plain' });
+            const link = document.createElement('a');
+            link.style.display = 'none';
+            link.href = URL.createObjectURL(blob);
+            link.download = 'denah_3d_architect.obj';
+            document.body.appendChild(link);
+            link.click();
+            
+            setTimeout(() => {
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
+            }, 100);
+        };
 
         // === SAVE & LOAD PROJECT (.JSON) ===
         document.getElementById('saveProjBtn').addEventListener('click', () => {
