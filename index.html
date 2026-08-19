@@ -191,10 +191,11 @@
             box-shadow: 0 20px 40px rgba(0,0,0,0.6);
             border: 1px solid #3f3f46;
             position: relative;
+            overflow: hidden; /* Memastikan shadow dan sudut membulat rapi */
         }
 
         #closeArBtn { 
-            position: absolute; top: 15px; right: 20px; 
+            position: absolute; top: 16px; right: 16px; 
             width: auto; 
             padding: 8px 20px; 
             background: rgba(239, 68, 68, 0.15); 
@@ -465,14 +466,18 @@
     </div>
 
     <div id="ar-modal">
-        <button id="closeArBtn">&times; Close AR</button>
+        <!-- TOMBOL CLOSE SEKARANG BERADA DI DALAM model-viewer -->
         <model-viewer id="arViewer" ar ar-modes="webxr scene-viewer quick-look" camera-controls touch-action="pan-y" shadow-intensity="1" alt="Denah 3D AR">
+            
+            <button id="closeArBtn">&times; Close AR</button>
+            
             <button slot="ar-button" id="arViewBtn">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
                 </svg>
                 <span id="txtArViewBtn">View in AR</span>
             </button>
+            
         </model-viewer>
     </div>
 
