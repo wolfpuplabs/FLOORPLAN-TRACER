@@ -175,10 +175,55 @@
         .close-help { position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 24px; cursor: pointer; color: #71717a; padding: 0; width: auto; line-height: 1; }
         .close-help:hover { color: #ef4444; }
 
-        /* Modal AR */
-        #ar-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; flex-direction: column; }
-        model-viewer { width: 90vw; height: 80vh; background-color: #111; border-radius: 8px; }
-        #closeArBtn { position: absolute; top: 20px; right: 20px; padding: 10px 20px; background: #ef4444; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 14px; z-index: 1001; cursor:pointer;}
+        /* --- Modal AR UI REDESIGN --- */
+        #ar-modal { 
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; 
+            background: rgba(15, 15, 20, 0.85); backdrop-filter: blur(8px);
+            z-index: 1000; justify-content: center; align-items: center; 
+        }
+        
+        model-viewer { 
+            width: 95vw; height: 85dvh; 
+            background-color: #18181b; 
+            border-radius: 16px; 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            border: 1px solid #3f3f46;
+        }
+
+        #closeArBtn { 
+            position: absolute; top: 20px; right: 20px; 
+            width: auto; /* Mencegah tertarik menjadi 100% */
+            padding: 10px 24px; 
+            background: rgba(239, 68, 68, 0.15); 
+            color: #fca5a5; 
+            border: 1px solid rgba(239, 68, 68, 0.3); 
+            border-radius: 30px; 
+            font-weight: 600; font-size: 14px; 
+            z-index: 1001; cursor: pointer;
+            backdrop-filter: blur(4px);
+            transition: all 0.2s;
+        }
+        #closeArBtn:hover {
+            background: rgba(239, 68, 68, 0.9); color: white;
+        }
+
+        #arViewBtn {
+            width: auto; /* Mencegah tertarik menjadi 100% */
+            background-color: white; 
+            color: #2563eb;
+            border-radius: 30px; 
+            border: none; 
+            position: absolute; 
+            bottom: 30px; left: 50%; transform: translateX(-50%); 
+            padding: 14px 28px; 
+            font-weight: bold; font-size: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+            display: flex; align-items: center; gap: 8px;
+            cursor: pointer; transition: transform 0.2s;
+        }
+        #arViewBtn:hover {
+            transform: translateX(-50%) scale(1.05);
+        }
 
         @media (max-width: 1100px) {
             #main-container { flex-direction: column; }
@@ -186,6 +231,8 @@
             #sidebar.collapsed { margin-left: 0; transform: translateX(-100%); }
             #workspace-container { flex: none; height: 50%; width: 100%; border-right: none; border-bottom: 2px solid #a1a1aa; }
             #render-container { flex: none; height: 50%; width: 100%; }
+            #closeArBtn { top: 15px; right: 15px; padding: 8px 16px; font-size: 13px; }
+            model-viewer { height: 90dvh; }
         }
     </style>
 </head>
@@ -414,10 +461,13 @@
     </div>
 
     <div id="ar-modal">
-        <button id="closeArBtn">Tutup AR</button>
+        <button id="closeArBtn">&times; Close AR</button>
         <model-viewer id="arViewer" ar ar-modes="webxr scene-viewer quick-look" camera-controls touch-action="pan-y" shadow-intensity="1" alt="Denah 3D AR">
-            <button slot="ar-button" style="background-color: white; border-radius: 4px; border: none; position: absolute; top: 16px; left: 16px; padding: 12px; font-weight: bold; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
-                View in AR
+            <button slot="ar-button" id="arViewBtn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                </svg>
+                <span id="txtArViewBtn">View in AR</span>
             </button>
         </model-viewer>
     </div>
@@ -484,7 +534,8 @@
                 gTitle: "Panduan Singkat", 
                 g1: "<b>Free Draw / Bebas:</b> Mulai gambar langsung! Tiap kotak (grid) = 1 meter.",
                 g2: "<b>Tembok:</b> Tap 1x titik awal, tap posisi lain. Tap 2x (atau ESC) untuk mengakhiri garis tembok.",
-                g3: "<b>Edit & Hapus Tembok:</b> Gunakan Mode 'Pilih/Edit', klik garis tembok untuk menggeser posisinya atau menghapusnya."
+                g3: "<b>Edit & Hapus Tembok:</b> Gunakan Mode 'Pilih/Edit', klik garis tembok untuk menggeser posisinya atau menghapusnya.",
+                closeAr: "Tutup AR", viewArBtn: "Lihat di Ruangan (AR)"
             },
             en: {
                 title: "Floorplan Tracer", sec1: "File & System", sec2: "Draw Tools", sec3: "Properties", sec4: "Output",
@@ -504,7 +555,8 @@
                 gTitle: "Quick Guide", 
                 g1: "<b>Free Draw:</b> Start drawing right away! Each grid box = 1 meter.",
                 g2: "<b>Wall:</b> Tap 1x start point, tap other pos. Tap 2x (or ESC) to finish the wall line.",
-                g3: "<b>Edit & Delete Wall:</b> Use 'Select/Edit' mode, click any wall line to drag it around or delete it."
+                g3: "<b>Edit & Delete Wall:</b> Use 'Select/Edit' mode, click any wall line to drag it around or delete it.",
+                closeAr: "Close AR", viewArBtn: "View in AR"
             }
         };
 
@@ -564,6 +616,10 @@
             if (document.getElementById('exportObjBtn')) document.getElementById('exportObjBtn').innerText = t.exportObjBtn;
             document.getElementById('txtGuideTitle').innerText = t.gTitle; document.getElementById('txtGuide1').innerHTML = t.g1;
             document.getElementById('txtGuide2').innerHTML = t.g2; document.getElementById('txtGuide3').innerHTML = t.g3;
+
+            // Update terjemahan tombol UI AR baru
+            if (document.getElementById('closeArBtn')) document.getElementById('closeArBtn').innerHTML = `&times; ${t.closeAr}`;
+            if (document.getElementById('txtArViewBtn')) document.getElementById('txtArViewBtn').innerText = t.viewArBtn;
 
             // Re-render select option jika sedang terbuka
             if (typeof selectedItem !== 'undefined' && selectedItem !== null) {
