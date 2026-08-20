@@ -992,15 +992,22 @@
                 const posZ = (obj.y - center2DY) * scale3D; 
                 const elev = obj.elevation || 0;
                 
-                let meshGroup;
+                let innerMesh; // Simpan model di variabel sementara
                 if ((obj.type === 'custom_glb' || obj.type === 'custom_obj') && customModels[obj.modelId]) {
-                    meshGroup = customModels[obj.modelId].clone();
+                    innerMesh = customModels[obj.modelId].clone();
                 } else {
-                    meshGroup = (obj.type === 'stairs') ? createStairsMesh(obj.steps || 14, obj.width3D || 1.0, heightWall) : createFurnitureMesh(obj.type, obj.variant || 0); 
+                    innerMesh = (obj.type === 'stairs') ? createStairsMesh(obj.steps || 14, obj.width3D || 1.0, heightWall) : createFurnitureMesh(obj.type, obj.variant || 0); 
                 }
                 
+                // --- PERBAIKAN FLIP ---
+                // Bungkus innerMesh dengan meshGroup (Wrapper)
+                let meshGroup = new THREE.Group();
+                // Terapkan flip (skala negatif) HANYA pada innerMesh (mesh di dalam)
+                innerMesh.scale.set(obj.flipX ? -1 : 1, 1, obj.flipZ ? -1 : 1);
+                meshGroup.add(innerMesh);
+
+                // Terapkan Posisi dan Rotasi ke Wrapper Group
                 meshGroup.position.set(posX, elev, posZ); 
-                
                 meshGroup.rotation.order = 'YXZ';
                 meshGroup.rotation.set(
                     THREE.MathUtils.degToRad(obj.rotationX || 0),
@@ -1008,11 +1015,13 @@
                     THREE.MathUtils.degToRad(obj.rotationZ || 0)
                 );
 
-                const sX = (obj.scaleX !== undefined ? obj.scaleX : (obj.scaleVal || 1.0)) * (obj.flipX ? -1 : 1);
+                // Terapkan Skala (Harus selalu absolut/positif) ke Wrapper Group
+                const sX = obj.scaleX !== undefined ? obj.scaleX : (obj.scaleVal || 1.0);
                 const sY = obj.scaleY !== undefined ? obj.scaleY : (obj.scaleVal || 1.0);
-                const sZ = (obj.scaleZ !== undefined ? obj.scaleZ : (obj.scaleVal || 1.0)) * (obj.flipZ ? -1 : 1);
+                const sZ = obj.scaleZ !== undefined ? obj.scaleZ : (obj.scaleVal || 1.0);
                 meshGroup.scale.set(sX, sY, sZ); 
 
+                // Identitas untuk Raycaster & Seleksi Gizmo
                 meshGroup.userData.id = obj.id;
                 meshGroup.userData.isFreeObject = true;
 
