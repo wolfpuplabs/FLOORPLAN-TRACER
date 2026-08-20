@@ -272,6 +272,11 @@
                     <div id="freeObjectControls" style="display: none; background: #f4f4f5; padding: 10px; border-radius: 6px; border: 1px solid #d4d4d8; margin-bottom: 10px;">
                         <h5 style="margin: 0 0 8px 0; font-size: 11px; color: #2563eb;">3D OBJECT EDITOR</h5>
                         
+                        <div style="display: flex; gap: 6px; margin-bottom: 12px;">
+                            <button id="btnFlipX" class="edit-btn-secondary" style="margin-bottom: 0; padding: 6px; font-size: 10px; font-weight:bold; background:#e0e7ff; color:#4f46e5;">Flip X</button>
+                            <button id="btnFlipZ" class="edit-btn-secondary" style="margin-bottom: 0; padding: 6px; font-size: 10px; font-weight:bold; background:#e0e7ff; color:#4f46e5;">Flip Z</button>
+                        </div>
+
                         <label><span>Elevasi (Naik/Turun):</span> <span id="valObjElev">0</span> m</label>
                         <input type="range" id="editObjElev" min="-1.0" max="5.0" step="0.1" value="0">
                         <label><span>Rotasi Y (Kiri/Kanan):</span> <span id="valRotY">0</span>°</label>
@@ -340,6 +345,8 @@
                 <button id="btnTrMv" class="active" style="width:auto; padding:6px 12px; background:#2563eb; color:#fff; border:none; font-weight:bold; border-radius:4px;">Move</button>
                 <button id="btnTrRt" style="width:auto; padding:6px 12px; background:#3f3f46; color:#fff; border:none; font-weight:bold; border-radius:4px;">Rotate</button>
                 <button id="btnTrSc" style="width:auto; padding:6px 12px; background:#3f3f46; color:#fff; border:none; font-weight:bold; border-radius:4px;">Scale</button>
+                <div style="width: 1px; background: #71717a; margin: 0 4px;"></div>
+                <button id="btnTrSpace" style="width:auto; padding:6px 12px; background:#059669; color:#fff; border:none; font-weight:bold; border-radius:4px;" title="Toggle Local/World Space">Local</button>
             </div>
         </div>
     </div>
@@ -572,7 +579,7 @@
             }
             else { 
                 saveState(); let snapPos = getSnapped(x, y);
-                freeObjects.push({ id: Date.now(), type: mode, variant: 0, x: snapPos.x, y: snapPos.y, rotationX: 0, rotationY: 0, rotationZ: 0, scaleX: 1.0, scaleY: 1.0, scaleZ: 1.0, steps: 14, width3D: mode === 'stairs' ? 1.0 : 1.0 });
+                freeObjects.push({ id: Date.now(), type: mode, variant: 0, x: snapPos.x, y: snapPos.y, rotationX: 0, rotationY: 0, rotationZ: 0, scaleX: 1.0, scaleY: 1.0, scaleZ: 1.0, steps: 14, width3D: mode === 'stairs' ? 1.0 : 1.0, flipX: false, flipZ: false });
                 furnitureSelect.value = ""; setMode('select', document.getElementById('modeSelect')); update3D(); draw2D();
             }
         });
@@ -704,6 +711,9 @@
 
         document.getElementById('flipHingeBtn').addEventListener('click', () => { if (selectedItem && selectedItem.type === 'door') { saveState(); selectedItem.flipHinge = !selectedItem.flipHinge; update3D(); draw2D(); }});
         
+        document.getElementById('btnFlipX').addEventListener('click', () => { if (selectedItem && !selectedItem.isWall) { saveState(); selectedItem.flipX = !selectedItem.flipX; update3D(); draw2D(); }});
+        document.getElementById('btnFlipZ').addEventListener('click', () => { if (selectedItem && !selectedItem.isWall) { saveState(); selectedItem.flipZ = !selectedItem.flipZ; update3D(); draw2D(); }});
+
         document.getElementById('delObjBtn').addEventListener('click', () => { 
             if (selectedItem) { 
                 saveState(); 
@@ -762,6 +772,8 @@
                 const sX = obj.scaleX !== undefined ? obj.scaleX : (obj.scaleVal || 1.0);
                 const sZ = obj.scaleZ !== undefined ? obj.scaleZ : (obj.scaleVal || 1.0);
                 
+                ctx.scale(obj.flipX ? -1 : 1, obj.flipZ ? -1 : 1);
+
                 if (obj === selectedItem) { ctx.shadowColor = '#2563eb'; ctx.shadowBlur = 15; }
                 if (obj.type === 'stairs') { 
                     const w = ((obj.width3D || 1.0) / scale3D) * sX; const h = (1.5 / scale3D) * sZ; 
@@ -783,6 +795,7 @@
                     else if (obj.type === 'curtain') { ctx.fillRect(-sizeX, -sizeZ/4, sizeX*2, sizeZ/2); ctx.strokeRect(-sizeX, -sizeZ/4, sizeX*2, sizeZ/2); } 
                     else { ctx.fillRect(-sizeX/2, -sizeZ/2, sizeX, sizeZ); ctx.strokeRect(-sizeX/2, -sizeZ/2, sizeX, sizeZ); }
                     
+                    ctx.scale(obj.flipX ? -1 : 1, obj.flipZ ? -1 : 1);
                     ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.max(10, Math.min(sizeX,sizeZ)*0.35)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; 
                     const labels = { bed:'BED', sofa:'SOFA', table:'TBL', chair:'CHR', tv:'TV', buffet:'BUF', wardrobe:'WRD', kitchen_set:'KIT', stove:'STV', fridge:'FRG', toilet:'WC', shower:'SHW', bathtub:'BAT', standing_lamp:'LMP', carpet:'CRP', curtain:'CUR', plant:'PLT', tree:'TRE', custom_glb:'GLB', custom_obj:'OBJ' }; ctx.fillText(labels[obj.type] || 'OBJ', 0, 0); 
                 } ctx.restore();
@@ -818,7 +831,7 @@
             const wsRect = document.getElementById('workspace-container').getBoundingClientRect();
             let { x, y } = getTrueCoords(wsRect.left + (wsRect.width / 2), wsRect.top + (wsRect.height / 2));
             
-            freeObjects.push({ id: Date.now(), type: type, modelId: modelId, x: x, y: y, rotationX: 0, rotationY: 0, rotationZ: 0, scaleX: 1.0, scaleY: 1.0, scaleZ: 1.0 });
+            freeObjects.push({ id: Date.now(), type: type, modelId: modelId, x: x, y: y, rotationX: 0, rotationY: 0, rotationZ: 0, scaleX: 1.0, scaleY: 1.0, scaleZ: 1.0, flipX: false, flipZ: false });
             setMode('select', document.getElementById('modeSelect')); update3D(); draw2D();
         }
 
@@ -995,9 +1008,9 @@
                     THREE.MathUtils.degToRad(obj.rotationZ || 0)
                 );
 
-                const sX = obj.scaleX !== undefined ? obj.scaleX : (obj.scaleVal || 1.0);
+                const sX = (obj.scaleX !== undefined ? obj.scaleX : (obj.scaleVal || 1.0)) * (obj.flipX ? -1 : 1);
                 const sY = obj.scaleY !== undefined ? obj.scaleY : (obj.scaleVal || 1.0);
-                const sZ = obj.scaleZ !== undefined ? obj.scaleZ : (obj.scaleVal || 1.0);
+                const sZ = (obj.scaleZ !== undefined ? obj.scaleZ : (obj.scaleVal || 1.0)) * (obj.flipZ ? -1 : 1);
                 meshGroup.scale.set(sX, sY, sZ); 
 
                 meshGroup.userData.id = obj.id;
@@ -1043,6 +1056,10 @@
         // === TRANSFORM CONTROLS LOGIC (3D EDITOR) ===
         window.transformControl = new THREE.TransformControls(camera, renderer.domElement);
         transformControl.size = 1.3; 
+        
+        // Default to local space for better rotation & move orientation intuitively
+        transformControl.setSpace('local');
+
         scene.add(transformControl);
 
         transformControl.addEventListener('dragging-changed', (event) => {
@@ -1067,9 +1084,10 @@
                     
                     obj.rotationZ = THREE.MathUtils.radToDeg(mesh.rotation.z);
                     
-                    obj.scaleX = mesh.scale.x;
-                    obj.scaleY = mesh.scale.y;
-                    obj.scaleZ = mesh.scale.z;
+                    // Maintain magnitudes independently from flip state
+                    obj.scaleX = Math.abs(mesh.scale.x);
+                    obj.scaleY = Math.abs(mesh.scale.y);
+                    obj.scaleZ = Math.abs(mesh.scale.z);
                     
                     draw2D(); 
                     
@@ -1091,6 +1109,14 @@
         document.getElementById('transformUI').addEventListener('pointerdown', (e) => { e.stopPropagation(); });
 
         const btnTrMv = document.getElementById('btnTrMv'); const btnTrRt = document.getElementById('btnTrRt'); const btnTrSc = document.getElementById('btnTrSc');
+        const btnTrSpace = document.getElementById('btnTrSpace');
+
+        btnTrSpace.onclick = () => {
+            const newSpace = transformControl.space === 'local' ? 'world' : 'local';
+            transformControl.setSpace(newSpace);
+            btnTrSpace.innerText = newSpace === 'local' ? 'Local' : 'World';
+            btnTrSpace.style.background = newSpace === 'local' ? '#059669' : '#ca8a04';
+        };
 
         function setTransformMode(tMode, activeBtn) {
             transformControl.setMode(tMode);
