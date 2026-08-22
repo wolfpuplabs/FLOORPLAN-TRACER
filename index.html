@@ -893,14 +893,16 @@
                 selectionBox.visible = false;
             }
 
-            // --- AUTO-RESET ORIENTASI GIZMO ---
-            // Dikoreksi ulang di SETIAP frame (bukan cuma saat event 'dragging-changed'),
-            // supaya gizmo SELALU balik ke orientasi yang benar begitu drag selesai —
-            // termasuk kalau event drag-end gagal ter-trigger (kasus umum di layar sentuh/mobile).
-            if (window.transformControl && transformControl.object) {
-                const wantLocalForRotateDrag = transformControl.dragging && transformControl.getMode() === 'rotate' && isWorldSpaceMode;
-                const desiredSpace = wantLocalForRotateDrag ? 'local' : (isWorldSpaceMode ? 'world' : 'local');
+            // --- ORIENTASI GIZMO: dikunci ke kaidah standar 3D editor ---
+            // Disinkronkan tiap frame supaya label tombol & orientasi gizmo TIDAK PERNAH
+            // desync (dulu bisa nyangkut di Local walau tombol tertulis World, terutama
+            // di layar sentuh saat event drag-end gagal ter-trigger).
+            // Penting: orientasi TIDAK diubah di tengah drag — gizmo yang berputar sendiri
+            // saat sedang ditarik itu justru yang bikin bingung dan tidak ada di editor mana pun.
+            if (window.transformControl && !transformControl.dragging) {
+                const desiredSpace = getEffectiveSpace();
                 if (transformControl.space !== desiredSpace) transformControl.setSpace(desiredSpace);
+                syncSpaceButton();
             }
             
             renderer.render(scene, camera); 
@@ -1137,22 +1139,67 @@
         const btnTrMv = document.getElementById('btnTrMv'); const btnTrRt = document.getElementById('btnTrRt'); const btnTrSc = document.getElementById('btnTrSc');
         const btnTrSpace = document.getElementById('btnTrSpace');
 
+        // Ruang orientasi yang SEHARUSNYA dipakai, mengikuti kaidah standar 3D editor:
+        //  - Scale  : SELALU Local. Skala non-uniform cuma bermakna di sumbu objek sendiri,
+        //             jadi Blender/Unity/Maya semuanya mengunci scale gizmo ke Local.
+        //  - Move   : ikut pilihan user (World / Local).
+        //  - Rotate : ikut pilihan user, dan TIDAK berubah di tengah drag.
+        function getEffectiveSpace() {
+            if (transformControl.getMode() === 'scale') return 'local';
+            return isWorldSpaceMode ? 'world' : 'local';
+        }
+
+        // Label tombol selalu diturunkan dari kondisi gizmo yang SEBENARNYA,
+        // supaya tulisan tidak pernah berbohong terhadap apa yang tampil di layar.
+        function syncSpaceButton() {
+            const locked = transformControl.getMode() === 'scale';
+            const label = locked ? 'Local 🔒' : (isWorldSpaceMode ? 'World' : 'Local');
+            const bg = locked ? '#52525b' : (isWorldSpaceMode ? '#ca8a04' : '#059669');
+            if (btnTrSpace.innerText !== label) btnTrSpace.innerText = label;
+            if (btnTrSpace.style.background !== bg) btnTrSpace.style.background = bg;
+            btnTrSpace.style.opacity = locked ? '0.6' : '1';
+            btnTrSpace.style.cursor = locked ? 'not-allowed' : 'pointer';
+            btnTrSpace.title = locked
+                ? 'Mode Scale selalu memakai sumbu Local (standar 3D editor)'
+                : 'Toggle Local / World Space  (shortcut: X)';
+        }
+
         btnTrSpace.onclick = () => {
+            // Di mode Scale, toggle tidak berlaku — beri tahu, jangan diam-diam mengabaikan.
+            if (transformControl.getMode() === 'scale') {
+                btnTrSpace.animate(
+                    [{ transform: 'translateX(0)' }, { transform: 'translateX(-4px)' }, { transform: 'translateX(4px)' }, { transform: 'translateX(0)' }],
+                    { duration: 220 }
+                );
+                return;
+            }
             isWorldSpaceMode = !isWorldSpaceMode;
-            const newSpace = isWorldSpaceMode ? 'world' : 'local';
-            transformControl.setSpace(newSpace);
-            btnTrSpace.innerText = isWorldSpaceMode ? 'World' : 'Local';
-            btnTrSpace.style.background = isWorldSpaceMode ? '#ca8a04' : '#059669';
+            transformControl.setSpace(getEffectiveSpace());
+            syncSpaceButton();
         };
 
         function setTransformMode(tMode, activeBtn) {
             transformControl.setMode(tMode);
+            transformControl.setSpace(getEffectiveSpace());
             [btnTrMv, btnTrRt, btnTrSc].forEach(b => { b.style.background = '#3f3f46'; b.classList.remove('active'); });
             activeBtn.style.background = '#2563eb'; activeBtn.classList.add('active');
+            syncSpaceButton();
         }
         btnTrMv.onclick = () => setTransformMode('translate', btnTrMv);
         btnTrRt.onclick = () => setTransformMode('rotate', btnTrRt);
         btnTrSc.onclick = () => setTransformMode('scale', btnTrSc);
+        syncSpaceButton();
+
+        // Shortcut keyboard standar (Unity/Maya style) — W/E/R ganti mode, X toggle space.
+        window.addEventListener('keydown', (e) => {
+            if (/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName)) return;
+            if (e.ctrlKey || e.metaKey || e.altKey) return;
+            const k = e.key.toLowerCase();
+            if (k === 'w') setTransformMode('translate', btnTrMv);
+            else if (k === 'e') setTransformMode('rotate', btnTrRt);
+            else if (k === 'r') setTransformMode('scale', btnTrSc);
+            else if (k === 'x') btnTrSpace.onclick();
+        });
 
         // --- SISTEM RAYCASTER BARU (Bebas Flicker & Aman untuk Layar Sentuh) ---
         const raycaster = new THREE.Raycaster(); 
@@ -1229,6 +1276,3 @@
     </script>
 </body>
 <html>
-
-
-
