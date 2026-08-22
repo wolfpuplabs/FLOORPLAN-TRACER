@@ -1073,7 +1073,24 @@
 
         transformControl.addEventListener('dragging-changed', (event) => {
             controls.enabled = !event.value;
-            if (event.value) { saveState(); }
+            const isWorldMode = btnTrSpace.innerText === 'World';
+            
+            if (event.value) { 
+                saveState();
+                // Jika sedang rotasi di mode World, pinjam Local sementara 
+                // agar cincin gizmo ikut miring secara visual bersama objek
+                if (transformControl.getMode() === 'rotate' && isWorldMode) {
+                    transformControl.setSpace('local');
+                }
+            } else { 
+                // Kembalikan dan reset gizmo menjadi tegak lurus (World) 
+                // jika UI memang sedang berada di mode World
+                if (isWorldMode) {
+                    transformControl.setSpace('world');
+                } else {
+                    transformControl.setSpace('local');
+                }
+            }
         });
 
         transformControl.addEventListener('change', () => {
@@ -1211,4 +1228,5 @@
     </script>
 </body>
 <html>
+
 
