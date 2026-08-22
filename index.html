@@ -374,6 +374,7 @@
 
         let selectedItem = null; let isDraggingObject = false; let isDraggingCanvas = false; let isPinchZooming = false;
         let undoStack = []; let redoStack = [];
+        let isWorldSpaceMode = true; // status World/Local untuk gizmo transform (dipakai untuk auto-reset orientasi)
 
         const customModels = {};
         const gltfLoader = new THREE.GLTFLoader();
@@ -891,6 +892,16 @@
             } else {
                 selectionBox.visible = false;
             }
+
+            // --- AUTO-RESET ORIENTASI GIZMO ---
+            // Dikoreksi ulang di SETIAP frame (bukan cuma saat event 'dragging-changed'),
+            // supaya gizmo SELALU balik ke orientasi yang benar begitu drag selesai —
+            // termasuk kalau event drag-end gagal ter-trigger (kasus umum di layar sentuh/mobile).
+            if (window.transformControl && transformControl.object) {
+                const wantLocalForRotateDrag = transformControl.dragging && transformControl.getMode() === 'rotate' && isWorldSpaceMode;
+                const desiredSpace = wantLocalForRotateDrag ? 'local' : (isWorldSpaceMode ? 'world' : 'local');
+                if (transformControl.space !== desiredSpace) transformControl.setSpace(desiredSpace);
+            }
             
             renderer.render(scene, camera); 
         } 
@@ -1073,24 +1084,13 @@
 
         transformControl.addEventListener('dragging-changed', (event) => {
             controls.enabled = !event.value;
-            const isWorldMode = btnTrSpace.innerText === 'World';
-            
             if (event.value) { 
                 saveState();
-                // Jika sedang rotasi di mode World, pinjam Local sementara 
-                // agar cincin gizmo ikut miring secara visual bersama objek
-                if (transformControl.getMode() === 'rotate' && isWorldMode) {
-                    transformControl.setSpace('local');
-                }
-            } else { 
-                // Kembalikan dan reset gizmo menjadi tegak lurus (World) 
-                // jika UI memang sedang berada di mode World
-                if (isWorldMode) {
-                    transformControl.setSpace('world');
-                } else {
-                    transformControl.setSpace('local');
-                }
             }
+            // Catatan: orientasi gizmo (World/Local) sekarang dikoreksi otomatis
+            // setiap frame di dalam animate(), jadi tidak perlu diatur di sini lagi.
+            // Ini membuat gizmo SELALU auto-reset walau event drag-end ini gagal
+            // ter-trigger (misal di layar sentuh/mobile).
         });
 
         transformControl.addEventListener('change', () => {
@@ -1138,10 +1138,11 @@
         const btnTrSpace = document.getElementById('btnTrSpace');
 
         btnTrSpace.onclick = () => {
-            const newSpace = transformControl.space === 'local' ? 'world' : 'local';
+            isWorldSpaceMode = !isWorldSpaceMode;
+            const newSpace = isWorldSpaceMode ? 'world' : 'local';
             transformControl.setSpace(newSpace);
-            btnTrSpace.innerText = newSpace === 'local' ? 'Local' : 'World';
-            btnTrSpace.style.background = newSpace === 'local' ? '#059669' : '#ca8a04';
+            btnTrSpace.innerText = isWorldSpaceMode ? 'World' : 'Local';
+            btnTrSpace.style.background = isWorldSpaceMode ? '#ca8a04' : '#059669';
         };
 
         function setTransformMode(tMode, activeBtn) {
@@ -1228,5 +1229,6 @@
     </script>
 </body>
 <html>
+
 
 
